@@ -56,6 +56,9 @@ public final class GameView extends View {
     private int[] sounds=new int[5];
     private boolean soundEnabled=true, vibrationEnabled=true;
     private int state=MENU, previousState=MENU, inputMode=0, world=0, stage=1;
+    private boolean tutorialActive=false, tutorialComplete=false, secondarySeen=false;
+    private int tutorialStep=TutorialRules.MOVE, guideKind=TutorialRules.GUIDE_NONE, guideId=-1, seenAbilityMask=0;
+    private float tutorialTravel=0f;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
     private int fireLevel=0, damageLevel=0, magnetLevel=0, shieldLevel=0, droneLevel=0;
     private int techMask=0, newlyUnlocked=-1, armedSecondary=-1;
@@ -139,6 +142,9 @@ public final class GameView extends View {
         inputMode=prefs.getInt("control",0);
         soundEnabled=prefs.getBoolean("sound",true);
         vibrationEnabled=prefs.getBoolean("vibration",true);
+        tutorialComplete=prefs.getBoolean("tutorial_complete",false);
+        seenAbilityMask=prefs.getInt("seen_ability_mask",0);
+        secondarySeen=prefs.getBoolean("secondary_seen",false);
         for(int i=0;i<starX.length;i++) resetBackgroundStar(i,true);
         initSounds();
         setFocusable(true);
@@ -154,7 +160,10 @@ public final class GameView extends View {
     }
     private void save(){prefs.edit().putInt("best",best).putInt("tech",techMask)
             .putInt("control",inputMode).putBoolean("sound",soundEnabled)
-            .putBoolean("vibration",vibrationEnabled).apply();}
+            .putBoolean("vibration",vibrationEnabled)
+            .putBoolean("tutorial_complete",tutorialComplete)
+            .putInt("seen_ability_mask",seenAbilityMask)
+            .putBoolean("secondary_seen",secondarySeen).apply();}
     private void resetBackgroundStar(int i,boolean anywhere){
         starX[i]=random.nextFloat()*W;
         starY[i]=anywhere?random.nextFloat()*H:-random.nextFloat()*25;
@@ -207,12 +216,79 @@ public final class GameView extends View {
     @Override protected void onDetachedFromWindow(){super.onDetachedFromWindow();if(soundPool!=null)soundPool.release();}
 
     private void startRun(){
+        tutorialActive=false;guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
         stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
         fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=0;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
         for(int i=0;i<abilityCharges.length;i++)abilityCharges[i]=1;
         startWorld(0);
+    }
+    /** Training is isolated from score, stars and ordinary sector balancing. */
+    private void startTutorial(){
+        startRun();
+        tutorialActive=true;
+        tutorialStep=TutorialRules.MOVE;
+        tutorialTravel=0;
+        enemies.clear();shots.clear();pickups.clear();particles.clear();
+        x=targetX=W/2;y=targetY=570;
+        stageTime=0;stars=0;score=0;
+        invulnerable=0;bannerTime=0;
+        guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
+    }
+    private void tutorialAction(int action) {
+        if(!tutorialActive)return;
+        int old=tutorialStep;
+        tutorialStep=TutorialRules.nextStep(old,action);
+        if(tutorialStep==old)return;
+        if(tutorialStep==TutorialRules.TARGET){
+            enemies.clear();shots.clear();
+            Enemy target=new Enemy(0,x,275,18);
+            target.vy=0;target.shoot=9999;target.value=0;
+            enemies.add(target);
+        }else if(tutorialStep==TutorialRules.COLLECT_STAR){
+            spawnPickup(x,y-85,0,12);
+        }else if(tutorialStep==TutorialRules.ACTIVATE_SHIELD){
+            abilityCharges[0]=Math.max(1,abilityCharges[0]);
+            beginGuide(TutorialRules.GUIDE_ABILITY,0);
+        }else if(tutorialStep==TutorialRules.FIRE_SECONDARY){
+            secCharges[0]=Math.max(1,secCharges[0]);
+            beginGuide(TutorialRules.GUIDE_SECONDARY,0);
+        }else if(tutorialStep==TutorialRules.COMPLETE){
+            guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
+        }
+    }
+    private void beginGuide(int kind,int id) {
+        guideKind=kind;guideId=id;
+        armedSecondary=-1;
+        touchPointer=-1;downWasButton=false;
+    }
+    private void dismissGuide() {
+        if(guideKind==TutorialRules.GUIDE_ABILITY && guideId>=0) {
+            seenAbilityMask=TutorialRules.markAbilitySeen(seenAbilityMask,guideId);
+        }else if(guideKind==TutorialRules.GUIDE_SECONDARY)secondarySeen=true;
+        guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
+        save();
+    }
+    private void finishTutorial(){
+        tutorialComplete=true;tutorialActive=false;dismissGuide();save();
+        startRun();
+    }
+    private void updateTutorial(float dt){
+        x+=(targetX-x)*Math.min(1,dt*16f);
+        y+=(targetY-y)*Math.min(1,dt*16f);
+        x=clamp(x,24,W-24);y=clamp(y,120,FIELD_BOTTOM-22);
+        if(tutorialStep==TutorialRules.TARGET) {
+            shootTimer-=dt;
+            if(shootTimer<=0){firePrimary();shootTimer=GameRules.fireInterval(0,false);}
+        }
+        if(tutorialStep==TutorialRules.TARGET||tutorialStep==TutorialRules.COLLECT_STAR){
+            updateShots(dt);
+            updatePickups(dt);
+        }
+        if(tutorialStep==TutorialRules.MOVE && Math.abs(targetX-W/2)>65) {
+            tutorialAction(TutorialRules.ACTION_MOVE);
+        }
     }
     private void startWorld(int next){
         world=next;stage=GameRules.worldTier(world);
@@ -294,6 +370,11 @@ public final class GameView extends View {
     private void enemyKilled(int i,Enemy e){
         explode(e.x,e.y,e.kind==5?0xFFC391FF:RED,e.kind>=3?19:9);
         addScore(e.kind>=3?110:40);
+        if(tutorialActive && tutorialStep==TutorialRules.TARGET){
+            enemies.remove(i);
+            tutorialAction(TutorialRules.ACTION_TARGET_KILLED);
+            return;
+        }
         starBurst(e.x,e.y,e.value,3);
         if(random.nextFloat()<.16f)spawnPickup(e.x,e.y,1+random.nextInt(4),1);
         if(random.nextFloat()<.09f)spawnPickup(e.x,e.y,5,1);
@@ -348,6 +429,7 @@ public final class GameView extends View {
     }
     private boolean useSecondary(int which){
         if(state!=PLAY||which<0||which>1||secCharges[which]<=0)return false;
+        if(!TutorialRules.allowSecondaryTap(guideKind,which,guideId))return false;
         secCharges[which]--;
         if(which==0){
             for(int k=-1;k<=1;k++){
@@ -376,10 +458,18 @@ public final class GameView extends View {
             explode(x,y,CYAN,32);flashTime=.15f;
             banner="EMP-IMPULS";bannerTime=.7f;
         }
-        sound(2);vibrate(30);return true;
+        sound(2);vibrate(30);
+        boolean prompted=guideKind==TutorialRules.GUIDE_SECONDARY;
+        secondarySeen=true;
+        if(prompted)dismissGuide();
+        else save();
+        if(tutorialActive && tutorialStep==TutorialRules.FIRE_SECONDARY)
+            tutorialAction(TutorialRules.ACTION_SECONDARY_FIRED);
+        return true;
     }
     private void useAbility(int which){
         if(which<0||which>3||abilityCharges[which]<=0||state!=PLAY)return;
+        if(!TutorialRules.allowAbilityTap(guideKind,which,guideId))return;
         abilityCharges[which]--;
         switch(which){
             case 0:shieldTime=Math.max(shieldTime,8f);break;
@@ -390,6 +480,11 @@ public final class GameView extends View {
         }
         banner=ABILITY_NAMES[which]+" AKTIV";bannerTime=1.1f;
         explode(x,y,which==3?0xFFD095FF:CYAN,10);
+        seenAbilityMask=TutorialRules.markAbilitySeen(seenAbilityMask,which);
+        if(guideKind==TutorialRules.GUIDE_ABILITY)dismissGuide();
+        else save();
+        if(tutorialActive && tutorialStep==TutorialRules.ACTIVATE_SHIELD && which==0)
+            tutorialAction(TutorialRules.ACTION_SHIELD_USED);
     }
     private void fireEnemy(float ex,float ey,float tx,float ty,int type){
         float dx=tx-ex,dy=ty-ey;
@@ -446,6 +541,13 @@ public final class GameView extends View {
         if(flashTime>0)flashTime-=dt;
         if(bannerTime>0)bannerTime-=dt;
         if(state!=PLAY)return;
+        // A discovered power-up pauses the entire combat simulation; only the
+        // highlighted real HUD control (or explicit skip) may resume it.
+        if(guideKind!=TutorialRules.GUIDE_NONE)return;
+        if(tutorialActive) {
+            if(tutorialStep!=TutorialRules.COMPLETE)updateTutorial(dt);
+            return;
+        }
         stageTime+=dt;
         x+=(targetX-x)*Math.min(1,dt*16);
         y+=(targetY-y)*Math.min(1,dt*16);
@@ -683,13 +785,22 @@ public final class GameView extends View {
                 q.y+=(y-q.y)*Math.min(1,dt*(120+magnetLevel*60)/d);
             }
             if(d<20){
-                if(q.kind==0){stars+=q.value;addScore(q.value);}
-                else if(q.kind==5){
+                if(q.kind==0){
+                    stars+=q.value;addScore(q.value);
+                    if(tutorialActive && tutorialStep==TutorialRules.COLLECT_STAR)
+                        tutorialAction(TutorialRules.ACTION_STAR_COLLECTED);
+                }else if(q.kind==5){
                     int randomSlot=random.nextInt(4);
                     abilityCharges[randomSlot]=Math.min(3,abilityCharges[randomSlot]+1);
+                    if(!tutorialActive && TutorialRules.canPromptAbility(seenAbilityMask,randomSlot))
+                        beginGuide(TutorialRules.GUIDE_ABILITY,randomSlot);
                 }else{
                     int slot=q.kind-1;
-                    if(slot>=0&&slot<4)abilityCharges[slot]=Math.min(3,abilityCharges[slot]+1);
+                    if(slot>=0&&slot<4){
+                        abilityCharges[slot]=Math.min(3,abilityCharges[slot]+1);
+                        if(!tutorialActive && TutorialRules.canPromptAbility(seenAbilityMask,slot))
+                            beginGuide(TutorialRules.GUIDE_ABILITY,slot);
+                    }
                 }
                 sound(0);pickups.remove(i);continue;
             }
