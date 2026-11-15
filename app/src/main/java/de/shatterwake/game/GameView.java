@@ -53,7 +53,7 @@ public final class GameView extends View {
     private final int[] secCharges=new int[]{3,2};
     private final int[] unlockLevels=new int[5];
     private SoundPool soundPool;
-    private int[] sounds=new int[4];
+    private int[] sounds=new int[5];
     private boolean soundEnabled=true, vibrationEnabled=true;
     private int state=MENU, previousState=MENU, inputMode=0, world=0, stage=1;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
@@ -65,6 +65,8 @@ public final class GameView extends View {
     private float planetOffset=0, idleTime=0, flashTime=0, bannerTime=0, nextEnemySide=1;
     private float droneShootTimer=0;
     private boolean bossActive=false, downWasButton=false;
+    private int bossSequence=GameRules.BOSS_NORMAL;
+    private float bossSequenceTimer=0f;
     private int touchPointer=-1;
     private float touchOffsetX=0, touchOffsetY=0;
     private Boss boss;
@@ -77,8 +79,8 @@ public final class GameView extends View {
         Enemy(int kind,float x,float y,int hp) {
             this.kind=kind;this.x=x;this.y=y;this.hp=hp;maxHp=hp;
             radius=kind==3?25:kind==5?24:kind==6?24:15;
-            value=(kind==3||kind==5)?45:kind==6?28:19;
-            shoot=2.2f+(kind%3)*.55f;
+            value=(kind==3||kind==5)?38:kind==6?25:20;
+            shoot=1.65f+(kind%3)*.45f;
         }
     }
     private static final class Shot {
@@ -119,7 +121,7 @@ public final class GameView extends View {
                 int part=i==0?0:(i%5==0?3:(i%4==0?2:(i%3==0?4:1)));
                 nodes.add(new Node(i,part, i==0?135f+(tier-1)*50:39f+(tier-1)*18));
             }
-            hp=445+(tier-1)*315;
+            hp=610+(tier-1)*355;
             maxHp=hp;
         }
     }
@@ -160,7 +162,8 @@ public final class GameView extends View {
     }
     private void sound(int kind){
         if(!soundEnabled||soundPool==null||kind<0||kind>=sounds.length||sounds[kind]<=0)return;
-        try {soundPool.play(sounds[kind],.18f,.18f,1,0,1);}catch(Exception ignored){}
+        try {float volume=kind==4?.58f:.18f;
+            soundPool.play(sounds[kind],volume,volume,1,0,1);}catch(Exception ignored){}
     }
     private void vibrate(long duration){
         if(!vibrationEnabled)return;
@@ -174,8 +177,9 @@ public final class GameView extends View {
             soundPool=new SoundPool.Builder().setMaxStreams(5)
                     .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build();
-            for(int s=0;s<4;s++) {
-                int rate=16000, count=s==2?5400:2400;
+            for(int s=0;s<5;s++) {
+                int rate=16000, count=s==4?rate*3:s==2?5400:2400;
+                double phase=0;
                 ByteBuffer buf=ByteBuffer.allocate(44+count*2).order(ByteOrder.LITTLE_ENDIAN);
                 buf.put(new byte[]{'R','I','F','F'}).putInt(36+count*2)
                         .put(new byte[]{'W','A','V','E','f','m','t',' '}).putInt(16)
@@ -183,10 +187,15 @@ public final class GameView extends View {
                         .putShort((short)2).putShort((short)16)
                         .put(new byte[]{'d','a','t','a'}).putInt(count*2);
                 for(int n=0;n<count;n++) {
-                    double q=(double)n/count, f=s==0?720-450*q:s==1?220+420*q:s==2?100+140*q:470-300*q;
-                    double wave=Math.sin(2*Math.PI*f*n/rate);
-                    if(s==2)wave+=.32*Math.sin(2*Math.PI*(f*.45)*n/rate);
-                    double env=Math.pow(1-q,s==2?1.9:2.6);
+                    double q=(double)n/count, f=s==0?720-450*q:s==1?220+420*q
+                            :s==2?100+140*q:s==3?470-300*q:
+                            520+310*(.5-.5*Math.cos(2*Math.PI*q*5.0));
+                    phase+=2*Math.PI*f/rate;
+                    double wave=Math.sin(phase);
+                    if(s==2)wave+=.32*Math.sin(phase*.45);
+                    if(s==4)wave=.76*Math.sin(phase)+.24*Math.sin(phase*1.99);
+                    double env=s==4?Math.min(1,Math.min(n/1300.0,(count-n)/1800.0))
+                            :Math.pow(1-q,s==2?1.9:2.6);
                     buf.putShort((short)Math.max(-32767,Math.min(32767,wave*env*11500)));
                 }
                 File file=new File(getContext().getCacheDir(),"sw_sfx_"+s+".wav");
@@ -208,7 +217,8 @@ public final class GameView extends View {
     private void startWorld(int next){
         world=next;stage=GameRules.worldTier(world);
         enemies.clear();shots.clear();pickups.clear();particles.clear();
-        boss=null;bossActive=false;stageTime=0;spawnTimer=2.5f;starTimer=2.7f;
+        boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;bossSequenceTimer=0f;
+        stageTime=0;spawnTimer=2.5f;starTimer=6.2f;
         shootTimer=0;secondaryRegen=0;droneShootTimer=0;
         x=targetX=W/2;y=targetY=573;invulnerable=4.0f;
         state=PLAY;flashTime=.7f;
@@ -222,29 +232,41 @@ public final class GameView extends View {
         kind=kind<33?0:kind<54?1:kind<74?2:kind<85?3:kind<95?4:5;
         if(stage==1 && kind==5)kind=1;
         if(stage==1 && stageTime<25f)kind=random.nextBoolean()?0:1;
-        int count=(stage==1 && stageTime<26f)?1:(kind==3||kind==5?1:(random.nextFloat()<.28f?2:1));
+        int count=(stage==1 && stageTime<22f)?1:(kind==3||kind==5?1:(random.nextFloat()<.37f?2:1));
         count=Math.min(count,GameRules.enemyCap(stage,stageTime)-enemies.size());
         float base=rnd(45,365);
         for(int i=0;i<count;i++) {
             float xx=clamp(base+(i-(count-1)/2f)*44,30,W-30);
-            Enemy e=new Enemy(kind,xx,-40-i*27,14+tier*8+(kind>=3?30:0));
+            Enemy e=new Enemy(kind,xx,-40-i*27,25+tier*8+(kind>=3?34:0));
             e.phase=rnd(0,6.28f);e.vx=random.nextBoolean()?1:-1;
-            e.vy=(rnd(48,75)+tier*12)*.75f;e.fragments=kind==6?4:0;
-            e.shoot=rnd(2.2f,4.2f);
+            e.vy=(rnd(48,75)+tier*12)*.86f;e.fragments=kind==6?4:0;
+            e.shoot=rnd(1.6f,3.1f);
             enemies.add(e);
         }
     }
+    /** Only invoked once the previous wave has cleared and the siren completed. */
     private void spawnBoss(){
-        enemies.clear();bossActive=true;
+        bossActive=true;
         boss=new Boss(world,stage);
-        flashTime=.8f;banner="BOSS · "+BOSS_NAMES[world];bannerTime=3.2f;
-        sound(2);vibrate(50);
+        bossSequence=GameRules.BOSS_ENTERING;
+        bossSequenceTimer=GameRules.BOSS_ENTRY_SECONDS;
+        boss.fireTimer=1.65f;
+        positionBossNodes();
+        banner="BOSS IM ANFLUG · "+BOSS_NAMES[world];bannerTime=2f;
+    }
+    private void beginBossWarning(){
+        bossSequence=GameRules.BOSS_WARNING;
+        bossSequenceTimer=GameRules.BOSS_WARNING_SECONDS;
+        // No lingering stray enemy bullets can unfairly hit during the warning.
+        for(int i=shots.size()-1;i>=0;i--)if(shots.get(i).hostile)shots.remove(i);
+        sound(4);vibrate(80);
     }
     private void spawnPickup(float xx,float yy,int kind,int val){
         if(pickups.size()>55)return;
         pickups.add(new Pickup(xx,yy,kind,val));
     }
     private void starBurst(float xx,float yy,int total,int pieces){
+        total=GameRules.scaleStarReward(total);
         int each=Math.max(1,total/Math.max(1,pieces));
         for(int i=0;i<pieces;i++){
             Pickup q=new Pickup(xx+rnd(-34,34),yy+rnd(-22,22),0,each);
@@ -265,7 +287,7 @@ public final class GameView extends View {
         int absorbed=Math.min(shieldLevel,damage);
         damage=Math.max(0,damage-absorbed);
         if(damage==0){invulnerable=.45f;return;}
-        hp-=damage;invulnerable=2.4f;flashTime=.3f;
+        hp-=damage;invulnerable=2.0f;flashTime=.3f;
         explode(x,y,CYAN,13);sound(3);vibrate(90);
         if(hp<=0){hp=0;state=DEAD;save();}
     }
@@ -296,7 +318,7 @@ public final class GameView extends View {
     /** Small center-biased aim correction; explicitly permits targeting individual boss nodes. */
     private float findAimAngle(){
         float chosen=0,bestCost=Float.MAX_VALUE;
-        if(bossActive && boss!=null){
+        if(bossActive && boss!=null && bossSequence==GameRules.BOSS_COMBAT){
             for(Node n:boss.nodes){
                 if(n.hp<=0)continue;
                 float dy=y-n.y,dx=n.x-x;
@@ -318,7 +340,7 @@ public final class GameView extends View {
     private float[] nearestTarget(float sx,float sy){
         float[] ret={sx,sy-240};float dmin=Float.MAX_VALUE;
         for(Enemy e:enemies){float d=dist2(sx,sy,e.x,e.y);if(d<dmin){dmin=d;ret[0]=e.x;ret[1]=e.y;}}
-        if(bossActive && boss!=null)for(Node n:boss.nodes){
+        if(bossActive && boss!=null && bossSequence==GameRules.BOSS_COMBAT)for(Node n:boss.nodes){
             if(n.hp<=0)continue;float d=dist2(sx,sy,n.x,n.y);
             if(d<dmin){dmin=d;ret[0]=n.x;ret[1]=n.y;}
         }
@@ -344,7 +366,7 @@ public final class GameView extends View {
                 if(dist2(e.x,e.y,x,y)<205*205){e.hp-=55+damageLevel*6;
                     if(e.hp<=0)enemyKilled(i,e);}
             }
-            if(bossActive&&boss!=null){
+            if(bossActive&&boss!=null&&bossSequence==GameRules.BOSS_COMBAT){
                 boss.fireTimer+=.65f;
                 for(Node n:boss.nodes)if(n.hp>0&&dist2(n.x,n.y,x,y)<210*210){
                     n.hp-=20;boss.hp-=20;nodeDamage(n);
@@ -376,13 +398,14 @@ public final class GameView extends View {
         int active=0;
         for(Shot q:shots)if(q.hostile)active++;
         if(active>=GameRules.hostileShotCap(stage,stageTime,bossActive))return;
-        float speed=type==1?102:(76+stage*12);
+        float speed=type==1?123:(98+stage*13);
         shots.add(new Shot(ex,ey,dx/len*speed,dy/len*speed,1,type==1?4:1,true));
     }
     private void bossAttack(){
         if(boss==null)return;
         int active=0;for(Shot shot:shots)if(shot.hostile)active++;
-        if(active>=GameRules.hostileShotCap(stage,stageTime,true)){boss.fireTimer=.4f;return;}
+        final int cap=GameRules.hostileShotCap(stage,stageTime,true);
+        if(active>=cap){boss.fireTimer=.4f;return;}
         int live=0;
         for(Node n:boss.nodes)if(n.hp>0&&n.type==1)live++;
         if(live==0){boss.fireTimer=1.25f;return;}
@@ -392,14 +415,16 @@ public final class GameView extends View {
             float a=start+i/(float)Math.max(1,amount-1);
             float base=(float)Math.atan2(x-210,y-225);
             float theta=base+a*.9f;
-            if(shots.size()<160)shots.add(new Shot(210,245,(float)Math.sin(theta)*142,
-                    (float)Math.cos(theta)*110,1,1,true));
+            if(active>=cap)break;
+            shots.add(new Shot(210,245,(float)Math.sin(theta)*140,
+                    (float)Math.cos(theta)*114,1,1,true));active++;
         }
         if(boss.phase>1&&world!=0&&stageTime>35f){
             for(int i=0;i<3;i++){
                 float a=boss.time*1.4f+i*2.09f;
-                if(shots.size()<170)shots.add(new Shot(210+(float)Math.cos(a)*82,
-                        245+(float)Math.sin(a)*49,(float)Math.cos(a)*122,(float)Math.sin(a)*122,1,4,true));
+                if(active>=cap)break;
+                shots.add(new Shot(210+(float)Math.cos(a)*82,
+                        245+(float)Math.sin(a)*49,(float)Math.cos(a)*112,(float)Math.sin(a)*112,1,4,true));active++;
             }
         }
         boss.fireTimer=GameRules.bossFireInterval(boss.phase,stage)+rnd(0,.25f);
