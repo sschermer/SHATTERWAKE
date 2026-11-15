@@ -532,7 +532,10 @@ public final class GameView extends View {
     private static float dist2(float ax,float ay,float bx,float by){float dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
 
     private void update(float dt){
-        idleTime+=dt;planetOffset+=dt*22;
+        idleTime+=dt;
+        // True simulation pause during a first-discovery lesson.
+        if(state==PLAY&&guideKind!=TutorialRules.GUIDE_NONE)return;
+        planetOffset+=dt*22;
         for(int i=0;i<starX.length;i++){
             starY[i]+=starV[i]*dt;
             if(starY[i]>H)resetBackgroundStar(i,false);
@@ -806,7 +809,9 @@ public final class GameView extends View {
                             beginGuide(TutorialRules.GUIDE_ABILITY,slot);
                     }
                 }
-                sound(0);pickups.remove(i);continue;
+                sound(0);pickups.remove(i);
+                if(guideKind!=TutorialRules.GUIDE_NONE)break;
+                continue;
             }
             if(q.y>FIELD_BOTTOM+38)pickups.remove(i);
         }
