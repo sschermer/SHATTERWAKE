@@ -41,6 +41,7 @@ public final class GameView extends View {
     private static final String[] ABILITY_NAMES={"SCHILD","RAPID","DREIFACH","PLASMA"};
     private static final String[] SECONDARY_NAMES={"RAKETEN","EMP"};
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final SpriteAtlas atlas=new SpriteAtlas();
     private final Random random=new Random();
     private final SharedPreferences prefs;
     private final ArrayList<Enemy> enemies=new ArrayList<>();
@@ -56,6 +57,10 @@ public final class GameView extends View {
     private int[] sounds=new int[5];
     private boolean soundEnabled=true, vibrationEnabled=true;
     private int state=MENU, previousState=MENU, inputMode=0, world=0, stage=1;
+    private boolean tutorialActive=false, tutorialComplete=false, secondarySeen=false,
+            shopIntroSeen=false, shopIntroShowing=false;
+    private int tutorialStep=TutorialRules.MOVE, guideKind=TutorialRules.GUIDE_NONE, guideId=-1, seenAbilityMask=0;
+    private float tutorialTravel=0f;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
     private int fireLevel=0, damageLevel=0, magnetLevel=0, shieldLevel=0, droneLevel=0;
     private int techMask=0, newlyUnlocked=-1, armedSecondary=-1;
@@ -139,6 +144,10 @@ public final class GameView extends View {
         inputMode=prefs.getInt("control",0);
         soundEnabled=prefs.getBoolean("sound",true);
         vibrationEnabled=prefs.getBoolean("vibration",true);
+        tutorialComplete=prefs.getBoolean("tutorial_complete",false);
+        seenAbilityMask=prefs.getInt("seen_ability_mask",0);
+        secondarySeen=prefs.getBoolean("secondary_seen",false);
+        shopIntroSeen=prefs.getBoolean("shop_intro_seen",false);
         for(int i=0;i<starX.length;i++) resetBackgroundStar(i,true);
         initSounds();
         setFocusable(true);
@@ -154,7 +163,11 @@ public final class GameView extends View {
     }
     private void save(){prefs.edit().putInt("best",best).putInt("tech",techMask)
             .putInt("control",inputMode).putBoolean("sound",soundEnabled)
-            .putBoolean("vibration",vibrationEnabled).apply();}
+            .putBoolean("vibration",vibrationEnabled)
+            .putBoolean("tutorial_complete",tutorialComplete)
+            .putInt("seen_ability_mask",seenAbilityMask)
+            .putBoolean("secondary_seen",secondarySeen)
+            .putBoolean("shop_intro_seen",shopIntroSeen).apply();}
     private void resetBackgroundStar(int i,boolean anywhere){
         starX[i]=random.nextFloat()*W;
         starY[i]=anywhere?random.nextFloat()*H:-random.nextFloat()*25;
@@ -207,12 +220,79 @@ public final class GameView extends View {
     @Override protected void onDetachedFromWindow(){super.onDetachedFromWindow();if(soundPool!=null)soundPool.release();}
 
     private void startRun(){
+        tutorialActive=false;guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
         stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
         fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=0;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
         for(int i=0;i<abilityCharges.length;i++)abilityCharges[i]=1;
         startWorld(0);
+    }
+    /** Training is isolated from score, stars and ordinary sector balancing. */
+    private void startTutorial(){
+        startRun();
+        tutorialActive=true;
+        tutorialStep=TutorialRules.MOVE;
+        tutorialTravel=0;
+        enemies.clear();shots.clear();pickups.clear();particles.clear();
+        x=targetX=W/2;y=targetY=570;
+        stageTime=0;stars=0;score=0;
+        invulnerable=0;bannerTime=0;
+        guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
+    }
+    private void tutorialAction(int action) {
+        if(!tutorialActive)return;
+        int old=tutorialStep;
+        tutorialStep=TutorialRules.nextStep(old,action);
+        if(tutorialStep==old)return;
+        if(tutorialStep==TutorialRules.TARGET){
+            enemies.clear();shots.clear();
+            Enemy target=new Enemy(0,x,275,18);
+            target.vy=0;target.shoot=9999;target.value=0;
+            enemies.add(target);
+        }else if(tutorialStep==TutorialRules.COLLECT_STAR){
+            spawnPickup(x,y-85,0,12);
+        }else if(tutorialStep==TutorialRules.ACTIVATE_SHIELD){
+            abilityCharges[0]=Math.max(1,abilityCharges[0]);
+            beginGuide(TutorialRules.GUIDE_ABILITY,0);
+        }else if(tutorialStep==TutorialRules.FIRE_SECONDARY){
+            secCharges[0]=Math.max(1,secCharges[0]);
+            beginGuide(TutorialRules.GUIDE_SECONDARY,0);
+        }else if(tutorialStep==TutorialRules.COMPLETE){
+            guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
+        }
+    }
+    private void beginGuide(int kind,int id) {
+        guideKind=kind;guideId=id;
+        armedSecondary=-1;
+        touchPointer=-1;downWasButton=false;
+    }
+    private void dismissGuide() {
+        if(guideKind==TutorialRules.GUIDE_ABILITY && guideId>=0) {
+            seenAbilityMask=TutorialRules.markAbilitySeen(seenAbilityMask,guideId);
+        }else if(guideKind==TutorialRules.GUIDE_SECONDARY)secondarySeen=true;
+        guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
+        save();
+    }
+    private void finishTutorial(){
+        tutorialComplete=true;tutorialActive=false;dismissGuide();save();
+        startRun();
+    }
+    private void updateTutorial(float dt){
+        x+=(targetX-x)*Math.min(1,dt*16f);
+        y+=(targetY-y)*Math.min(1,dt*16f);
+        x=clamp(x,24,W-24);y=clamp(y,120,FIELD_BOTTOM-22);
+        if(tutorialStep==TutorialRules.TARGET) {
+            shootTimer-=dt;
+            if(shootTimer<=0){firePrimary();shootTimer=GameRules.fireInterval(0,false);}
+        }
+        if(tutorialStep==TutorialRules.TARGET||tutorialStep==TutorialRules.COLLECT_STAR){
+            updateShots(dt);
+            updatePickups(dt);
+        }
+        if(tutorialStep==TutorialRules.MOVE && Math.abs(targetX-W/2)>65) {
+            tutorialAction(TutorialRules.ACTION_MOVE);
+        }
     }
     private void startWorld(int next){
         world=next;stage=GameRules.worldTier(world);
@@ -294,6 +374,11 @@ public final class GameView extends View {
     private void enemyKilled(int i,Enemy e){
         explode(e.x,e.y,e.kind==5?0xFFC391FF:RED,e.kind>=3?19:9);
         addScore(e.kind>=3?110:40);
+        if(tutorialActive && tutorialStep==TutorialRules.TARGET){
+            enemies.remove(i);
+            tutorialAction(TutorialRules.ACTION_TARGET_KILLED);
+            return;
+        }
         starBurst(e.x,e.y,e.value,3);
         if(random.nextFloat()<.16f)spawnPickup(e.x,e.y,1+random.nextInt(4),1);
         if(random.nextFloat()<.09f)spawnPickup(e.x,e.y,5,1);
@@ -348,6 +433,7 @@ public final class GameView extends View {
     }
     private boolean useSecondary(int which){
         if(state!=PLAY||which<0||which>1||secCharges[which]<=0)return false;
+        if(!TutorialRules.allowSecondaryTap(guideKind,which,guideId))return false;
         secCharges[which]--;
         if(which==0){
             for(int k=-1;k<=1;k++){
@@ -376,10 +462,18 @@ public final class GameView extends View {
             explode(x,y,CYAN,32);flashTime=.15f;
             banner="EMP-IMPULS";bannerTime=.7f;
         }
-        sound(2);vibrate(30);return true;
+        sound(2);vibrate(30);
+        boolean prompted=guideKind==TutorialRules.GUIDE_SECONDARY;
+        secondarySeen=true;
+        if(prompted)dismissGuide();
+        else save();
+        if(tutorialActive && tutorialStep==TutorialRules.FIRE_SECONDARY)
+            tutorialAction(TutorialRules.ACTION_SECONDARY_FIRED);
+        return true;
     }
     private void useAbility(int which){
         if(which<0||which>3||abilityCharges[which]<=0||state!=PLAY)return;
+        if(!TutorialRules.allowAbilityTap(guideKind,which,guideId))return;
         abilityCharges[which]--;
         switch(which){
             case 0:shieldTime=Math.max(shieldTime,8f);break;
@@ -390,6 +484,11 @@ public final class GameView extends View {
         }
         banner=ABILITY_NAMES[which]+" AKTIV";bannerTime=1.1f;
         explode(x,y,which==3?0xFFD095FF:CYAN,10);
+        seenAbilityMask=TutorialRules.markAbilitySeen(seenAbilityMask,which);
+        if(guideKind==TutorialRules.GUIDE_ABILITY)dismissGuide();
+        else save();
+        if(tutorialActive && tutorialStep==TutorialRules.ACTIVATE_SHIELD && which==0)
+            tutorialAction(TutorialRules.ACTION_SHIELD_USED);
     }
     private void fireEnemy(float ex,float ey,float tx,float ty,int type){
         float dx=tx-ex,dy=ty-ey;
@@ -433,7 +532,10 @@ public final class GameView extends View {
     private static float dist2(float ax,float ay,float bx,float by){float dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
 
     private void update(float dt){
-        idleTime+=dt;planetOffset+=dt*22;
+        idleTime+=dt;
+        // True simulation pause during a first-discovery lesson.
+        if(state==PLAY&&guideKind!=TutorialRules.GUIDE_NONE)return;
+        planetOffset+=dt*22;
         for(int i=0;i<starX.length;i++){
             starY[i]+=starV[i]*dt;
             if(starY[i]>H)resetBackgroundStar(i,false);
@@ -446,6 +548,13 @@ public final class GameView extends View {
         if(flashTime>0)flashTime-=dt;
         if(bannerTime>0)bannerTime-=dt;
         if(state!=PLAY)return;
+        // A discovered power-up pauses the entire combat simulation; only the
+        // highlighted real HUD control (or explicit skip) may resume it.
+        if(guideKind!=TutorialRules.GUIDE_NONE)return;
+        if(tutorialActive) {
+            if(tutorialStep!=TutorialRules.COMPLETE)updateTutorial(dt);
+            return;
+        }
         stageTime+=dt;
         x+=(targetX-x)*Math.min(1,dt*16);
         y+=(targetY-y)*Math.min(1,dt*16);
@@ -683,15 +792,26 @@ public final class GameView extends View {
                 q.y+=(y-q.y)*Math.min(1,dt*(120+magnetLevel*60)/d);
             }
             if(d<20){
-                if(q.kind==0){stars+=q.value;addScore(q.value);}
-                else if(q.kind==5){
+                if(q.kind==0){
+                    stars+=q.value;addScore(q.value);
+                    if(tutorialActive && tutorialStep==TutorialRules.COLLECT_STAR)
+                        tutorialAction(TutorialRules.ACTION_STAR_COLLECTED);
+                }else if(q.kind==5){
                     int randomSlot=random.nextInt(4);
                     abilityCharges[randomSlot]=Math.min(3,abilityCharges[randomSlot]+1);
+                    if(!tutorialActive && TutorialRules.canPromptAbility(seenAbilityMask,randomSlot))
+                        beginGuide(TutorialRules.GUIDE_ABILITY,randomSlot);
                 }else{
                     int slot=q.kind-1;
-                    if(slot>=0&&slot<4)abilityCharges[slot]=Math.min(3,abilityCharges[slot]+1);
+                    if(slot>=0&&slot<4){
+                        abilityCharges[slot]=Math.min(3,abilityCharges[slot]+1);
+                        if(!tutorialActive && TutorialRules.canPromptAbility(seenAbilityMask,slot))
+                            beginGuide(TutorialRules.GUIDE_ABILITY,slot);
+                    }
                 }
-                sound(0);pickups.remove(i);continue;
+                sound(0);pickups.remove(i);
+                if(guideKind!=TutorialRules.GUIDE_NONE)break;
+                continue;
             }
             if(q.y>FIELD_BOTTOM+38)pickups.remove(i);
         }
@@ -708,6 +828,7 @@ public final class GameView extends View {
         boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;
         enemies.clear();shots.clear();pickups.clear();
         buildShop();state=SHOP;
+        if(!shopIntroSeen)shopIntroShowing=true;
         shopMessage="BOSS BESIEGT · +"+bonus+" STERNE";
         sound(2);vibrate(100);
     }
@@ -778,10 +899,11 @@ public final class GameView extends View {
             drawWorld(c);drawEnemies(c);drawBoss(c);drawShots(c);drawPickups(c);drawParticles(c);
             drawPlayer(c);drawHud(c);
             drawBossTransition(c);
+            if(tutorialActive || guideKind!=TutorialRules.GUIDE_NONE)drawTutorialOverlay(c);
             if(state==PAUSE)drawPause(c);
         }else{
             if(state==MENU)drawMenu(c);
-            else if(state==SHOP)drawShop(c);
+            else if(state==SHOP){drawShop(c);if(shopIntroShowing)drawShopIntro(c);}
             else if(state==ROUTE)drawRoute(c);
             else if(state==DEAD)drawDead(c);
             else if(state==GAME_OVER)drawGameOver(c,false);
@@ -1054,22 +1176,9 @@ public final class GameView extends View {
         triangle(c,4,18,15,18,9,20+flame,0xFFFAB367);
         triangle(c,-12,19,-7,19,-9,18+flame*.75f,WHITE);
         triangle(c,7,19,12,19,9,18+flame*.75f,WHITE);
-        // Offset lower hull makes the craft read as a thick physical object.
-        shadedPolygon(c,new float[]{0,-25,-12,-14,-33,10,-30,21,-12,15,0,26,12,15,30,21,33,10,12,-14},
-                0xFF183F62,0xFF0D2038,0xFF357DA5);
-        shadedPolygon(c,new float[]{0,-37,-12,-18,-31,11,-21,12,-9,4,0,14,9,4,21,12,31,11,12,-18},
-                0xFFB5E1E9,0xFF3B80A7,0xFF8EC5DE);
-        shadedPolygon(c,new float[]{0,-31,-7,-13,0,0,7,-13},
-                0xFF163D5D,0xFF081B37,0xFF73E4F8);
-        shadedPolygon(c,new float[]{-28,10,-16,6,-10,10,-20,16},
-                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
-        shadedPolygon(c,new float[]{28,10,16,6,10,10,20,16},
-                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
-        line(c,-12,-16,-21,11,0xFFDBF6FF,1.3f);
-        line(c,12,-16,21,11,0xFFDBF6FF,1.3f);
-        glow(c,0,-12,10,0x8888F4FF,0x0088F4FF);
-        circle(c,0,-12,3.5f,WHITE);
-        circle(c,-23,9,2.4f,GOLD);circle(c,23,9,2.4f,GOLD);
+        // Detailed 192px transparent sprite, with independently animated thrusters
+        // and protective shield painted at runtime.
+        atlas.drawPlayer(c,0,-2);
         if(droneLevel>0){
             for(int i=0;i<Math.min(3,droneLevel);i++){
                 float dx=(i-(Math.min(3,droneLevel)-1)/2f)*43;
@@ -1093,34 +1202,13 @@ public final class GameView extends View {
                 for(int j=0;j<4;j++){
                     float xx=(float)Math.sin(e.t*4+j*.8f)*10;
                     float yy=j*13;
-                    glow(c,xx,yy,14,0x6049A4E2,0x0049A4E2);
-                    shadedPolygon(c,new float[]{xx,yy-12,xx-12,yy,xx,yy+12,xx+12,yy},
-                            0xFF93B1BB,0xFF2E4F68,0xFF92C5D9);
-                    circle(c,xx,yy,4,GOLD);
+                    glow(c,xx,yy,16,0x6049A4E2,0x0049A4E2);
+                    c.save();c.translate(xx,yy);
+                    atlas.drawModule(c,2,16f);
+                    c.restore();
                 }
-            }else if(e.kind==3){
-                shadedPolygon(c,new float[]{0,-31,-32,-6,-26,22,0,17,26,22,32,-6},
-                        0xFFB0A3A4,0xFF4C506A,0xFFE0B7B8);
-                shadedPolygon(c,new float[]{0,-29,-14,-4,0,12,14,-4},
-                        0xFFFFBF9A,0xFF9B4058,0xFFFFC3AB);
-                glow(c,0,2,14,0x99FFB080,0x00FFB080);
-                circle(c,0,2,5,WHITE);
-            }else if(e.kind==5){
-                shadedPolygon(c,new float[]{0,-29,-27,-2,-17,25,0,19,17,25,27,-2},
-                        0xFF8B9ABF,0xFF403B73,0xFFB3A4D9);
-                glow(c,0,2,22,0x77588CFB,0x00588CFB);
-                circle(c,0,2,12,0xFF45366F);circle(c,0,2,6,core);
-                line(c,-21,6,-6,11,0xFFA3BCEF,2);
-                line(c,21,6,6,11,0xFFA3BCEF,2);
-            }else{
-                shadedPolygon(c,new float[]{0,-23,-14,-4,-24,6,-19,17,-4,11,0,22,4,11,19,17,24,6,14,-4},
-                        0xFF9D8E9F,0xFF473B60,0xFFBE9CB6);
-                shadedPolygon(c,new float[]{0,-19,-7,0,-15,8,0,12,15,8,7,0},
-                        0xFFFFA4AD,0xFF8C476D,0xFFFFC2C4);
-                line(c,-19,9,-7,5,0xFFFFD9D8,1.3f);
-                line(c,19,9,7,5,0xFFFFD9D8,1.3f);
-                glow(c,0,-3,10,0x88FFC78C,0x00FFC78C);
-                circle(c,0,-3,3,GOLD);
+            }else {
+                atlas.drawEnemy(c,atlas.enemies[Math.min(5,Math.max(0,e.kind))],0,0,e.radius);
             }
             if(e.hp<e.maxHp){
                 box(c,-17,-35,34,3,0xDD111B30);
@@ -1144,14 +1232,8 @@ public final class GameView extends View {
             c.save();c.translate(n.x,n.y);
             float r=n.id==0?27:21;
             circle(c,0,7,r+4,0x55000000);
-            int shell=boss.type==2?0xFF584B91:boss.type==3?0xFF445D82:0xFF426278;
-            shadedPolygon(c,new float[]{-r,-r*.30f,-r*.54f,-r*.80f,r*.52f,-r*.80f,
-                    r,r*.12f,r*.51f,r*.77f,-r*.55f,r*.77f},
-                    0xFFA0AFBE,shell,0xFFA0C6DA);
-            shadedPolygon(c,new float[]{-r*.54f,-r*.8f,r*.52f,-r*.8f,r*.78f,-r*.12f,
-                    0,r*.16f,-r*.81f,-r*.12f},0xFFABCAD5,0xFF4C687E,0);
-            line(c,-r*.79f,r*.14f,r*.77f,r*.14f,0xAA24374F,1.8f);
-            triangle(c,-r*.58f,r*.40f,0,r*.64f,r*.58f,r*.40f,0x443B98C5);
+            // Individual hard-surface sprite per modular component.
+            atlas.drawModule(c,n.type,r*1.28f);
             if(n.id==0){
                 triangle(c,-14,-6,0,-19,14,-6,0xFFBD768A);
                 circle(c,0,1,10,RED);
@@ -1269,16 +1351,31 @@ public final class GameView extends View {
             int xx=252+i*81;
             int border=inputMode==0&&armedSecondary==i?GOLD:0xFF416D89;
             panel(c,xx,658,75,44,0xFF18384E,border,8);
-            txt(c,i==0?"RAKETE":"EMP",xx+37.5f,674,10,WHITE,Paint.Align.CENTER,true);
-            txt(c,""+secCharges[i],xx+37.5f,694,15,secCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
+            if(i==0){
+                triangle(c,xx+13,675,xx+22,660,xx+31,675,CYAN);
+                line(c,xx+22,671,xx+22,686,GOLD,2);
+            }else{
+                glow(c,xx+22,679,16,0x668AE6FF,0x008AE6FF);
+                circle(c,xx+22,679,5,CYAN);
+                line(c,xx+10,676,xx+34,676,WHITE,1.5f);
+            }
+            txt(c,i==0?"RAKETE":"EMP",xx+51,675,10,WHITE,Paint.Align.CENTER,true);
+            txt(c,""+secCharges[i]+"x",xx+51,693,14,secCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
         }
         for(int i=0;i<4;i++){
             int xx=13+i*100;
             boolean active=(i==0&&shieldTime>0)||(i==1&&rapidTime>0)||(i==2&&tripleTime>0)||(i==3&&plasmaTime>0);
             panel(c,xx,716,94,47,active?0xFF285976:0xFF182D45,
                     active?GOLD:0xFF42647D,8);
-            txt(c,ABILITY_NAMES[i],xx+47,734,i==2?10:11,WHITE,Paint.Align.CENTER,true);
-            txt(c,"◆ "+abilityCharges[i],xx+47,753,12,abilityCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
+            drawPowerupIcon(c,i,xx+22,739,12);
+            txt(c,ABILITY_NAMES[i],xx+59,735,i==2?10:11,WHITE,Paint.Align.CENTER,true);
+            txt(c,""+abilityCharges[i]+"x",xx+59,754,13,abilityCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
+            float activeLeft=i==0?shieldTime:i==1?rapidTime:i==2?tripleTime:plasmaTime;
+            float maxTime=i==0?8f:i==3?7f:9f;
+            if(activeLeft>0){
+                box(c,xx+5,760,84,2,0xFF14374F);
+                box(c,xx+5,760,84*clamp(activeLeft/maxTime,0,1),2,CYAN);
+            }
         }
     }
     private void textCenterAt(Canvas c,String s,float xx,float yy,float sz,int color){
@@ -1303,12 +1400,24 @@ public final class GameView extends View {
         button(c,"NEUER DURCHLAUF",51,450,318,58,true);
         button(c,"EINSTELLUNGEN",51,524,318,54,false);
         button(c,"TECHNOLOGIE-ARCHIV",51,593,318,54,false);
-        textCenter(c,"PROTOTYP 0.3  ·  OFFLINE  ·  OHNE TRACKING",725,11,MUTED,false);
+        button(c,"TUTORIAL "+(tutorialComplete?"WIEDERHOLEN":"STARTEN"),51,663,318,47,false);
+        textCenter(c,"PROTOTYP 0.4 · OFFLINE · OHNE TRACKING",754,10,MUTED,false);
     }
     private void screenHeader(Canvas c,String title,String sub){
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);
         textCenter(c,title,65,29,WHITE,true);
         textCenter(c,sub,91,12,MUTED,false);
+    }
+    private void drawShopIntro(Canvas c){
+        box(c,0,0,W,H,0xC7091322);
+        panel(c,23,207,374,338,0xF70C253B,0xFF7BDEEB,15);
+        textCenter(c,"DIE STERNENWERFT",264,28,GOLD,true);
+        textCenter(c,"DAS IST DEIN SHOP NACH JEDEM BOSS",305,13,WHITE,true);
+        textCenter(c,"STERNE SIND DIE WAEHRUNG",341,17,GOLD,true);
+        textCenter(c,"UPGRADES GELTEN BIS ZUM GAME OVER",376,13,MUTED,false);
+        textCenter(c,"PREISE STEIGEN MIT JEDER AUSBAUSTUFE",406,12,MUTED,false);
+        textCenter(c,"TIPP: ZUERST WAFFEN ODER REPARATUR",437,12,WHITE,false);
+        button(c,"VERSTANDEN",89,467,242,58,true);
     }
     private void drawShop(Canvas c){
         screenHeader(c,"STERNENWERFT","KAUF BLEIBT BIS ZUM GAME OVER AKTIV");
@@ -1417,7 +1526,7 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "SHATTERWAKE 0.2.0-alpha",
+                "SHATTERWAKE 0.4.0-alpha",
                 "Originaler Quellcode und Vektorgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",
@@ -1435,17 +1544,155 @@ public final class GameView extends View {
                 i==0?GOLD:i>=9?CYAN:WHITE,Paint.Align.LEFT,i==0);
         button(c,"ZURÜCK",90,690,240,55,true);
     }
+    private void drawTutorialOverlay(Canvas c){
+        if(guideKind==TutorialRules.GUIDE_NONE && !tutorialActive)return;
+        if(guideKind!=TutorialRules.GUIDE_NONE){
+            box(c,0,0,W,650,0xC9071226);
+            String title,description,action;
+            boolean ability=guideKind==TutorialRules.GUIDE_ABILITY;
+            if(ability){
+                title=ABILITY_NAMES[Math.max(0,Math.min(3,guideId))];
+                String[] descriptions={
+                    "8 SEKUNDEN SCHUTZ VOR TREFFERN",
+                    "9 SEKUNDEN SCHNELLER SCHIESSEN",
+                    "9 SEKUNDEN DREIFACH-SCHUSS",
+                    "7 SEKUNDEN PLASMA-MUNITION"
+                };
+                description=descriptions[Math.max(0,Math.min(3,guideId))];
+                action="TIPPE UNTEN AUF "+title;
+            }else{
+                title="SCHWARMRAKETEN";
+                description="ZIELSUCHENDE GESCHOSSE MIT LADUNGEN";
+                action=inputMode==0?"RAKETE WAEHLEN, SCHIFF ZIEHEN, LOSLASSEN":"TIPPE UNTEN AUF RAKETE";
+            }
+            panel(c,22,210,376,278,0xFA0C2036,0xFF76D9FF,15);
+            txt(c,tutorialActive?"TRAINING · INTERAKTIV":"NEUE TECHNOLOGIE",210,245,14,GOLD,Paint.Align.CENTER,true);
+            textCenter(c,title,292,31,WHITE,true);
+            textCenter(c,description,328,14,MUTED,false);
+            if(ability)drawPowerupIcon(c,guideId,210,374,40);
+            else {
+                glow(c,210,371,38,0x665DD9FF,0x005DD9FF);
+                triangle(c,200,382,210,352,220,382,0xFF95DBF9);
+                line(c,210,354,210,335,0xFFF9C46D,4f);
+            }
+            textCenter(c,action,447,12,GOLD,true);
+            textCenter(c,"SPIEL PAUSIERT · ERST AKTION AUSFUEHREN",472,10,WHITE,false);
+            // Real HUD controls remain tappable. Outline the control to be used.
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3);
+            p.setColor((int)(idleTime*4)%2==0?GOLD:CYAN);
+            if(ability){
+                int left=13+guideId*100;
+                c.drawRoundRect(left,714,left+94,766,8,8,p);
+            }else{
+                c.drawRoundRect(250,656,329,706,8,8,p);
+            }
+            p.setStyle(Paint.Style.FILL);
+            if(!tutorialActive){
+                button(c,"UEBERSPRINGEN",114,552,192,46,false);
+            }
+        }else if(tutorialActive){
+            String title="",detail="";
+            switch(tutorialStep){
+                case TutorialRules.MOVE:
+                    title="1/5 · STEUERN";
+                    detail="FINGER AUF DAS SCHIFF, NACH LINKS ODER RECHTS ZIEHEN";break;
+                case TutorialRules.TARGET:
+                    title="2/5 · ZIELEN";
+                    detail="SCHIFF UNTER DEN TRAININGSGEGNER BEWEGEN";break;
+                case TutorialRules.COLLECT_STAR:
+                    title="3/5 · STERNE";
+                    detail="SAMMLE DEN GELBEN STERN · SHOP-WAEHRUNG";break;
+                case TutorialRules.COMPLETE:
+                    box(c,0,0,W,650,0xC9071226);
+                    panel(c,30,229,360,274,0xF80D263B,0xFF7CE6C4,15);
+                    textCenter(c,"TRAINING ABSOLVIERT",301,26,GREEN,true);
+                    textCenter(c,"DU KENNST JETZT DIE GRUNDLAGEN",343,14,WHITE,false);
+                    textCenter(c,"STERNE · WAFFEN · FAEHIGKEITEN",371,13,GOLD,true);
+                    button(c,"SEKTOR 1 STARTEN",58,419,304,57,true);
+                    break;
+                default:break;
+            }
+            if(tutorialStep!=TutorialRules.COMPLETE){
+                panel(c,18,103,384,89,0xF5122944,0xAA67B5D8,11);
+                textCenter(c,title,137,21,GOLD,true);
+                textCenter(c,detail,165,12,WHITE,false);
+            }
+        }
+        if(tutorialActive){
+            panel(c,297,18,109,39,0xDD26364C,0xFF6889A9,7);
+            textCenterAt(c,"SKIP",351,44,13,WHITE);
+        }
+    }
+    private void drawPowerupIcon(Canvas c,int which,float px,float py,float radius){
+        c.save();c.translate(px,py);
+        int color=which==0?0xFF73E8FF:which==1?0xFFFFBE67:
+                which==2?0xFF93F6A0:0xFFC597FF;
+        glow(c,0,0,radius*1.25f,(color&0x00FFFFFF)|0x55000000,
+                color&0x00FFFFFF);
+        switch(which){
+            case 0:
+                shadedPolygon(c,new float[]{0,-radius,-radius*.65f,-radius*.55f,
+                        -radius*.52f,radius*.54f,0,radius,radius*.52f,radius*.54f,
+                        radius*.65f,-radius*.55f},
+                        0xFFE4FBFF,0xFF1E7895,color);
+                break;
+            case 1:
+                polygon(c,new float[]{-radius*.22f,-radius,radius*.5f,-radius*.1f,
+                        radius*.11f,radius*.02f,radius*.36f,radius,
+                        -radius*.55f,radius*.13f,-radius*.1f,-radius*.12f},color);
+                break;
+            case 2:
+                for(int i=-1;i<=1;i++){
+                    line(c,i*radius*.38f,radius*.75f,i*radius*.38f,-radius*.72f,color,4);
+                    circle(c,i*radius*.38f,-radius*.8f,5,WHITE);
+                }
+                break;
+            default:
+                glow(c,0,0,radius,0x99B06CFF,0x00B06CFF);
+                circle(c,0,0,radius*.53f,color);
+                circle(c,0,0,radius*.23f,WHITE);break;
+        }
+        c.restore();
+    }
     private boolean inside(float px,float py,float l,float t,float w,float h){
         return px>=l&&px<=l+w&&py>=t&&py<=t+h;
     }
     private boolean tap(float px,float py){
         switch(state){
             case MENU:
-                if(inside(px,py,51,450,318,58)){startRun();return true;}
+                if(inside(px,py,51,450,318,58)){
+                    if(!tutorialComplete)startTutorial();else startRun();
+                    return true;
+                }
                 if(inside(px,py,51,524,318,54)){state=SETTINGS;return true;}
                 if(inside(px,py,51,593,318,54)){state=ARCHIVE;return true;}
+                if(inside(px,py,51,663,318,47)){startTutorial();return true;}
                 return true;
             case PLAY:
+                if(tutorialActive && inside(px,py,297,18,109,39)){finishTutorial();return true;}
+                if(tutorialActive && tutorialStep==TutorialRules.COMPLETE){
+                    if(inside(px,py,58,419,304,57))finishTutorial();
+                    return true;
+                }
+                if(guideKind!=TutorialRules.GUIDE_NONE){
+                    if(!tutorialActive && inside(px,py,114,552,192,46)){dismissGuide();return true;}
+                    if(guideKind==TutorialRules.GUIDE_ABILITY){
+                        if(py>=716&&px>=13&&px<413){
+                            int a=(int)((px-13)/100);
+                            if(a==guideId)useAbility(a);
+                        }
+                        return true;
+                    }
+                    if(py>=650&&py<707&&px>=252){
+                        int slot=px>=333?1:0;
+                        if(slot==guideId){
+                            if(inputMode==0)armedSecondary=slot;
+                            else useSecondary(slot);
+                        }
+                        return true;
+                    }
+                    return !(inputMode==0&&py<650);
+                }
                 if(inside(px,py,365,51,36,31)){state=PAUSE;return true;}
                 if(py>=716){
                     int a=(int)((px-13)/100);
@@ -1453,7 +1700,10 @@ public final class GameView extends View {
                 }
                 if(py>=650&&py<707){
                     if(px>=252){int slot=px>=333?1:0;
-                        if(inputMode==0){armedSecondary=slot;
+                        if(!secondarySeen){
+                            beginGuide(TutorialRules.GUIDE_SECONDARY,slot);
+                        }else if(inputMode==0){
+                            armedSecondary=slot;
                             banner=SECONDARY_NAMES[slot]+" SCHARF";bannerTime=.9f;
                         }else useSecondary(slot);
                     }
@@ -1465,6 +1715,12 @@ public final class GameView extends View {
                 if(inside(px,py,55,408,310,58)){state=MENU;return true;}
                 return true;
             case SHOP:
+                if(shopIntroShowing){
+                    if(inside(px,py,89,467,242,58)){
+                        shopIntroShowing=false;shopIntroSeen=true;save();
+                    }
+                    return true;
+                }
                 for(int i=0;i<offers.size();i++)if(inside(px,py,20,205+i*62,380,55)){
                     buyOffer(i);return true;
                 }

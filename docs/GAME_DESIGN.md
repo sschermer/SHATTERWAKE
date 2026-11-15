@@ -1,4 +1,4 @@
-# SHATTERWAKE: playable prototype design (0.3.0-alpha)
+# SHATTERWAKE: playable prototype design (0.4.0-alpha)
 
 **Genre:** native Android portrait shooter with vertical scrolling and pseudo-isometric, procedurally drawn spaceships, asteroid objects and shadows. Designed for small touchscreens; no cloud services, no remote assets.
 
@@ -58,3 +58,19 @@
 - Bottom abilities: tap to activate shield/rapid/triple/plasma when charged.
 - Shop: tap purchase cards; WEITER to branching navigation (or finish at last sector).
 - At death: choose continue for half your stars (max two) or finish run.
+
+
+### Interactive onboarding (0.4 alpha)
+- For a profile without completed tutorial, starting a new run launches an isolated training mission with no hostile waves.
+- Movement, a harmless target dummy, a collectible star, shield ability and a guided rocket are each learned by performing the actual action.
+- The same tutorial remains replayable from the menu; its training stars and ability charges do not transfer to the real run.
+- After the first discovery of each ability pickup, game-world timers and combat freeze. The description remains visible until the real corresponding HUD action or an explicit accessibility skip.
+- Secondary weapon instructions match the chosen one-finger/two-finger control profile.
+- The first shop displays a separate in-context explanation of stars and run-limited upgrades.
+- Local preferences record completion/learned abilities; no server tracking.
+
+### Sprite rendering (0.4 alpha)
+- Runtime-generated original 192x192-pixel alpha-transparent Bitmap sprites are cached for the fighter, enemy silhouettes and five modular boss parts.
+- Shading, inset panels, engine nacelles, cockpit windows and rim light give a more detailed appearance than the former directly drawn low-poly shapes.
+- Real photorealistic 2.5D models, individual animated sprite sheets and art-direction review remain future development work.
+- Does not add any imported stock media, external fonts, music or runtime dependencies.

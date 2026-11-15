@@ -1,13 +1,13 @@
 # SHATTERWAKE — third-party and asset notices
 
-Inventory date: 2026-11-15. Version: 0.3.0-alpha.
+Inventory date: 2026-11-15. Version: 0.4.0-alpha.
 
 ## Assets included in the APK
 
 | Category | Origin | Rights / licensing position |
 |---|---|---|
 | Game and UI code | Newly written for SHATTERWAKE | Project `LICENSE` |
-| Player ship, enemies, worm segments, asteroids, HUD, stars, effects | Original Android Canvas geometry including layered nebulae, wrecks, crystals and structures, drawn in code | Project `LICENSE`; no imported artwork |
+| Player ship, enemies, worm segments, asteroids, HUD, stars, effects | Original project-drawn Android Canvas geometry and generated alpha-transparent Bitmap sprites (ships and boss modules), including layered nebulae, wrecks, crystals and structures; no stock-art source | Project `LICENSE`; no imported artwork |
 | Launcher icon (`ic_launcher.xml`) | Original vector paths | Project `LICENSE`; no imported image |
 | Sound effects | PCM synthesised at runtime from elementary sine waves | Original generated output; no imported samples |
 | Font | Android device's system sans-serif / sans-serif-condensed | System typeface, not redistributed as font file |
