@@ -889,6 +889,7 @@ public final class GameView extends View {
             drawWorld(c);drawEnemies(c);drawBoss(c);drawShots(c);drawPickups(c);drawParticles(c);
             drawPlayer(c);drawHud(c);
             drawBossTransition(c);
+            if(tutorialActive || guideKind!=TutorialRules.GUIDE_NONE)drawTutorialOverlay(c);
             if(state==PAUSE)drawPause(c);
         }else{
             if(state==MENU)drawMenu(c);
@@ -1414,7 +1415,8 @@ public final class GameView extends View {
         button(c,"NEUER DURCHLAUF",51,450,318,58,true);
         button(c,"EINSTELLUNGEN",51,524,318,54,false);
         button(c,"TECHNOLOGIE-ARCHIV",51,593,318,54,false);
-        textCenter(c,"PROTOTYP 0.3  ·  OFFLINE  ·  OHNE TRACKING",725,11,MUTED,false);
+        button(c,"TUTORIAL "+(tutorialComplete?"WIEDERHOLEN":"STARTEN"),51,663,318,47,false);
+        textCenter(c,"PROTOTYP 0.4 · OFFLINE · OHNE TRACKING",754,10,MUTED,false);
     }
     private void screenHeader(Canvas c,String title,String sub){
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);
@@ -1528,7 +1530,7 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "SHATTERWAKE 0.2.0-alpha",
+                "SHATTERWAKE 0.4.0-alpha",
                 "Originaler Quellcode und Vektorgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",
@@ -1546,17 +1548,155 @@ public final class GameView extends View {
                 i==0?GOLD:i>=9?CYAN:WHITE,Paint.Align.LEFT,i==0);
         button(c,"ZURÜCK",90,690,240,55,true);
     }
+    private void drawTutorialOverlay(Canvas c){
+        if(guideKind==TutorialRules.GUIDE_NONE && !tutorialActive)return;
+        if(guideKind!=TutorialRules.GUIDE_NONE){
+            box(c,0,0,W,650,0xC9071226);
+            String title,description,action;
+            boolean ability=guideKind==TutorialRules.GUIDE_ABILITY;
+            if(ability){
+                title=ABILITY_NAMES[Math.max(0,Math.min(3,guideId))];
+                String[] descriptions={
+                    "8 SEKUNDEN SCHUTZ VOR TREFFERN",
+                    "9 SEKUNDEN SCHNELLER SCHIESSEN",
+                    "9 SEKUNDEN DREIFACH-SCHUSS",
+                    "7 SEKUNDEN PLASMA-MUNITION"
+                };
+                description=descriptions[Math.max(0,Math.min(3,guideId))];
+                action="TIPPE UNTEN AUF "+title;
+            }else{
+                title="SCHWARMRAKETEN";
+                description="ZIELSUCHENDE GESCHOSSE MIT LADUNGEN";
+                action=inputMode==0?"RAKETE WAEHLEN, SCHIFF ZIEHEN, LOSLASSEN":"TIPPE UNTEN AUF RAKETE";
+            }
+            panel(c,22,210,376,278,0xFA0C2036,0xFF76D9FF,15);
+            txt(c,tutorialActive?"TRAINING · INTERAKTIV":"NEUE TECHNOLOGIE",210,245,14,GOLD,Paint.Align.CENTER,true);
+            textCenter(c,title,292,31,WHITE,true);
+            textCenter(c,description,328,14,MUTED,false);
+            if(ability)drawPowerupIcon(c,guideId,210,374,40);
+            else {
+                glow(c,210,371,38,0x665DD9FF,0x005DD9FF);
+                triangle(c,200,382,210,352,220,382,0xFF95DBF9);
+                line(c,210,354,210,335,0xFFF9C46D,4f);
+            }
+            textCenter(c,action,447,12,GOLD,true);
+            textCenter(c,"SPIEL PAUSIERT · ERST AKTION AUSFUEHREN",472,10,WHITE,false);
+            // Real HUD controls remain tappable. Outline the control to be used.
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3);
+            p.setColor((int)(idleTime*4)%2==0?GOLD:CYAN);
+            if(ability){
+                int left=13+guideId*100;
+                c.drawRoundRect(left,714,left+94,766,8,8,p);
+            }else{
+                c.drawRoundRect(250,656,329,706,8,8,p);
+            }
+            p.setStyle(Paint.Style.FILL);
+            if(!tutorialActive){
+                button(c,"UEBERSPRINGEN",114,552,192,46,false);
+            }
+        }else if(tutorialActive){
+            String title="",detail="";
+            switch(tutorialStep){
+                case TutorialRules.MOVE:
+                    title="1/5 · STEUERN";
+                    detail="FINGER AUF DAS SCHIFF, NACH LINKS ODER RECHTS ZIEHEN";break;
+                case TutorialRules.TARGET:
+                    title="2/5 · ZIELEN";
+                    detail="SCHIFF UNTER DEN TRAININGSGEGNER BEWEGEN";break;
+                case TutorialRules.COLLECT_STAR:
+                    title="3/5 · STERNE";
+                    detail="SAMMLE DEN GELBEN STERN · SHOP-WAEHRUNG";break;
+                case TutorialRules.COMPLETE:
+                    box(c,0,0,W,650,0xC9071226);
+                    panel(c,30,229,360,274,0xF80D263B,0xFF7CE6C4,15);
+                    textCenter(c,"TRAINING ABSOLVIERT",301,26,GREEN,true);
+                    textCenter(c,"DU KENNST JETZT DIE GRUNDLAGEN",343,14,WHITE,false);
+                    textCenter(c,"STERNE · WAFFEN · FAEHIGKEITEN",371,13,GOLD,true);
+                    button(c,"SEKTOR 1 STARTEN",58,419,304,57,true);
+                    break;
+                default:break;
+            }
+            if(tutorialStep!=TutorialRules.COMPLETE){
+                panel(c,18,103,384,89,0xF5122944,0xAA67B5D8,11);
+                textCenter(c,title,137,21,GOLD,true);
+                textCenter(c,detail,165,12,WHITE,false);
+            }
+        }
+        if(tutorialActive){
+            panel(c,297,18,109,39,0xDD26364C,0xFF6889A9,7);
+            textCenterAt(c,"SKIP",351,44,13,WHITE);
+        }
+    }
+    private void drawPowerupIcon(Canvas c,int which,float px,float py,float radius){
+        c.save();c.translate(px,py);
+        int color=which==0?0xFF73E8FF:which==1?0xFFFFBE67:
+                which==2?0xFF93F6A0:0xFFC597FF;
+        glow(c,0,0,radius*1.25f,(color&0x00FFFFFF)|0x55000000,
+                color&0x00FFFFFF);
+        switch(which){
+            case 0:
+                shadedPolygon(c,new float[]{0,-radius,-radius*.65f,-radius*.55f,
+                        -radius*.52f,radius*.54f,0,radius,radius*.52f,radius*.54f,
+                        radius*.65f,-radius*.55f},
+                        0xFFE4FBFF,0xFF1E7895,color);
+                break;
+            case 1:
+                polygon(c,new float[]{-radius*.22f,-radius,radius*.5f,-radius*.1f,
+                        radius*.11f,radius*.02f,radius*.36f,radius,
+                        -radius*.55f,radius*.13f,-radius*.1f,-radius*.12f},color);
+                break;
+            case 2:
+                for(int i=-1;i<=1;i++){
+                    line(c,i*radius*.38f,radius*.75f,i*radius*.38f,-radius*.72f,color,4);
+                    circle(c,i*radius*.38f,-radius*.8f,5,WHITE);
+                }
+                break;
+            default:
+                glow(c,0,0,radius,0x99B06CFF,0x00B06CFF);
+                circle(c,0,0,radius*.53f,color);
+                circle(c,0,0,radius*.23f,WHITE);break;
+        }
+        c.restore();
+    }
     private boolean inside(float px,float py,float l,float t,float w,float h){
         return px>=l&&px<=l+w&&py>=t&&py<=t+h;
     }
     private boolean tap(float px,float py){
         switch(state){
             case MENU:
-                if(inside(px,py,51,450,318,58)){startRun();return true;}
+                if(inside(px,py,51,450,318,58)){
+                    if(!tutorialComplete)startTutorial();else startRun();
+                    return true;
+                }
                 if(inside(px,py,51,524,318,54)){state=SETTINGS;return true;}
                 if(inside(px,py,51,593,318,54)){state=ARCHIVE;return true;}
+                if(inside(px,py,51,663,318,47)){startTutorial();return true;}
                 return true;
             case PLAY:
+                if(tutorialActive && inside(px,py,297,18,109,39)){finishTutorial();return true;}
+                if(tutorialActive && tutorialStep==TutorialRules.COMPLETE){
+                    if(inside(px,py,58,419,304,57))finishTutorial();
+                    return true;
+                }
+                if(guideKind!=TutorialRules.GUIDE_NONE){
+                    if(!tutorialActive && inside(px,py,114,552,192,46)){dismissGuide();return true;}
+                    if(guideKind==TutorialRules.GUIDE_ABILITY){
+                        if(py>=716&&px>=13&&px<413){
+                            int a=(int)((px-13)/100);
+                            if(a==guideId)useAbility(a);
+                        }
+                        return true;
+                    }
+                    if(py>=650&&py<707&&px>=252){
+                        int slot=px>=333?1:0;
+                        if(slot==guideId){
+                            if(inputMode==0)armedSecondary=slot;
+                            else useSecondary(slot);
+                        }
+                        return true;
+                    }
+                    return !(inputMode==0&&py<650);
+                }
                 if(inside(px,py,365,51,36,31)){state=PAUSE;return true;}
                 if(py>=716){
                     int a=(int)((px-13)/100);
@@ -1567,6 +1707,9 @@ public final class GameView extends View {
                         if(inputMode==0){armedSecondary=slot;
                             banner=SECONDARY_NAMES[slot]+" SCHARF";bannerTime=.9f;
                         }else useSecondary(slot);
+                        if(!secondarySeen && guideKind==TutorialRules.GUIDE_NONE){
+                            beginGuide(TutorialRules.GUIDE_SECONDARY,slot);
+                        }
                     }
                     return true;
                 }
