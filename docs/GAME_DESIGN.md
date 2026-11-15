@@ -1,4 +1,4 @@
-# SHATTERWAKE: playable prototype design (0.1.0-alpha)
+# SHATTERWAKE: playable prototype design (0.2.0-alpha)
 
 **Genre:** native Android portrait shooter with vertical scrolling and pseudo-isometric, procedurally drawn spaceships, asteroid objects and shadows. Designed for small touchscreens; no cloud services, no remote assets.
 
@@ -14,6 +14,16 @@
 - Genuine branching paths: stage 1 junkyard worm boss; stage 2 either machine colony fortress or nebula prism leviathan; stage 3 either storm hive or Null Citadel architect. Five distinct scenes/boss structures, three stages per full run. Encounter waves and special offers vary.
 - Up to two continues at death; each costs **half** of current remaining stars rounded up, keeps shop upgrades and returns hull to full.
 - Boss modular anatomy: weapon nodes, connecting nodes, cargo and reactor nodes; destroyable parts lead to rewards, changed attacks and a splitting fragment in worm fight. Bosses have changing phases.
+
+### Early-game balance targets (0.2 alpha)
+
+- Enemy fire is disabled during the initial 18 seconds of sector 1 to let players learn movement.
+- The first 20 seconds permit at most 3 concurrent enemies, increasing in tiers to 8 later in sector 1.
+- First-stage enemy shots are capped at 3 active projectiles through second 55, and capped at 5 through second 90.
+- Enemies appear more slowly, one at a time in opening waves, with reduced velocity and hull strength.
+- Starter hull increased to 6; damage invulnerability increased to 2.4 seconds.
+- Boss salvo density reduced, with slower projectiles, fewer volleys and longer pauses.
+- These are *tuning assumptions*, not yet validated by measured phone playtests.
 
 ### Explicit prototype compromises / next iteration
 
