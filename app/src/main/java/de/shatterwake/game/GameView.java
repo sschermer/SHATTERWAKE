@@ -825,11 +825,18 @@ public final class GameView extends View {
         }
     }
     private void asteroid(Canvas c,float sx,float sy,float r){
-        polygon(c,new float[]{sx-r,sy-r*.4f,sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,
-                sx+r,sy-r*.05f,sx+r*.6f,sy+r*.84f,sx-r*.6f,sy+r},0xFF32445E);
-        polygon(c,new float[]{sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,sx+r*.1f,sy-r*.1f,
-                sx-r*.6f,sy+r},0xFF4F6074);
-        line(c,sx-r*.2f,sy-r*.3f,sx+r*.33f,sy+r*.18f,0x776E8394,1.4f);
+        glow(c,sx,sy+r*.45f,r*1.45f,0x22000000,0x00000000);
+        shadedPolygon(c,new float[]{sx-r,sy-r*.4f,sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,
+                sx+r,sy-r*.05f,sx+r*.6f,sy+r*.84f,sx-r*.6f,sy+r},
+                0xFF8293A7,0xFF24354B,0xFF64768D);
+        shadedPolygon(c,new float[]{sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,
+                sx+r*.1f,sy-r*.1f,sx-r*.6f,sy+r},
+                0xFF8497A7,0xFF43586D,0);
+        shadedPolygon(c,new float[]{sx+r*.42f,sy-r*.78f,sx+r,sy-r*.05f,
+                sx+r*.6f,sy+r*.84f,sx+r*.1f,sy-r*.1f},
+                0xFF566C83,0xFF273B57,0);
+        line(c,sx-r*.3f,sy-r*.18f,sx+r*.15f,sy+r*.05f,0x775D748B,1.6f);
+        glow(c,sx-r*.28f,sy-r*.33f,r*.2f,0x3A88BCD8,0x0088BCD8);
     }
     /**
      * Procedurally shaded pseudo-isometric craft. Every shape is project-owned;
@@ -971,18 +978,23 @@ public final class GameView extends View {
             float r=n.id==0?27:21;
             circle(c,0,7,r+4,0x55000000);
             int shell=boss.type==2?0xFF584B91:boss.type==3?0xFF445D82:0xFF426278;
-            polygon(c,new float[]{-r,-r*.30f,-r*.54f,-r*.80f,r*.52f,-r*.80f,
-                    r,r*.12f,r*.51f,r*.77f,-r*.55f,r*.77f},shell);
-            polygon(c,new float[]{-r*.54f,-r*.8f,r*.52f,-r*.8f,r*.78f,-r*.12f,
-                    0,r*.16f,-r*.81f,-r*.12f},0xFF7093A4);
+            shadedPolygon(c,new float[]{-r,-r*.30f,-r*.54f,-r*.80f,r*.52f,-r*.80f,
+                    r,r*.12f,r*.51f,r*.77f,-r*.55f,r*.77f},
+                    0xFFA0AFBE,shell,0xFFA0C6DA);
+            shadedPolygon(c,new float[]{-r*.54f,-r*.8f,r*.52f,-r*.8f,r*.78f,-r*.12f,
+                    0,r*.16f,-r*.81f,-r*.12f},0xFFABCAD5,0xFF4C687E,0);
+            line(c,-r*.79f,r*.14f,r*.77f,r*.14f,0xAA24374F,1.8f);
+            triangle(c,-r*.58f,r*.40f,0,r*.64f,r*.58f,r*.40f,0x443B98C5);
             if(n.id==0){
                 triangle(c,-14,-6,0,-19,14,-6,0xFFBD768A);
                 circle(c,0,1,10,RED);
                 circle(c,0,1,5,WHITE);
             } else {
                 int core=n.type==3?GOLD:n.type==2?GREEN:n.type==4?0xFFAE83FF:RED;
+                glow(c,0,0,17,0x883DDBE7,0x003DDBE7);
                 circle(c,0,0,10,0x884E1829);
                 circle(c,0,0,n.type==3?8:6,core);
+                circle(c,-2,-2,2,WHITE);
                 if(n.type==1){
                     triangle(c,-6,-11,0,-22,6,-11,0xFFF19EAD);
                 }else if(n.type==2){
@@ -999,8 +1011,11 @@ public final class GameView extends View {
     private void drawShots(Canvas c){
         for(Shot s:shots){
             if(s.hostile){
-                circle(c,s.x,s.y,s.radius+3,0x44FC5472);
+                glow(c,s.x,s.y,s.radius+13,0x55FF667F,0x00FF667F);
+                line(c,s.x-s.vx*.037f,s.y-s.vy*.037f,s.x,s.y,
+                        0x99FF8B9B,Math.max(1.5f,s.radius*.43f));
                 circle(c,s.x,s.y,s.radius,s.kind==4?0xFFFFAA76:0xFFFF7085);
+                circle(c,s.x,s.y,Math.max(1.5f,s.radius*.36f),WHITE);
             } else if(s.kind==2){
                 circle(c,s.x,s.y,11,0x4471E4FF);circle(c,s.x,s.y,6,GOLD);
                 line(c,s.x,s.y+7,s.x-s.vx*.05f,s.y-s.vy*.05f,0xFFED9F4B,3);
@@ -1016,7 +1031,7 @@ public final class GameView extends View {
             float pulse=(float)Math.sin(q.t*9)*1.8f;
             int col=q.kind==0?GOLD:q.kind==1?CYAN:q.kind==2?GREEN:
                     q.kind==3?0xFFFFA676:q.kind==4?0xFFBE91FF:0xFFB8F6FB;
-            circle(c,q.x,q.y,11+pulse,0x334FD0FF);
+            glow(c,q.x,q.y,16+pulse,0x5572CCF9,0x0072CCF9);
             if(q.kind==0){
                 float[] vertices=new float[20];
                 for(int k=0;k<10;k++){
