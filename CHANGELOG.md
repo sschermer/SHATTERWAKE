@@ -1,5 +1,15 @@
 # Changes
 
+## 0.4.0-alpha — 2026-11-16
+- Added a guided first-play mission (steering, targeting, star pickup, shield activation and secondary weapon use).
+- Persist tutorial completion and first-explanation state; replay tutorial from the main menu.
+- Pause simulation to explain each newly collected ability, requiring correct action at the original HUD control. Skip is accessible when needed.
+- Added first-shop orientation, ability and secondary glyphs, and active timer bars.
+- Replaced original simplified hull geometry with own transparent high-resolution cached sprites for fighter, six enemy classes and five boss module types. Added surface paneling, cockpit glazing, engine nozzles and lighting.
+- Gameplay difficulty and existing boss entrance untouched.
+- Updated test/build pipeline with pure-Java tutorial state-machine regression tests; no third-party assets or runtime libraries.
+
+
 ## 0.3.0-alpha — 2026-11-15
 - Corrected excessive ease of v0.2 with moderate enemy and projectile pressure; 9-second opening grace, faster spawn and gradual projectile caps.
 - Lower star rewards and much slower passive star supply; rebalanced progressive shop prices to prevent all-max upgrades by end of run.
