@@ -56,13 +56,10 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk out/SHATTERWAKE-v0.1.0-alpha-debug.apk
           cd out
           sha256sum SHATTERWAKE-v0.1.0-alpha-debug.apk > SHA256SUMS.txt
-      - name: Upload APK and checksum
-        uses: actions/upload-artifact@v4
-        with:
-          name: SHATTERWAKE-v0.1.0-alpha-APK
-          path: out/
-          if-no-files-found: error
-          retention-days: 90
+      - name: Verify installable APK and checksum
+        run: |
+          test -s out/SHATTERWAKE-v0.1.0-alpha-debug.apk
+          (cd out && sha256sum -c SHA256SUMS.txt)
       - name: Populate GitHub with readable sources after main branch merge
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -70,7 +67,11 @@ jobs:
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             rm -f project.bundle.b64
+            mkdir -p dist
+            cp out/SHATTERWAKE-v0.1.0-alpha-debug.apk dist/
+            cp out/SHA256SUMS.txt dist/
             git add -A
+            git add -f dist/SHATTERWAKE-v0.1.0-alpha-debug.apk
             git commit -m 'Expand verified Android source bundle' || true
             git push origin HEAD:main
           fi
