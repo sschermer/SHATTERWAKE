@@ -41,6 +41,7 @@ public final class GameView extends View {
     private static final String[] ABILITY_NAMES={"SCHILD","RAPID","DREIFACH","PLASMA"};
     private static final String[] SECONDARY_NAMES={"RAKETEN","EMP"};
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final SpriteAtlas atlas=new SpriteAtlas();
     private final Random random=new Random();
     private final SharedPreferences prefs;
     private final ArrayList<Enemy> enemies=new ArrayList<>();
@@ -1166,22 +1167,9 @@ public final class GameView extends View {
         triangle(c,4,18,15,18,9,20+flame,0xFFFAB367);
         triangle(c,-12,19,-7,19,-9,18+flame*.75f,WHITE);
         triangle(c,7,19,12,19,9,18+flame*.75f,WHITE);
-        // Offset lower hull makes the craft read as a thick physical object.
-        shadedPolygon(c,new float[]{0,-25,-12,-14,-33,10,-30,21,-12,15,0,26,12,15,30,21,33,10,12,-14},
-                0xFF183F62,0xFF0D2038,0xFF357DA5);
-        shadedPolygon(c,new float[]{0,-37,-12,-18,-31,11,-21,12,-9,4,0,14,9,4,21,12,31,11,12,-18},
-                0xFFB5E1E9,0xFF3B80A7,0xFF8EC5DE);
-        shadedPolygon(c,new float[]{0,-31,-7,-13,0,0,7,-13},
-                0xFF163D5D,0xFF081B37,0xFF73E4F8);
-        shadedPolygon(c,new float[]{-28,10,-16,6,-10,10,-20,16},
-                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
-        shadedPolygon(c,new float[]{28,10,16,6,10,10,20,16},
-                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
-        line(c,-12,-16,-21,11,0xFFDBF6FF,1.3f);
-        line(c,12,-16,21,11,0xFFDBF6FF,1.3f);
-        glow(c,0,-12,10,0x8888F4FF,0x0088F4FF);
-        circle(c,0,-12,3.5f,WHITE);
-        circle(c,-23,9,2.4f,GOLD);circle(c,23,9,2.4f,GOLD);
+        // Detailed 192px transparent sprite, with independently animated thrusters
+        // and protective shield painted at runtime.
+        atlas.drawPlayer(c,0,-2);
         if(droneLevel>0){
             for(int i=0;i<Math.min(3,droneLevel);i++){
                 float dx=(i-(Math.min(3,droneLevel)-1)/2f)*43;
@@ -1205,34 +1193,13 @@ public final class GameView extends View {
                 for(int j=0;j<4;j++){
                     float xx=(float)Math.sin(e.t*4+j*.8f)*10;
                     float yy=j*13;
-                    glow(c,xx,yy,14,0x6049A4E2,0x0049A4E2);
-                    shadedPolygon(c,new float[]{xx,yy-12,xx-12,yy,xx,yy+12,xx+12,yy},
-                            0xFF93B1BB,0xFF2E4F68,0xFF92C5D9);
-                    circle(c,xx,yy,4,GOLD);
+                    glow(c,xx,yy,16,0x6049A4E2,0x0049A4E2);
+                    c.save();c.translate(xx,yy);
+                    atlas.drawModule(c,2,16f);
+                    c.restore();
                 }
-            }else if(e.kind==3){
-                shadedPolygon(c,new float[]{0,-31,-32,-6,-26,22,0,17,26,22,32,-6},
-                        0xFFB0A3A4,0xFF4C506A,0xFFE0B7B8);
-                shadedPolygon(c,new float[]{0,-29,-14,-4,0,12,14,-4},
-                        0xFFFFBF9A,0xFF9B4058,0xFFFFC3AB);
-                glow(c,0,2,14,0x99FFB080,0x00FFB080);
-                circle(c,0,2,5,WHITE);
-            }else if(e.kind==5){
-                shadedPolygon(c,new float[]{0,-29,-27,-2,-17,25,0,19,17,25,27,-2},
-                        0xFF8B9ABF,0xFF403B73,0xFFB3A4D9);
-                glow(c,0,2,22,0x77588CFB,0x00588CFB);
-                circle(c,0,2,12,0xFF45366F);circle(c,0,2,6,core);
-                line(c,-21,6,-6,11,0xFFA3BCEF,2);
-                line(c,21,6,6,11,0xFFA3BCEF,2);
-            }else{
-                shadedPolygon(c,new float[]{0,-23,-14,-4,-24,6,-19,17,-4,11,0,22,4,11,19,17,24,6,14,-4},
-                        0xFF9D8E9F,0xFF473B60,0xFFBE9CB6);
-                shadedPolygon(c,new float[]{0,-19,-7,0,-15,8,0,12,15,8,7,0},
-                        0xFFFFA4AD,0xFF8C476D,0xFFFFC2C4);
-                line(c,-19,9,-7,5,0xFFFFD9D8,1.3f);
-                line(c,19,9,7,5,0xFFFFD9D8,1.3f);
-                glow(c,0,-3,10,0x88FFC78C,0x00FFC78C);
-                circle(c,0,-3,3,GOLD);
+            }else {
+                atlas.drawEnemy(c,atlas.enemies[Math.min(5,Math.max(0,e.kind))],0,0,e.radius);
             }
             if(e.hp<e.maxHp){
                 box(c,-17,-35,34,3,0xDD111B30);
@@ -1256,14 +1223,8 @@ public final class GameView extends View {
             c.save();c.translate(n.x,n.y);
             float r=n.id==0?27:21;
             circle(c,0,7,r+4,0x55000000);
-            int shell=boss.type==2?0xFF584B91:boss.type==3?0xFF445D82:0xFF426278;
-            shadedPolygon(c,new float[]{-r,-r*.30f,-r*.54f,-r*.80f,r*.52f,-r*.80f,
-                    r,r*.12f,r*.51f,r*.77f,-r*.55f,r*.77f},
-                    0xFFA0AFBE,shell,0xFFA0C6DA);
-            shadedPolygon(c,new float[]{-r*.54f,-r*.8f,r*.52f,-r*.8f,r*.78f,-r*.12f,
-                    0,r*.16f,-r*.81f,-r*.12f},0xFFABCAD5,0xFF4C687E,0);
-            line(c,-r*.79f,r*.14f,r*.77f,r*.14f,0xAA24374F,1.8f);
-            triangle(c,-r*.58f,r*.40f,0,r*.64f,r*.58f,r*.40f,0x443B98C5);
+            // Individual hard-surface sprite per modular component.
+            atlas.drawModule(c,n.type,r*1.28f);
             if(n.id==0){
                 triangle(c,-14,-6,0,-19,14,-6,0xFFBD768A);
                 circle(c,0,1,10,RED);
