@@ -1110,10 +1110,8 @@ public final class GameView extends View {
     }
     private void drawMenu(Canvas c){
         logo(c,172,43);
-        c.save();c.translate(210,320);c.scale(2.3f,2.3f);
-        polygon(c,new float[]{0,-36,-12,-15,-31,13,-25,22,-7,11,0,27,7,11,25,22,31,13,12,-15},0xFF286187);
-        polygon(c,new float[]{0,-34,-9,-10,-19,11,-1,10,19,11,9,-10},CYAN);
-        triangle(c,-7,18,0,45,7,18,GOLD);
+        c.save();c.translate(210,309);c.scale(1.8f,1.8f);
+        c.translate(-x,-y);drawPlayer(c);
         c.restore();
         textCenter(c,"VERTIKALER SCI-FI ARCADE-SHOOTER",411,13,MUTED,false);
         button(c,"NEUER DURCHLAUF",51,450,318,58,true);
