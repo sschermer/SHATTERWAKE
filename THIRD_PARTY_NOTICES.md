@@ -1,6 +1,6 @@
 # SHATTERWAKE — third-party and asset notices
 
-Inventory date: 2026-11-15. Version: 0.1.0-alpha.
+Inventory date: 2026-11-15. Version: 0.2.0-alpha.
 
 ## Assets included in the APK
 
