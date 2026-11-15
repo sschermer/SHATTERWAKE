@@ -1,6 +1,7 @@
 ## 0.5.0-alpha — understandable training and high-visibility plasma
 
 - Replace abruptly finishing five-step onboarding with nine guided tasks and a deliberate WEITER checkpoint after every success.
+- Give each of the four power-ups 15 seconds of real, counted, playable training before offering the next lesson; include a timer/progress bar, durable firing targets and harmless shield-test shots. Keep real-run durations unchanged.
 - Add hands-on rapid-fire, triple-shot and plasma lessons. Plasma must destroy a visible stationary training enemy; missile lessons likewise end only after a practice kill.
 - Trigger missiles and EMP on a single tap in both control modes, removing the ambiguous arm-then-release interaction.
 - Give active plasma a pulsing violet ship aura/reactor, high-contrast wide projectiles and visible purple impact particles. A status label accompanies the active HUD icon.

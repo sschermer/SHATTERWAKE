@@ -6,7 +6,7 @@ Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight
 
 ## What's new in version 0.5
 
-- A paced **nine-step interactive tutorial** teaches steering, automatic fire, stars, shield, rapid fire, triple shot, plasma, its visible impact on a training target, and homing missiles. Each completed action stops at a **WEITER** confirmation, preventing sudden jumps. The last screen requires explicit confirmation to start sector 1.
+- A paced **nine-step interactive tutorial** teaches steering, automatic fire, stars, shield, rapid fire, triple shot, plasma, its visible impact on a training target, and homing missiles. **Each of the four power-ups now gets a full 15 seconds of active testing** after activation, with a visible countdown and real firing/target feedback. Only then does the **WEITER** confirmation unlock the next lesson. The last screen requires explicit confirmation to start sector 1.
 - **Plasma is unambiguously visible:** a pulsing violet aura and reactor on the fighter, thick luminous violet bolts with long trails, and purple impact particles on targets. Its charged HUD tile remains highlighted while active.
 - Guided missiles now fire with **one tap**, instead of a hard-to-understand select-then-release sequence, in both control layouts. They must actually destroy a practice target before the tutorial completes.
 - Each special ability is first introduced with a paused hint highlighting its real HUD button. Training is safe and does not consume a normal run.

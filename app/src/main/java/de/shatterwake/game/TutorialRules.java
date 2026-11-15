@@ -16,6 +16,19 @@ public final class TutorialRules {
             ACTION_PLASMA_TARGET_KILLED=7, ACTION_SECONDARY_TARGET_KILLED=8;
     public static final int GUIDE_NONE=-1, GUIDE_ABILITY=0, GUIDE_SECONDARY=1;
     public static final int ALL_ABILITIES=(1<<4)-1;
+    public static final float POWERUP_TRIAL_SECONDS=15f;
+    public static boolean isPowerupStep(int step) {
+        return step>=ACTIVATE_SHIELD && step<=ACTIVATE_PLASMA;
+    }
+    public static int abilityForStep(int step) {
+        return isPowerupStep(step)?step-ACTIVATE_SHIELD:-1;
+    }
+    public static int actionForStep(int step) {
+        return isPowerupStep(step)?ACTION_SHIELD_USED+step-ACTIVATE_SHIELD:-1;
+    }
+    public static float remainingTrialTime(float remaining,float elapsed) {
+        return Math.max(0f,remaining-Math.max(0f,elapsed));
+    }
     public static int nextStep(int step,int action) {
         switch(step) {
             case MOVE: return action==ACTION_MOVE?TARGET:MOVE;

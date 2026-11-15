@@ -44,6 +44,24 @@ public final class TutorialChecks {
         assert TutorialRules.allowSecondaryTap(TutorialRules.GUIDE_SECONDARY,0,0);
         assert !TutorialRules.allowSecondaryTap(TutorialRules.GUIDE_SECONDARY,1,0);
         assert TutorialRules.abilityExplanation(3).contains("Plasma");
-        System.out.println("PASS: nine deliberate lesson transitions, plasma and targeted controls");
+        assert TutorialRules.POWERUP_TRIAL_SECONDS==15f;
+        for(int i=0;i<4;i++){
+            int powerupStep=TutorialRules.ACTIVATE_SHIELD+i;
+            assert TutorialRules.isPowerupStep(powerupStep);
+            assert TutorialRules.abilityForStep(powerupStep)==i;
+            assert TutorialRules.actionForStep(powerupStep)==TutorialRules.ACTION_SHIELD_USED+i;
+            assert TutorialRules.nextStep(powerupStep,TutorialRules.ACTION_MOVE)==powerupStep;
+        }
+        assert !TutorialRules.isPowerupStep(TutorialRules.PLASMA_TARGET);
+        assert TutorialRules.abilityForStep(TutorialRules.FIRE_SECONDARY)==-1;
+        assert TutorialRules.actionForStep(TutorialRules.MOVE)==-1;
+        float trial=TutorialRules.POWERUP_TRIAL_SECONDS;
+        trial=TutorialRules.remainingTrialTime(trial,14f);
+        assert trial==1f : "The lesson must not advance before 15 active seconds";
+        assert TutorialRules.remainingTrialTime(trial,-5f)==1f : "A pause must not count";
+        trial=TutorialRules.remainingTrialTime(trial,1f);
+        assert trial==0f : "The lesson completes only at 15 seconds";
+        assert TutorialRules.remainingTrialTime(0f,1f)==0f;
+        System.out.println("PASS: nine deliberate lessons and four full 15-second power-up trials");
     }
 }

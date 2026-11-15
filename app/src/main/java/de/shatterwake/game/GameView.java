@@ -62,7 +62,8 @@ public final class GameView extends View {
     private int tutorialStep=TutorialRules.MOVE, tutorialNextStep=TutorialRules.MOVE;
     private int guideKind=TutorialRules.GUIDE_NONE, guideId=-1, seenAbilityMask=0;
     private boolean tutorialCheckpoint=false, tutorialRocketFired=false;
-    private float tutorialTravel=0f;
+    private float tutorialTravel=0f, tutorialPowerupRemaining=0f, tutorialShieldShotTimer=0f;
+    private boolean tutorialPowerupTrialStarted=false;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
     private int fireLevel=0, damageLevel=0, magnetLevel=0, shieldLevel=0, droneLevel=0;
     private int techMask=0, newlyUnlocked=-1, armedSecondary=-1;
@@ -237,6 +238,8 @@ public final class GameView extends View {
         tutorialStep=tutorialNextStep=TutorialRules.MOVE;
         tutorialCheckpoint=false;tutorialRocketFired=false;
         tutorialTravel=0;
+        tutorialPowerupTrialStarted=false;tutorialPowerupRemaining=0f;
+        tutorialShieldShotTimer=0f;
         enemies.clear();shots.clear();pickups.clear();particles.clear();
         x=targetX=W/2;y=targetY=570;
         stageTime=0;stars=0;score=0;
@@ -257,6 +260,9 @@ public final class GameView extends View {
         tutorialCheckpoint=false;
         tutorialStep=tutorialNextStep;
         tutorialRocketFired=false;
+        tutorialPowerupTrialStarted=false;tutorialPowerupRemaining=0f;
+        tutorialShieldShotTimer=0f;
+        shieldTime=rapidTime=tripleTime=plasmaTime=0f;
         enemies.clear();shots.clear();pickups.clear();
         shootTimer=0f;
         if(tutorialStep==TutorialRules.TARGET){
@@ -268,11 +274,15 @@ public final class GameView extends View {
             star.vy=0;pickups.add(star);
         }else if(tutorialStep>=TutorialRules.ACTIVATE_SHIELD
                 && tutorialStep<=TutorialRules.ACTIVATE_PLASMA){
-            int id=tutorialStep-TutorialRules.ACTIVATE_SHIELD;
+            int id=TutorialRules.abilityForStep(tutorialStep);
             abilityCharges[id]=Math.max(1,abilityCharges[id]);
-            if(id==1)shieldTime=0;
-            if(id==2)rapidTime=0;
-            if(id==3)tripleTime=0;
+            // A sturdy stationary target lets the player see actual rapid,
+            // triple and plasma hits for the entire practice window.
+            if(id>0){
+                Enemy target=new Enemy(3,x>W/2?100:320,267,20000);
+                target.vy=0;target.shoot=9999;target.value=0;
+                enemies.add(target);
+            }
             beginGuide(TutorialRules.GUIDE_ABILITY,id);
         }else if(tutorialStep==TutorialRules.PLASMA_TARGET){
             plasmaTime=Math.max(plasmaTime,7f);
@@ -309,12 +319,45 @@ public final class GameView extends View {
         x+=(targetX-x)*Math.min(1,dt*16f);
         y+=(targetY-y)*Math.min(1,dt*16f);
         x=clamp(x,24,W-24);y=clamp(y,120,FIELD_BOTTOM-22);
-        if(tutorialStep==TutorialRules.TARGET||tutorialStep==TutorialRules.PLASMA_TARGET){
-            shootTimer-=dt;
-            if(shootTimer<=0){firePrimary();shootTimer=GameRules.fireInterval(0,false);}
+        boolean testingPowerup=tutorialPowerupTrialStarted
+                && TutorialRules.isPowerupStep(tutorialStep);
+        if(testingPowerup){
+            // The 15 seconds count only during active gameplay, not while a
+            // guide, confirmation, or the Android pause screen is visible.
+            tutorialPowerupRemaining=TutorialRules.remainingTrialTime(
+                    tutorialPowerupRemaining,dt);
+            int ability=TutorialRules.abilityForStep(tutorialStep);
+            if(ability==0)shieldTime=tutorialPowerupRemaining;
+            else if(ability==1)rapidTime=tutorialPowerupRemaining;
+            else if(ability==2)tripleTime=tutorialPowerupRemaining;
+            else if(ability==3)plasmaTime=tutorialPowerupRemaining;
+            if(tutorialPowerupRemaining<=0f){
+                tutorialAction(TutorialRules.actionForStep(tutorialStep));
+                return;
+            }
         }
-        if(tutorialStep==TutorialRules.TARGET||tutorialStep==TutorialRules.COLLECT_STAR
-                ||tutorialStep==TutorialRules.PLASMA_TARGET||tutorialStep==TutorialRules.FIRE_SECONDARY){
+        // Fire normally during every practice window, including the rapid-fire
+        // rate boost and the extra barrels of the triple-shot upgrade.
+        if(testingPowerup||tutorialStep==TutorialRules.TARGET
+                ||tutorialStep==TutorialRules.PLASMA_TARGET){
+            shootTimer-=dt;
+            if(shootTimer<=0){
+                firePrimary();
+                shootTimer=GameRules.fireInterval(0,rapidTime>0);
+            }
+        }
+        if(testingPowerup && tutorialStep==TutorialRules.ACTIVATE_SHIELD){
+            // Harmless incoming training shots visibly strike the active shield.
+            tutorialShieldShotTimer-=dt;
+            if(tutorialShieldShotTimer<=0){
+                shots.add(new Shot(x,y-165f,0f,190f,1f,1,true));
+                tutorialShieldShotTimer=1.55f;
+            }
+        }
+        if(testingPowerup||tutorialStep==TutorialRules.TARGET
+                ||tutorialStep==TutorialRules.COLLECT_STAR
+                ||tutorialStep==TutorialRules.PLASMA_TARGET
+                ||tutorialStep==TutorialRules.FIRE_SECONDARY){
             updateShots(dt);
             updatePickups(dt);
         }
@@ -520,6 +563,9 @@ public final class GameView extends View {
     private void useAbility(int which){
         if(which<0||which>3||abilityCharges[which]<=0||state!=PLAY)return;
         if(!TutorialRules.allowAbilityTap(guideKind,which,guideId))return;
+        if(tutorialActive && (!TutorialRules.isPowerupStep(tutorialStep)
+                || TutorialRules.abilityForStep(tutorialStep)!=which
+                || tutorialPowerupTrialStarted))return;
         abilityCharges[which]--;
         switch(which){
             case 0:shieldTime=Math.max(shieldTime,8f);break;
@@ -534,14 +580,15 @@ public final class GameView extends View {
         if(guideKind==TutorialRules.GUIDE_ABILITY)dismissGuide();
         else save();
         if(tutorialActive){
-            if(tutorialStep==TutorialRules.ACTIVATE_SHIELD && which==0)
-                tutorialAction(TutorialRules.ACTION_SHIELD_USED);
-            else if(tutorialStep==TutorialRules.ACTIVATE_RAPID && which==1)
-                tutorialAction(TutorialRules.ACTION_RAPID_USED);
-            else if(tutorialStep==TutorialRules.ACTIVATE_TRIPLE && which==2)
-                tutorialAction(TutorialRules.ACTION_TRIPLE_USED);
-            else if(tutorialStep==TutorialRules.ACTIVATE_PLASMA && which==3)
-                tutorialAction(TutorialRules.ACTION_PLASMA_USED);
+            // Activation starts the lesson. Only 15 seconds of actual practice
+            // may unlock the next WEITER confirmation.
+            tutorialPowerupTrialStarted=true;
+            tutorialPowerupRemaining=TutorialRules.POWERUP_TRIAL_SECONDS;
+            tutorialShieldShotTimer=.65f;
+            if(which==0)shieldTime=tutorialPowerupRemaining;
+            else if(which==1)rapidTime=tutorialPowerupRemaining;
+            else if(which==2)tripleTime=tutorialPowerupRemaining;
+            else plasmaTime=tutorialPowerupRemaining;
         }
     }
     private void fireEnemy(float ex,float ey,float tx,float ty,int type){
@@ -770,6 +817,9 @@ public final class GameView extends View {
             if(s.x<-45||s.x>W+45||s.y<-80||s.y>H+35||s.age>4){shots.remove(i);continue;}
             if(s.hostile){
                 if(dist2(s.x,s.y,x,y)<(10+s.radius)*(10+s.radius)){
+                    if(tutorialActive && tutorialPowerupTrialStarted
+                            && tutorialStep==TutorialRules.ACTIVATE_SHIELD)
+                        explode(x,y,CYAN,6);
                     takeHit(1);shots.remove(i);
                 }
                 continue;
@@ -1450,6 +1500,10 @@ public final class GameView extends View {
             txt(c,""+abilityCharges[i]+"x",xx+59,754,13,abilityCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
             float activeLeft=i==0?shieldTime:i==1?rapidTime:i==2?tripleTime:plasmaTime;
             float maxTime=i==0?8f:i==3?7f:9f;
+            if(tutorialPowerupTrialStarted && TutorialRules.abilityForStep(tutorialStep)==i){
+                activeLeft=tutorialPowerupRemaining;
+                maxTime=TutorialRules.POWERUP_TRIAL_SECONDS;
+            }
             if(activeLeft>0){
                 box(c,xx+5,760,84,2,0xFF14374F);
                 box(c,xx+5,760,84*clamp(activeLeft/maxTime,0,1),2,CYAN);
@@ -1641,7 +1695,14 @@ public final class GameView extends View {
                     "9 SEKUNDEN DREIFACH-SCHUSS",
                     "7 SEKUNDEN VIOLETTE PLASMA-GESCHOSSE"
                 };
-                description=descriptions[Math.max(0,Math.min(3,guideId))];
+                String[] trainingDescriptions={
+                    "15 SEK: SCHILD WEHRT TRAININGSSCHUESSE AB",
+                    "15 SEK: SCHNELLFEUER AM ZIEL TESTEN",
+                    "15 SEK: DREI SCHUESSE GLEICHZEITIG",
+                    "15 SEK: VIOLETTE PLASMA-TREFFER TESTEN"
+                };
+                description=(tutorialActive?trainingDescriptions:descriptions)
+                        [Math.max(0,Math.min(3,guideId))];
                 action="JETZT UNTEN AUF "+title+" TIPPEN";
             }else{
                 title="SCHWARMRAKETEN";
@@ -1681,10 +1742,10 @@ public final class GameView extends View {
                     "DU BEHERRSCHST DIE SCHIFFSSTEUERUNG",
                     "DIE HAUPTWAFFE SCHIESST AUTOMATISCH",
                     "STERNE SIND DIE SHOP-WAEHRUNG",
-                    "DER SCHILD SCHUETZT DICH",
-                    "SCHNELLFEUER ERHOEHT DIE FEUERRATE",
-                    "DREIFACH GIBT DIR MEHR GESCHOSSE",
-                    "DU SIEHST JETZT DEN PLASMA-EFFEKT",
+                    "SCHILD 15 SEKUNDEN ERPROBT",
+                    "SCHNELLFEUER 15 SEKUNDEN GETESTET",
+                    "DREIFACHSCHUSS 15 SEKUNDEN GETESTET",
+                    "PLASMA 15 SEKUNDEN GETESTET",
                     "PLASMA TRIFFT MIT VIOLETTEN IMPULSEN",
                     "DIE RAKETEN FINDEN IHR ZIEL SELBST"
                 };
@@ -1720,6 +1781,14 @@ public final class GameView extends View {
                         detail="ZUM ZIEL FLIEGEN · DIE WAFFE FEUERT SELBST";break;
                     case TutorialRules.COLLECT_STAR:
                         detail="ZUM GELBEN STERN FLIEGEN UND IHN EINSAMMELN";break;
+                    case TutorialRules.ACTIVATE_SHIELD:
+                        detail="SCHILD: TRAININGSSCHUESSE ABWEHREN";break;
+                    case TutorialRules.ACTIVATE_RAPID:
+                        detail="SCHNELLFEUER: MEHR TREFFER PRO SEKUNDE";break;
+                    case TutorialRules.ACTIVATE_TRIPLE:
+                        detail="DREIFACH: DREI SCHUESSE PRO SALVE";break;
+                    case TutorialRules.ACTIVATE_PLASMA:
+                        detail="PLASMA: VIOLETTE TREFFER AM ZIEL";break;
                     case TutorialRules.PLASMA_TARGET:
                         detail="ZUM ZIEL FLIEGEN · VIOLETTE TREFFER BEOBACHTEN";break;
                     case TutorialRules.FIRE_SECONDARY:
@@ -1727,10 +1796,19 @@ public final class GameView extends View {
                                 "RAKETE UNTEN RECHTS ANTIPPEN";break;
                     default:break;
                 }
-                panel(c,18,103,384,89,0xF5122944,0xAA67B5D8,11);
+                boolean practicing=TutorialRules.isPowerupStep(tutorialStep)
+                        && tutorialPowerupTrialStarted;
+                panel(c,18,103,384,practicing?115:89,0xF5122944,0xAA67B5D8,11);
                 textCenter(c,(tutorialStep+1)+"/"+TutorialRules.TOTAL_STEPS+" · "+
                         tutorialStepName(tutorialStep),137,20,GOLD,true);
                 textCenter(c,detail,165,12,WHITE,false);
+                if(practicing){
+                    textCenter(c,"NOCH "+(int)Math.ceil(tutorialPowerupRemaining)
+                            +" SEKUNDEN TESTZEIT",188,13,GOLD,true);
+                    box(c,53,202,314,7,0xFF244960);
+                    box(c,53,202,314*clamp(tutorialPowerupRemaining
+                            /TutorialRules.POWERUP_TRIAL_SECONDS,0f,1f),7,CYAN);
+                }
             }
         }
         if(tutorialActive){
