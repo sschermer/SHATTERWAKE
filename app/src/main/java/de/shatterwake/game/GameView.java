@@ -78,7 +78,7 @@ public final class GameView extends View {
             this.kind=kind;this.x=x;this.y=y;this.hp=hp;maxHp=hp;
             radius=kind==3?25:kind==5?24:kind==6?24:15;
             value=(kind==3||kind==5)?45:kind==6?28:19;
-            shoot=.9f+(kind%3)*.37f;
+            shoot=2.2f+(kind%3)*.55f;
         }
     }
     private static final class Shot {
@@ -117,9 +117,9 @@ public final class GameView extends View {
             int count=type==0?12:type==1?9:type==2?8:type==3?10:11;
             for(int i=0;i<count;i++) {
                 int part=i==0?0:(i%5==0?3:(i%4==0?2:(i%3==0?4:1)));
-                nodes.add(new Node(i,part, i==0?170f+(tier-1)*50:45f+(tier-1)*18));
+                nodes.add(new Node(i,part, i==0?135f+(tier-1)*50:39f+(tier-1)*18));
             }
-            hp=520+(tier-1)*350;
+            hp=445+(tier-1)*315;
             maxHp=hp;
         }
     }
@@ -198,7 +198,7 @@ public final class GameView extends View {
     @Override protected void onDetachedFromWindow(){super.onDetachedFromWindow();if(soundPool!=null)soundPool.release();}
 
     private void startRun(){
-        stage=1;world=0;stars=0;score=0;hp=maxHp=5;continuesUsed=0;
+        stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
         fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=0;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
@@ -208,26 +208,29 @@ public final class GameView extends View {
     private void startWorld(int next){
         world=next;stage=GameRules.worldTier(world);
         enemies.clear();shots.clear();pickups.clear();particles.clear();
-        boss=null;bossActive=false;stageTime=0;spawnTimer=0.8f;starTimer=2.7f;
+        boss=null;bossActive=false;stageTime=0;spawnTimer=2.5f;starTimer=2.7f;
         shootTimer=0;secondaryRegen=0;droneShootTimer=0;
-        x=targetX=W/2;y=targetY=573;invulnerable=2.5f;
+        x=targetX=W/2;y=targetY=573;invulnerable=4.0f;
         state=PLAY;flashTime=.7f;
         banner="SEKTOR "+stage+" · "+WORLD_NAMES[world];bannerTime=3.1f;
     }
     private float rnd(float lo,float hi){return lo+random.nextFloat()*(hi-lo);}
     private void spawnEnemy(){
-        if(enemies.size()>=18)return;
+        if(enemies.size()>=GameRules.enemyCap(stage,stageTime))return;
         int tier=GameRules.worldTier(world);
         int kind=random.nextInt(100);
         kind=kind<33?0:kind<54?1:kind<74?2:kind<85?3:kind<95?4:5;
         if(stage==1 && kind==5)kind=1;
-        int count=kind==3||kind==5?1:(random.nextFloat()<.48f?3:2);
+        if(stage==1 && stageTime<25f)kind=random.nextBoolean()?0:1;
+        int count=(stage==1 && stageTime<26f)?1:(kind==3||kind==5?1:(random.nextFloat()<.28f?2:1));
+        count=Math.min(count,GameRules.enemyCap(stage,stageTime)-enemies.size());
         float base=rnd(45,365);
         for(int i=0;i<count;i++) {
             float xx=clamp(base+(i-(count-1)/2f)*44,30,W-30);
-            Enemy e=new Enemy(kind,xx,-40-i*27,20+tier*11+(kind>=3?40:0));
+            Enemy e=new Enemy(kind,xx,-40-i*27,14+tier*8+(kind>=3?30:0));
             e.phase=rnd(0,6.28f);e.vx=random.nextBoolean()?1:-1;
-            e.vy=rnd(48,75)+tier*14;e.fragments=kind==6?4:0;
+            e.vy=(rnd(48,75)+tier*12)*.75f;e.fragments=kind==6?4:0;
+            e.shoot=rnd(2.2f,4.2f);
             enemies.add(e);
         }
     }
@@ -262,7 +265,7 @@ public final class GameView extends View {
         int absorbed=Math.min(shieldLevel,damage);
         damage=Math.max(0,damage-absorbed);
         if(damage==0){invulnerable=.45f;return;}
-        hp-=damage;invulnerable=1.5f;flashTime=.3f;
+        hp-=damage;invulnerable=2.4f;flashTime=.3f;
         explode(x,y,CYAN,13);sound(3);vibrate(90);
         if(hp<=0){hp=0;state=DEAD;save();}
     }
@@ -370,32 +373,36 @@ public final class GameView extends View {
         float dx=tx-ex,dy=ty-ey;
         float len=(float)Math.sqrt(dx*dx+dy*dy);
         if(len<.01f)len=1;
-        float speed=type==1?138:112+stage*16;
-        if(shots.size()<180)shots.add(new Shot(ex,ey,dx/len*speed,dy/len*speed,1,type==1?4:1,true));
+        int active=0;
+        for(Shot q:shots)if(q.hostile)active++;
+        if(active>=GameRules.hostileShotCap(stage,stageTime,bossActive))return;
+        float speed=type==1?102:(76+stage*12);
+        shots.add(new Shot(ex,ey,dx/len*speed,dy/len*speed,1,type==1?4:1,true));
     }
     private void bossAttack(){
         if(boss==null)return;
+        int active=0;for(Shot shot:shots)if(shot.hostile)active++;
+        if(active>=GameRules.hostileShotCap(stage,stageTime,true)){boss.fireTimer=.4f;return;}
         int live=0;
         for(Node n:boss.nodes)if(n.hp>0&&n.type==1)live++;
         if(live==0){boss.fireTimer=1.25f;return;}
-        int amount=boss.phase==1?3:boss.phase==2?5:7;
-        if(world==1||world==4)amount+=2;
+        int amount=GameRules.bossVolleyCount(boss.phase,stage);
         float start=-.5f;
         for(int i=0;i<amount;i++){
             float a=start+i/(float)Math.max(1,amount-1);
             float base=(float)Math.atan2(x-210,y-225);
             float theta=base+a*.9f;
             if(shots.size()<160)shots.add(new Shot(210,245,(float)Math.sin(theta)*142,
-                    (float)Math.cos(theta)*142,1,1,true));
+                    (float)Math.cos(theta)*110,1,1,true));
         }
-        if(boss.phase>1&&world!=0){
+        if(boss.phase>1&&world!=0&&stageTime>35f){
             for(int i=0;i<3;i++){
                 float a=boss.time*1.4f+i*2.09f;
                 if(shots.size()<170)shots.add(new Shot(210+(float)Math.cos(a)*82,
                         245+(float)Math.sin(a)*49,(float)Math.cos(a)*122,(float)Math.sin(a)*122,1,4,true));
             }
         }
-        boss.fireTimer=.88f-boss.phase*.11f+rnd(0,.32f);
+        boss.fireTimer=GameRules.bossFireInterval(boss.phase,stage)+rnd(0,.25f);
     }
     private static float clamp(float v,float a,float b){return Math.max(a,Math.min(v,b));}
     private static float dist2(float ax,float ay,float bx,float by){float dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
@@ -443,10 +450,10 @@ public final class GameView extends View {
         }
         if(!bossActive){
             spawnTimer-=dt;
-            if(spawnTimer<=0){spawnEnemy();spawnTimer=rnd(1.45f,2.35f)-stage*.11f;}
+            if(spawnTimer<=0){spawnEnemy();spawnTimer=GameRules.enemySpawnInterval(stage,stageTime)*rnd(.90f,1.12f);}
             starTimer-=dt;
             if(starTimer<=0){spawnPickup(rnd(30,W-30),-15,0,25);starTimer=rnd(3.3f,5.4f);}
-            if(stageTime>=130+stage*35)spawnBoss();
+            if(stageTime>=GameRules.bossArrivalSeconds(stage))spawnBoss();
         } else if(boss!=null){
             boss.time+=dt;
             boss.fireTimer-=dt;
@@ -513,16 +520,16 @@ public final class GameView extends View {
             }
             e.x=clamp(e.x,24,W-24);
             e.shoot-=dt;
-            if(e.y>35 && e.y<FIELD_BOTTOM-25 && e.shoot<=0 && e.kind!=6){
+            if(GameRules.enemyFireAllowed(stage,stageTime) && e.y>35 && e.y<FIELD_BOTTOM-85 && e.shoot<=0 && e.kind!=6){
                 fireEnemy(e.x,e.y,x,y,e.kind==5?1:0);
-                e.shoot= e.kind>=3?rnd(1.2f,2f):rnd(2f,3.6f);
+                e.shoot=GameRules.enemyShotInterval(stage,random.nextFloat())*(e.kind>=3?.88f:1f);
             }
             if(e.kind==3 && e.t>3.2 && (int)(e.t*2)%7==0 && random.nextFloat()<dt*.5f){
                 Enemy child=new Enemy(0,e.x+rnd(-15,15),e.y+14,24+stage*8);
-                child.vy=110;enemies.add(child);
+                child.vy=82;if(enemies.size()<GameRules.enemyCap(stage,stageTime))enemies.add(child);
             }
-            if(e.y>FIELD_BOTTOM+50){enemies.remove(i);continue;}
-            if(dist2(e.x,e.y,x,y)<(e.radius+15)*(e.radius+15)){
+            if(e.y>FIELD_BOTTOM+20){enemies.remove(i);continue;}
+            if(dist2(e.x,e.y,x,y)<(e.radius+12)*(e.radius+12)){
                 takeHit(1);e.hp-=28;
                 if(e.hp<=0){enemyKilled(i,e);continue;}
             }
@@ -541,7 +548,7 @@ public final class GameView extends View {
             s.x+=s.vx*dt;s.y+=s.vy*dt;
             if(s.x<-45||s.x>W+45||s.y<-80||s.y>H+35||s.age>4){shots.remove(i);continue;}
             if(s.hostile){
-                if(dist2(s.x,s.y,x,y)<(14+s.radius)*(14+s.radius)){
+                if(dist2(s.x,s.y,x,y)<(10+s.radius)*(10+s.radius)){
                     takeHit(1);shots.remove(i);
                 }
                 continue;
@@ -825,7 +832,7 @@ public final class GameView extends View {
         line(c,sx-r*.2f,sy-r*.3f,sx+r*.33f,sy+r*.18f,0x776E8394,1.4f);
     }
     private void drawPlayer(Canvas c){
-        if(invulnerable>0 && (int)(idleTime*14)%2==0)return;
+        // Keep the ship visible while protected instead of flickering out of existence.
         c.save();c.translate(x,y);
         circle(c,0,12,27,0x2A000000);
         if(shieldTime>0){
