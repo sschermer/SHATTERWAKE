@@ -1,0 +1,28 @@
+SHATTERWAKE -- PROPRIETARY PROJECT LICENSE
+
+Copyright (c) 2026 sschermer. All rights reserved.
+
+This repository contains original SHATTERWAKE application source code,
+vector artwork, gameplay rules, interface design and algorithmically generated
+audio routines prepared for the repository owner.
+
+Except where separately identified in THIRD_PARTY_NOTICES.md, no right to
+copy, modify, redistribute, sublicense, publicly perform, sell, or incorporate
+this original project into another product is granted to third parties without
+the copyright holder's prior written permission.
+
+The copyright holder may use, modify, publish, license and commercialize the
+original project, subject to applicable law and to any applicable terms
+under which the project output was provided.
+
+This license does not change the independent rights or licenses of Google,
+Android, Gradle, Java, the Android build toolchain, or third-party components.
+It does not imply a trademark registration or clearance for SHATTERWAKE.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT, TO THE EXTENT PERMITTED BY LAW.
+
+Commercial release requires the additional checks in
+"docs/LICENSING_AND_RELEASE.md". This text is project documentation, not a
+legal opinion or a guarantee of regulatory compliance.
