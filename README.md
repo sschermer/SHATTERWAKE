@@ -1,13 +1,13 @@
 # SHATTERWAKE
 
-**Native Android arcade space shooter — playable prototype 0.1.0-alpha.**
+**Native Android arcade space shooter — playable prototype 0.2.0-alpha.**
 
 Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight correction cone, two selectable touch input modes, distinct enemy flight patterns, destructible segmented space worm, modular multi-stage bosses, star pickups, temporary in-run star-shop upgrades, permanent tech archive unlocks and genuine branching sector paths.
 
 ## Install on an Android phone
 
-1. Open the latest [GitHub release](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.1.0-alpha) while signed into the repository-owning account (the repository is private).
-2. Download **SHATTERWAKE-v0.1.0-alpha-debug.apk**.
+1. Open the latest [GitHub release](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.2.0-alpha) while signed into the repository-owning account (the repository is private).
+2. Download **SHATTERWAKE-v0.2.0-alpha-debug.apk**.
 3. Confirm that the SHA-256 of the APK matches `SHA256SUMS.txt` from the release.
 4. Open the APK and permit installation from the chosen file manager/browser when Android asks.
 5. This is a **debug-signed test APK**. A later build signed with a different debug key may require uninstalling the earlier version first (which deletes the local unlock history).
@@ -20,6 +20,10 @@ If the release is unavailable, inspect the [Android APK GitHub Actions workflow]
 - From the repository root: `gradle --no-daemon :app:assembleDebug`.
 - Debug APK: `app/build/outputs/apk/debug/app-debug.apk`.
 - The project intentionally depends on no external game engine or runtime library.
+
+## Changes in 0.2 alpha
+
+The first version was much too punishing: a reported play session lasted only 30 seconds. This iteration provides a gentle first minute (18 seconds before enemy fire; capped hostile projectiles and lower enemy speed), and better layered procedural rendering. The art remains **prototype-quality**: a true high-fidelity isometric/2.5D art pass is still required. Do not mistake layered polygons for final production graphics.
 
 ## Play
 

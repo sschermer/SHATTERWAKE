@@ -78,7 +78,7 @@ public final class GameView extends View {
             this.kind=kind;this.x=x;this.y=y;this.hp=hp;maxHp=hp;
             radius=kind==3?25:kind==5?24:kind==6?24:15;
             value=(kind==3||kind==5)?45:kind==6?28:19;
-            shoot=.9f+(kind%3)*.37f;
+            shoot=2.2f+(kind%3)*.55f;
         }
     }
     private static final class Shot {
@@ -117,9 +117,9 @@ public final class GameView extends View {
             int count=type==0?12:type==1?9:type==2?8:type==3?10:11;
             for(int i=0;i<count;i++) {
                 int part=i==0?0:(i%5==0?3:(i%4==0?2:(i%3==0?4:1)));
-                nodes.add(new Node(i,part, i==0?170f+(tier-1)*50:45f+(tier-1)*18));
+                nodes.add(new Node(i,part, i==0?135f+(tier-1)*50:39f+(tier-1)*18));
             }
-            hp=520+(tier-1)*350;
+            hp=445+(tier-1)*315;
             maxHp=hp;
         }
     }
@@ -198,7 +198,7 @@ public final class GameView extends View {
     @Override protected void onDetachedFromWindow(){super.onDetachedFromWindow();if(soundPool!=null)soundPool.release();}
 
     private void startRun(){
-        stage=1;world=0;stars=0;score=0;hp=maxHp=5;continuesUsed=0;
+        stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
         fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=0;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
@@ -208,26 +208,29 @@ public final class GameView extends View {
     private void startWorld(int next){
         world=next;stage=GameRules.worldTier(world);
         enemies.clear();shots.clear();pickups.clear();particles.clear();
-        boss=null;bossActive=false;stageTime=0;spawnTimer=0.8f;starTimer=2.7f;
+        boss=null;bossActive=false;stageTime=0;spawnTimer=2.5f;starTimer=2.7f;
         shootTimer=0;secondaryRegen=0;droneShootTimer=0;
-        x=targetX=W/2;y=targetY=573;invulnerable=2.5f;
+        x=targetX=W/2;y=targetY=573;invulnerable=4.0f;
         state=PLAY;flashTime=.7f;
         banner="SEKTOR "+stage+" · "+WORLD_NAMES[world];bannerTime=3.1f;
     }
     private float rnd(float lo,float hi){return lo+random.nextFloat()*(hi-lo);}
     private void spawnEnemy(){
-        if(enemies.size()>=18)return;
+        if(enemies.size()>=GameRules.enemyCap(stage,stageTime))return;
         int tier=GameRules.worldTier(world);
         int kind=random.nextInt(100);
         kind=kind<33?0:kind<54?1:kind<74?2:kind<85?3:kind<95?4:5;
         if(stage==1 && kind==5)kind=1;
-        int count=kind==3||kind==5?1:(random.nextFloat()<.48f?3:2);
+        if(stage==1 && stageTime<25f)kind=random.nextBoolean()?0:1;
+        int count=(stage==1 && stageTime<26f)?1:(kind==3||kind==5?1:(random.nextFloat()<.28f?2:1));
+        count=Math.min(count,GameRules.enemyCap(stage,stageTime)-enemies.size());
         float base=rnd(45,365);
         for(int i=0;i<count;i++) {
             float xx=clamp(base+(i-(count-1)/2f)*44,30,W-30);
-            Enemy e=new Enemy(kind,xx,-40-i*27,20+tier*11+(kind>=3?40:0));
+            Enemy e=new Enemy(kind,xx,-40-i*27,14+tier*8+(kind>=3?30:0));
             e.phase=rnd(0,6.28f);e.vx=random.nextBoolean()?1:-1;
-            e.vy=rnd(48,75)+tier*14;e.fragments=kind==6?4:0;
+            e.vy=(rnd(48,75)+tier*12)*.75f;e.fragments=kind==6?4:0;
+            e.shoot=rnd(2.2f,4.2f);
             enemies.add(e);
         }
     }
@@ -262,7 +265,7 @@ public final class GameView extends View {
         int absorbed=Math.min(shieldLevel,damage);
         damage=Math.max(0,damage-absorbed);
         if(damage==0){invulnerable=.45f;return;}
-        hp-=damage;invulnerable=1.5f;flashTime=.3f;
+        hp-=damage;invulnerable=2.4f;flashTime=.3f;
         explode(x,y,CYAN,13);sound(3);vibrate(90);
         if(hp<=0){hp=0;state=DEAD;save();}
     }
@@ -370,32 +373,36 @@ public final class GameView extends View {
         float dx=tx-ex,dy=ty-ey;
         float len=(float)Math.sqrt(dx*dx+dy*dy);
         if(len<.01f)len=1;
-        float speed=type==1?138:112+stage*16;
-        if(shots.size()<180)shots.add(new Shot(ex,ey,dx/len*speed,dy/len*speed,1,type==1?4:1,true));
+        int active=0;
+        for(Shot q:shots)if(q.hostile)active++;
+        if(active>=GameRules.hostileShotCap(stage,stageTime,bossActive))return;
+        float speed=type==1?102:(76+stage*12);
+        shots.add(new Shot(ex,ey,dx/len*speed,dy/len*speed,1,type==1?4:1,true));
     }
     private void bossAttack(){
         if(boss==null)return;
+        int active=0;for(Shot shot:shots)if(shot.hostile)active++;
+        if(active>=GameRules.hostileShotCap(stage,stageTime,true)){boss.fireTimer=.4f;return;}
         int live=0;
         for(Node n:boss.nodes)if(n.hp>0&&n.type==1)live++;
         if(live==0){boss.fireTimer=1.25f;return;}
-        int amount=boss.phase==1?3:boss.phase==2?5:7;
-        if(world==1||world==4)amount+=2;
+        int amount=GameRules.bossVolleyCount(boss.phase,stage);
         float start=-.5f;
         for(int i=0;i<amount;i++){
             float a=start+i/(float)Math.max(1,amount-1);
             float base=(float)Math.atan2(x-210,y-225);
             float theta=base+a*.9f;
             if(shots.size()<160)shots.add(new Shot(210,245,(float)Math.sin(theta)*142,
-                    (float)Math.cos(theta)*142,1,1,true));
+                    (float)Math.cos(theta)*110,1,1,true));
         }
-        if(boss.phase>1&&world!=0){
+        if(boss.phase>1&&world!=0&&stageTime>35f){
             for(int i=0;i<3;i++){
                 float a=boss.time*1.4f+i*2.09f;
                 if(shots.size()<170)shots.add(new Shot(210+(float)Math.cos(a)*82,
                         245+(float)Math.sin(a)*49,(float)Math.cos(a)*122,(float)Math.sin(a)*122,1,4,true));
             }
         }
-        boss.fireTimer=.88f-boss.phase*.11f+rnd(0,.32f);
+        boss.fireTimer=GameRules.bossFireInterval(boss.phase,stage)+rnd(0,.25f);
     }
     private static float clamp(float v,float a,float b){return Math.max(a,Math.min(v,b));}
     private static float dist2(float ax,float ay,float bx,float by){float dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;}
@@ -443,10 +450,10 @@ public final class GameView extends View {
         }
         if(!bossActive){
             spawnTimer-=dt;
-            if(spawnTimer<=0){spawnEnemy();spawnTimer=rnd(1.45f,2.35f)-stage*.11f;}
+            if(spawnTimer<=0){spawnEnemy();spawnTimer=GameRules.enemySpawnInterval(stage,stageTime)*rnd(.90f,1.12f);}
             starTimer-=dt;
             if(starTimer<=0){spawnPickup(rnd(30,W-30),-15,0,25);starTimer=rnd(3.3f,5.4f);}
-            if(stageTime>=130+stage*35)spawnBoss();
+            if(stageTime>=GameRules.bossArrivalSeconds(stage))spawnBoss();
         } else if(boss!=null){
             boss.time+=dt;
             boss.fireTimer-=dt;
@@ -513,16 +520,16 @@ public final class GameView extends View {
             }
             e.x=clamp(e.x,24,W-24);
             e.shoot-=dt;
-            if(e.y>35 && e.y<FIELD_BOTTOM-25 && e.shoot<=0 && e.kind!=6){
+            if(GameRules.enemyFireAllowed(stage,stageTime) && e.y>35 && e.y<FIELD_BOTTOM-85 && e.shoot<=0 && e.kind!=6){
                 fireEnemy(e.x,e.y,x,y,e.kind==5?1:0);
-                e.shoot= e.kind>=3?rnd(1.2f,2f):rnd(2f,3.6f);
+                e.shoot=GameRules.enemyShotInterval(stage,random.nextFloat())*(e.kind>=3?.88f:1f);
             }
             if(e.kind==3 && e.t>3.2 && (int)(e.t*2)%7==0 && random.nextFloat()<dt*.5f){
                 Enemy child=new Enemy(0,e.x+rnd(-15,15),e.y+14,24+stage*8);
-                child.vy=110;enemies.add(child);
+                child.vy=82;if(enemies.size()<GameRules.enemyCap(stage,stageTime))enemies.add(child);
             }
-            if(e.y>FIELD_BOTTOM+50){enemies.remove(i);continue;}
-            if(dist2(e.x,e.y,x,y)<(e.radius+15)*(e.radius+15)){
+            if(e.y>FIELD_BOTTOM+20){enemies.remove(i);continue;}
+            if(dist2(e.x,e.y,x,y)<(e.radius+12)*(e.radius+12)){
                 takeHit(1);e.hp-=28;
                 if(e.hp<=0){enemyKilled(i,e);continue;}
             }
@@ -541,7 +548,7 @@ public final class GameView extends View {
             s.x+=s.vx*dt;s.y+=s.vy*dt;
             if(s.x<-45||s.x>W+45||s.y<-80||s.y>H+35||s.age>4){shots.remove(i);continue;}
             if(s.hostile){
-                if(dist2(s.x,s.y,x,y)<(14+s.radius)*(14+s.radius)){
+                if(dist2(s.x,s.y,x,y)<(10+s.radius)*(10+s.radius)){
                     takeHit(1);shots.remove(i);
                 }
                 continue;
@@ -818,37 +825,92 @@ public final class GameView extends View {
         }
     }
     private void asteroid(Canvas c,float sx,float sy,float r){
-        polygon(c,new float[]{sx-r,sy-r*.4f,sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,
-                sx+r,sy-r*.05f,sx+r*.6f,sy+r*.84f,sx-r*.6f,sy+r},0xFF32445E);
-        polygon(c,new float[]{sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,sx+r*.1f,sy-r*.1f,
-                sx-r*.6f,sy+r},0xFF4F6074);
-        line(c,sx-r*.2f,sy-r*.3f,sx+r*.33f,sy+r*.18f,0x776E8394,1.4f);
+        glow(c,sx,sy+r*.45f,r*1.45f,0x22000000,0x00000000);
+        shadedPolygon(c,new float[]{sx-r,sy-r*.4f,sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,
+                sx+r,sy-r*.05f,sx+r*.6f,sy+r*.84f,sx-r*.6f,sy+r},
+                0xFF8293A7,0xFF24354B,0xFF64768D);
+        shadedPolygon(c,new float[]{sx-r*.54f,sy-r,sx+r*.42f,sy-r*.78f,
+                sx+r*.1f,sy-r*.1f,sx-r*.6f,sy+r},
+                0xFF8497A7,0xFF43586D,0);
+        shadedPolygon(c,new float[]{sx+r*.42f,sy-r*.78f,sx+r,sy-r*.05f,
+                sx+r*.6f,sy+r*.84f,sx+r*.1f,sy-r*.1f},
+                0xFF566C83,0xFF273B57,0);
+        line(c,sx-r*.3f,sy-r*.18f,sx+r*.15f,sy+r*.05f,0x775D748B,1.6f);
+        glow(c,sx-r*.28f,sy-r*.33f,r*.2f,0x3A88BCD8,0x0088BCD8);
+    }
+    /**
+     * Procedurally shaded pseudo-isometric craft. Every shape is project-owned;
+     * the project does not ship third-party textures, models or sample images.
+     */
+    private void shadedPolygon(Canvas c,float[] pts,int lit,int dark,int edge){
+        Path path=new Path();path.moveTo(pts[0],pts[1]);
+        float minY=pts[1],maxY=pts[1];
+        for(int k=2;k<pts.length;k+=2){
+            path.lineTo(pts[k],pts[k+1]);
+            minY=Math.min(minY,pts[k+1]);maxY=Math.max(maxY,pts[k+1]);
+        }
+        path.close();
+        p.setStyle(Paint.Style.FILL);
+        p.setColor(WHITE);
+        p.setShader(new LinearGradient(0,minY,0,maxY+1,lit,dark,Shader.TileMode.CLAMP));
+        c.drawPath(path,p);p.setShader(null);
+        if(edge!=0){
+            p.setStyle(Paint.Style.STROKE);p.setColor(edge);p.setStrokeWidth(1f);
+            c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
+        }
+    }
+    private void glow(Canvas c,float gx,float gy,float radius,int inner,int outer){
+        p.setShader(new RadialGradient(gx,gy,radius,new int[]{inner,outer},null,Shader.TileMode.CLAMP));
+        p.setColor(WHITE);p.setStyle(Paint.Style.FILL);
+        c.drawCircle(gx,gy,radius,p);p.setShader(null);
     }
     private void drawPlayer(Canvas c){
-        if(invulnerable>0 && (int)(idleTime*14)%2==0)return;
         c.save();c.translate(x,y);
-        circle(c,0,12,27,0x2A000000);
-        if(shieldTime>0){
-            circle(c,0,-3,27,0x3159E4FF);
-            p.setStyle(Paint.Style.STROKE);p.setColor(0xFF63F3F7);p.setStrokeWidth(2.3f);
-            c.drawCircle(0,-3,27+(float)Math.sin(idleTime*8)*2,p);p.setStyle(Paint.Style.FILL);
+        float lateral=clamp((targetX-x)*.12f,-7,7);
+        c.rotate(lateral);
+        float inv=invulnerable>0?(.5f+.5f*(float)Math.sin(idleTime*7)):0;
+        glow(c,0,24,46,0x40000000,0x00000000);
+        if(invulnerable>0){
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.7f);
+            p.setColor(((Math.round(100+100*inv))<<24)|0x004DE5FF);
+            c.drawCircle(0,-2,31,p);p.setStyle(Paint.Style.FILL);
         }
-        float exhaust=15+(float)Math.sin(idleTime*17)*5;
-        triangle(c,-10,12,-5,12,-7,12+exhaust,0xFF52C8F6);
-        triangle(c,5,12,10,12,7,12+exhaust,0xFFF8A75B);
-        polygon(c,new float[]{0,-32,-11,-13,-27,11,-29,18,-9,10,0,23,9,10,29,18,
-                27,11,11,-13},0xFF285B81);
-        polygon(c,new float[]{0,-32,-9,-10,-19,10,-4,4,0,15,4,4,19,10,9,-10},0xFF78DDF7);
-        polygon(c,new float[]{0,-25,-6,-11,0,1,6,-11},0xFF194665);
-        line(c,-22,12,-7,7,0xFFB7F6FF,2);
-        line(c,22,12,7,7,0xFFB7F6FF,2);
-        circle(c,0,-11,4,WHITE);
+        if(shieldTime>0){
+            glow(c,0,-4,39,0x335DE8FF,0x005DE8FF);
+            p.setStyle(Paint.Style.STROKE);p.setColor(0xFF72EAFF);p.setStrokeWidth(2);
+            c.drawOval(-34,-37,34,31,p);p.setStyle(Paint.Style.FILL);
+        }
+        float flame=15+7*(float)Math.sin(idleTime*23);
+        glow(c,-9,23,24,0x6648C8FF,0x0048C8FF);
+        glow(c,9,23,24,0x66FFB55F,0x00FFB55F);
+        triangle(c,-15,18,-4,18,-9,20+flame,0xFF2F92D4);
+        triangle(c,4,18,15,18,9,20+flame,0xFFFAB367);
+        triangle(c,-12,19,-7,19,-9,18+flame*.75f,WHITE);
+        triangle(c,7,19,12,19,9,18+flame*.75f,WHITE);
+        // Offset lower hull makes the craft read as a thick physical object.
+        shadedPolygon(c,new float[]{0,-25,-12,-14,-33,10,-30,21,-12,15,0,26,12,15,30,21,33,10,12,-14},
+                0xFF183F62,0xFF0D2038,0xFF357DA5);
+        shadedPolygon(c,new float[]{0,-37,-12,-18,-31,11,-21,12,-9,4,0,14,9,4,21,12,31,11,12,-18},
+                0xFFB5E1E9,0xFF3B80A7,0xFF8EC5DE);
+        shadedPolygon(c,new float[]{0,-31,-7,-13,0,0,7,-13},
+                0xFF163D5D,0xFF081B37,0xFF73E4F8);
+        shadedPolygon(c,new float[]{-28,10,-16,6,-10,10,-20,16},
+                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
+        shadedPolygon(c,new float[]{28,10,16,6,10,10,20,16},
+                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
+        line(c,-12,-16,-21,11,0xFFDBF6FF,1.3f);
+        line(c,12,-16,21,11,0xFFDBF6FF,1.3f);
+        glow(c,0,-12,10,0x8888F4FF,0x0088F4FF);
+        circle(c,0,-12,3.5f,WHITE);
+        circle(c,-23,9,2.4f,GOLD);circle(c,23,9,2.4f,GOLD);
         if(droneLevel>0){
             for(int i=0;i<Math.min(3,droneLevel);i++){
-                float dx=(i-(Math.min(3,droneLevel)-1)/2f)*37;
-                float dy=24+(float)Math.sin(idleTime*3+i)*4;
-                polygon(c,new float[]{dx,dy-8,dx-10,dy+5,dx,dy+1,dx+10,dy+5},CYAN);
-                circle(c,dx,dy,2,GOLD);
+                float dx=(i-(Math.min(3,droneLevel)-1)/2f)*43;
+                float dy=31+(float)Math.sin(idleTime*3+i)*4;
+                glow(c,dx,dy,16,0x5068E6FF,0x0068E6FF);
+                shadedPolygon(c,new float[]{dx,dy-11,dx-13,dy+5,dx,dy+1,dx+13,dy+5},
+                        0xFF9EDBE9,0xFF255675,0xFF67D6F2);
+                circle(c,dx,dy,2.8f,GOLD);
             }
         }
         c.restore();
@@ -856,29 +918,47 @@ public final class GameView extends View {
     private void drawEnemies(Canvas c){
         for(Enemy e:enemies){
             c.save();c.translate(e.x,e.y);
-            int color=e.kind==5?0xFFC79CFF:e.kind==3?0xFFFFA376:0xFFFF788B;
+            float wobble=(float)Math.sin(e.t*4+e.phase);
+            c.rotate(wobble*3);
+            int core=e.kind==5?0xFFA4A2FF:e.kind==3?0xFFFFC080:0xFFFF839C;
+            glow(c,0,17,e.radius+17,0x2A000000,0x00000000);
             if(e.kind==6){
                 for(int j=0;j<4;j++){
                     float xx=(float)Math.sin(e.t*4+j*.8f)*10;
                     float yy=j*13;
-                    circle(c,xx,yy,11-j,0xFF334D62);
-                    circle(c,xx,yy,5,GOLD);
+                    glow(c,xx,yy,14,0x6049A4E2,0x0049A4E2);
+                    shadedPolygon(c,new float[]{xx,yy-12,xx-12,yy,xx,yy+12,xx+12,yy},
+                            0xFF93B1BB,0xFF2E4F68,0xFF92C5D9);
+                    circle(c,xx,yy,4,GOLD);
                 }
             }else if(e.kind==3){
-                polygon(c,new float[]{0,-28,-30,-5,-24,20,24,20,30,-5},0xFF465D70);
-                polygon(c,new float[]{0,-25,-12,-4,0,17,12,-4},color);
-                circle(c,0,0,6,0xFFFEE2AE);
+                shadedPolygon(c,new float[]{0,-31,-32,-6,-26,22,0,17,26,22,32,-6},
+                        0xFFB0A3A4,0xFF4C506A,0xFFE0B7B8);
+                shadedPolygon(c,new float[]{0,-29,-14,-4,0,12,14,-4},
+                        0xFFFFBF9A,0xFF9B4058,0xFFFFC3AB);
+                glow(c,0,2,14,0x99FFB080,0x00FFB080);
+                circle(c,0,2,5,WHITE);
             }else if(e.kind==5){
-                polygon(c,new float[]{0,-26,-26,-1,-14,24,14,24,26,-1},0xFF475078);
-                circle(c,0,2,15,0x6655B8FF);
-                circle(c,0,2,7,color);
+                shadedPolygon(c,new float[]{0,-29,-27,-2,-17,25,0,19,17,25,27,-2},
+                        0xFF8B9ABF,0xFF403B73,0xFFB3A4D9);
+                glow(c,0,2,22,0x77588CFB,0x00588CFB);
+                circle(c,0,2,12,0xFF45366F);circle(c,0,2,6,core);
+                line(c,-21,6,-6,11,0xFFA3BCEF,2);
+                line(c,21,6,6,11,0xFFA3BCEF,2);
             }else{
-                polygon(c,new float[]{0,-22,-12,-3,-23,7,-18,14,-4,10,0,20,4,10,18,14,
-                        23,7,12,-3},0xFF583D55);
-                polygon(c,new float[]{0,-18,-7,0,-17,8,0,12,17,8,7,0},color);
-                circle(c,0,-3,4,GOLD);
+                shadedPolygon(c,new float[]{0,-23,-14,-4,-24,6,-19,17,-4,11,0,22,4,11,19,17,24,6,14,-4},
+                        0xFF9D8E9F,0xFF473B60,0xFFBE9CB6);
+                shadedPolygon(c,new float[]{0,-19,-7,0,-15,8,0,12,15,8,7,0},
+                        0xFFFFA4AD,0xFF8C476D,0xFFFFC2C4);
+                line(c,-19,9,-7,5,0xFFFFD9D8,1.3f);
+                line(c,19,9,7,5,0xFFFFD9D8,1.3f);
+                glow(c,0,-3,10,0x88FFC78C,0x00FFC78C);
+                circle(c,0,-3,3,GOLD);
             }
-            if(e.hp<e.maxHp)box(c,-17,-31,34*clamp((float)e.hp/e.maxHp,0,1),2,GOLD);
+            if(e.hp<e.maxHp){
+                box(c,-17,-35,34,3,0xDD111B30);
+                box(c,-17,-35,34*clamp((float)e.hp/e.maxHp,0,1),3,GOLD);
+            }
             c.restore();
         }
     }
@@ -898,18 +978,23 @@ public final class GameView extends View {
             float r=n.id==0?27:21;
             circle(c,0,7,r+4,0x55000000);
             int shell=boss.type==2?0xFF584B91:boss.type==3?0xFF445D82:0xFF426278;
-            polygon(c,new float[]{-r,-r*.30f,-r*.54f,-r*.80f,r*.52f,-r*.80f,
-                    r,r*.12f,r*.51f,r*.77f,-r*.55f,r*.77f},shell);
-            polygon(c,new float[]{-r*.54f,-r*.8f,r*.52f,-r*.8f,r*.78f,-r*.12f,
-                    0,r*.16f,-r*.81f,-r*.12f},0xFF7093A4);
+            shadedPolygon(c,new float[]{-r,-r*.30f,-r*.54f,-r*.80f,r*.52f,-r*.80f,
+                    r,r*.12f,r*.51f,r*.77f,-r*.55f,r*.77f},
+                    0xFFA0AFBE,shell,0xFFA0C6DA);
+            shadedPolygon(c,new float[]{-r*.54f,-r*.8f,r*.52f,-r*.8f,r*.78f,-r*.12f,
+                    0,r*.16f,-r*.81f,-r*.12f},0xFFABCAD5,0xFF4C687E,0);
+            line(c,-r*.79f,r*.14f,r*.77f,r*.14f,0xAA24374F,1.8f);
+            triangle(c,-r*.58f,r*.40f,0,r*.64f,r*.58f,r*.40f,0x443B98C5);
             if(n.id==0){
                 triangle(c,-14,-6,0,-19,14,-6,0xFFBD768A);
                 circle(c,0,1,10,RED);
                 circle(c,0,1,5,WHITE);
             } else {
                 int core=n.type==3?GOLD:n.type==2?GREEN:n.type==4?0xFFAE83FF:RED;
+                glow(c,0,0,17,0x883DDBE7,0x003DDBE7);
                 circle(c,0,0,10,0x884E1829);
                 circle(c,0,0,n.type==3?8:6,core);
+                circle(c,-2,-2,2,WHITE);
                 if(n.type==1){
                     triangle(c,-6,-11,0,-22,6,-11,0xFFF19EAD);
                 }else if(n.type==2){
@@ -926,8 +1011,11 @@ public final class GameView extends View {
     private void drawShots(Canvas c){
         for(Shot s:shots){
             if(s.hostile){
-                circle(c,s.x,s.y,s.radius+3,0x44FC5472);
+                glow(c,s.x,s.y,s.radius+13,0x55FF667F,0x00FF667F);
+                line(c,s.x-s.vx*.037f,s.y-s.vy*.037f,s.x,s.y,
+                        0x99FF8B9B,Math.max(1.5f,s.radius*.43f));
                 circle(c,s.x,s.y,s.radius,s.kind==4?0xFFFFAA76:0xFFFF7085);
+                circle(c,s.x,s.y,Math.max(1.5f,s.radius*.36f),WHITE);
             } else if(s.kind==2){
                 circle(c,s.x,s.y,11,0x4471E4FF);circle(c,s.x,s.y,6,GOLD);
                 line(c,s.x,s.y+7,s.x-s.vx*.05f,s.y-s.vy*.05f,0xFFED9F4B,3);
@@ -943,7 +1031,7 @@ public final class GameView extends View {
             float pulse=(float)Math.sin(q.t*9)*1.8f;
             int col=q.kind==0?GOLD:q.kind==1?CYAN:q.kind==2?GREEN:
                     q.kind==3?0xFFFFA676:q.kind==4?0xFFBE91FF:0xFFB8F6FB;
-            circle(c,q.x,q.y,11+pulse,0x334FD0FF);
+            glow(c,q.x,q.y,16+pulse,0x5572CCF9,0x0072CCF9);
             if(q.kind==0){
                 float[] vertices=new float[20];
                 for(int k=0;k<10;k++){
@@ -1022,10 +1110,8 @@ public final class GameView extends View {
     }
     private void drawMenu(Canvas c){
         logo(c,172,43);
-        c.save();c.translate(210,320);c.scale(2.3f,2.3f);
-        polygon(c,new float[]{0,-36,-12,-15,-31,13,-25,22,-7,11,0,27,7,11,25,22,31,13,12,-15},0xFF286187);
-        polygon(c,new float[]{0,-34,-9,-10,-19,11,-1,10,19,11,9,-10},CYAN);
-        triangle(c,-7,18,0,45,7,18,GOLD);
+        c.save();c.translate(210,309);c.scale(1.8f,1.8f);
+        c.translate(-x,-y);drawPlayer(c);
         c.restore();
         textCenter(c,"VERTIKALER SCI-FI ARCADE-SHOOTER",411,13,MUTED,false);
         button(c,"NEUER DURCHLAUF",51,450,318,58,true);
@@ -1145,7 +1231,7 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "SHATTERWAKE 0.1.0-alpha",
+                "SHATTERWAKE 0.2.0-alpha",
                 "Originaler Quellcode und Vektorgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",
