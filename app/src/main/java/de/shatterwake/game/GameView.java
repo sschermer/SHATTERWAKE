@@ -1233,7 +1233,7 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "SHATTERWAKE 0.1.0-alpha",
+                "SHATTERWAKE 0.2.0-alpha",
                 "Originaler Quellcode und Vektorgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",
