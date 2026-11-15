@@ -831,31 +831,79 @@ public final class GameView extends View {
                 sx-r*.6f,sy+r},0xFF4F6074);
         line(c,sx-r*.2f,sy-r*.3f,sx+r*.33f,sy+r*.18f,0x776E8394,1.4f);
     }
-    private void drawPlayer(Canvas c){
-        // Keep the ship visible while protected instead of flickering out of existence.
-        c.save();c.translate(x,y);
-        circle(c,0,12,27,0x2A000000);
-        if(shieldTime>0){
-            circle(c,0,-3,27,0x3159E4FF);
-            p.setStyle(Paint.Style.STROKE);p.setColor(0xFF63F3F7);p.setStrokeWidth(2.3f);
-            c.drawCircle(0,-3,27+(float)Math.sin(idleTime*8)*2,p);p.setStyle(Paint.Style.FILL);
+    /**
+     * Procedurally shaded pseudo-isometric craft. Every shape is project-owned;
+     * the project does not ship third-party textures, models or sample images.
+     */
+    private void shadedPolygon(Canvas c,float[] pts,int lit,int dark,int edge){
+        Path path=new Path();path.moveTo(pts[0],pts[1]);
+        float minY=pts[1],maxY=pts[1];
+        for(int k=2;k<pts.length;k+=2){
+            path.lineTo(pts[k],pts[k+1]);
+            minY=Math.min(minY,pts[k+1]);maxY=Math.max(maxY,pts[k+1]);
         }
-        float exhaust=15+(float)Math.sin(idleTime*17)*5;
-        triangle(c,-10,12,-5,12,-7,12+exhaust,0xFF52C8F6);
-        triangle(c,5,12,10,12,7,12+exhaust,0xFFF8A75B);
-        polygon(c,new float[]{0,-32,-11,-13,-27,11,-29,18,-9,10,0,23,9,10,29,18,
-                27,11,11,-13},0xFF285B81);
-        polygon(c,new float[]{0,-32,-9,-10,-19,10,-4,4,0,15,4,4,19,10,9,-10},0xFF78DDF7);
-        polygon(c,new float[]{0,-25,-6,-11,0,1,6,-11},0xFF194665);
-        line(c,-22,12,-7,7,0xFFB7F6FF,2);
-        line(c,22,12,7,7,0xFFB7F6FF,2);
-        circle(c,0,-11,4,WHITE);
+        path.close();
+        p.setStyle(Paint.Style.FILL);
+        p.setColor(WHITE);
+        p.setShader(new LinearGradient(0,minY,0,maxY+1,lit,dark,Shader.TileMode.CLAMP));
+        c.drawPath(path,p);p.setShader(null);
+        if(edge!=0){
+            p.setStyle(Paint.Style.STROKE);p.setColor(edge);p.setStrokeWidth(1f);
+            c.drawPath(path,p);p.setStyle(Paint.Style.FILL);
+        }
+    }
+    private void glow(Canvas c,float gx,float gy,float radius,int inner,int outer){
+        p.setShader(new RadialGradient(gx,gy,radius,new int[]{inner,outer},null,Shader.TileMode.CLAMP));
+        p.setColor(WHITE);p.setStyle(Paint.Style.FILL);
+        c.drawCircle(gx,gy,radius,p);p.setShader(null);
+    }
+    private void drawPlayer(Canvas c){
+        c.save();c.translate(x,y);
+        float lateral=clamp((targetX-x)*.12f,-7,7);
+        c.rotate(lateral);
+        float inv=invulnerable>0?(.5f+.5f*(float)Math.sin(idleTime*7)):0;
+        glow(c,0,24,46,0x40000000,0x00000000);
+        if(invulnerable>0){
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.7f);
+            p.setColor(((Math.round(100+100*inv))<<24)|0x004DE5FF);
+            c.drawCircle(0,-2,31,p);p.setStyle(Paint.Style.FILL);
+        }
+        if(shieldTime>0){
+            glow(c,0,-4,39,0x335DE8FF,0x005DE8FF);
+            p.setStyle(Paint.Style.STROKE);p.setColor(0xFF72EAFF);p.setStrokeWidth(2);
+            c.drawOval(-34,-37,34,31,p);p.setStyle(Paint.Style.FILL);
+        }
+        float flame=15+7*(float)Math.sin(idleTime*23);
+        glow(c,-9,23,24,0x6648C8FF,0x0048C8FF);
+        glow(c,9,23,24,0x66FFB55F,0x00FFB55F);
+        triangle(c,-15,18,-4,18,-9,20+flame,0xFF2F92D4);
+        triangle(c,4,18,15,18,9,20+flame,0xFFFAB367);
+        triangle(c,-12,19,-7,19,-9,18+flame*.75f,WHITE);
+        triangle(c,7,19,12,19,9,18+flame*.75f,WHITE);
+        // Offset lower hull makes the craft read as a thick physical object.
+        shadedPolygon(c,new float[]{0,-25,-12,-14,-33,10,-30,21,-12,15,0,26,12,15,30,21,33,10,12,-14},
+                0xFF183F62,0xFF0D2038,0xFF357DA5);
+        shadedPolygon(c,new float[]{0,-37,-12,-18,-31,11,-21,12,-9,4,0,14,9,4,21,12,31,11,12,-18},
+                0xFFB5E1E9,0xFF3B80A7,0xFF8EC5DE);
+        shadedPolygon(c,new float[]{0,-31,-7,-13,0,0,7,-13},
+                0xFF163D5D,0xFF081B37,0xFF73E4F8);
+        shadedPolygon(c,new float[]{-28,10,-16,6,-10,10,-20,16},
+                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
+        shadedPolygon(c,new float[]{28,10,16,6,10,10,20,16},
+                0xFF39789A,0xFF1F3A5A,0xFF77BBD9);
+        line(c,-12,-16,-21,11,0xFFDBF6FF,1.3f);
+        line(c,12,-16,21,11,0xFFDBF6FF,1.3f);
+        glow(c,0,-12,10,0x8888F4FF,0x0088F4FF);
+        circle(c,0,-12,3.5f,WHITE);
+        circle(c,-23,9,2.4f,GOLD);circle(c,23,9,2.4f,GOLD);
         if(droneLevel>0){
             for(int i=0;i<Math.min(3,droneLevel);i++){
-                float dx=(i-(Math.min(3,droneLevel)-1)/2f)*37;
-                float dy=24+(float)Math.sin(idleTime*3+i)*4;
-                polygon(c,new float[]{dx,dy-8,dx-10,dy+5,dx,dy+1,dx+10,dy+5},CYAN);
-                circle(c,dx,dy,2,GOLD);
+                float dx=(i-(Math.min(3,droneLevel)-1)/2f)*43;
+                float dy=31+(float)Math.sin(idleTime*3+i)*4;
+                glow(c,dx,dy,16,0x5068E6FF,0x0068E6FF);
+                shadedPolygon(c,new float[]{dx,dy-11,dx-13,dy+5,dx,dy+1,dx+13,dy+5},
+                        0xFF9EDBE9,0xFF255675,0xFF67D6F2);
+                circle(c,dx,dy,2.8f,GOLD);
             }
         }
         c.restore();
@@ -863,29 +911,47 @@ public final class GameView extends View {
     private void drawEnemies(Canvas c){
         for(Enemy e:enemies){
             c.save();c.translate(e.x,e.y);
-            int color=e.kind==5?0xFFC79CFF:e.kind==3?0xFFFFA376:0xFFFF788B;
+            float wobble=(float)Math.sin(e.t*4+e.phase);
+            c.rotate(wobble*3);
+            int core=e.kind==5?0xFFA4A2FF:e.kind==3?0xFFFFC080:0xFFFF839C;
+            glow(c,0,17,e.radius+17,0x2A000000,0x00000000);
             if(e.kind==6){
                 for(int j=0;j<4;j++){
                     float xx=(float)Math.sin(e.t*4+j*.8f)*10;
                     float yy=j*13;
-                    circle(c,xx,yy,11-j,0xFF334D62);
-                    circle(c,xx,yy,5,GOLD);
+                    glow(c,xx,yy,14,0x6049A4E2,0x0049A4E2);
+                    shadedPolygon(c,new float[]{xx,yy-12,xx-12,yy,xx,yy+12,xx+12,yy},
+                            0xFF93B1BB,0xFF2E4F68,0xFF92C5D9);
+                    circle(c,xx,yy,4,GOLD);
                 }
             }else if(e.kind==3){
-                polygon(c,new float[]{0,-28,-30,-5,-24,20,24,20,30,-5},0xFF465D70);
-                polygon(c,new float[]{0,-25,-12,-4,0,17,12,-4},color);
-                circle(c,0,0,6,0xFFFEE2AE);
+                shadedPolygon(c,new float[]{0,-31,-32,-6,-26,22,0,17,26,22,32,-6},
+                        0xFFB0A3A4,0xFF4C506A,0xFFE0B7B8);
+                shadedPolygon(c,new float[]{0,-29,-14,-4,0,12,14,-4},
+                        0xFFFFBF9A,0xFF9B4058,0xFFFFC3AB);
+                glow(c,0,2,14,0x99FFB080,0x00FFB080);
+                circle(c,0,2,5,WHITE);
             }else if(e.kind==5){
-                polygon(c,new float[]{0,-26,-26,-1,-14,24,14,24,26,-1},0xFF475078);
-                circle(c,0,2,15,0x6655B8FF);
-                circle(c,0,2,7,color);
+                shadedPolygon(c,new float[]{0,-29,-27,-2,-17,25,0,19,17,25,27,-2},
+                        0xFF8B9ABF,0xFF403B73,0xFFB3A4D9);
+                glow(c,0,2,22,0x77588CFB,0x00588CFB);
+                circle(c,0,2,12,0xFF45366F);circle(c,0,2,6,core);
+                line(c,-21,6,-6,11,0xFFA3BCEF,2);
+                line(c,21,6,6,11,0xFFA3BCEF,2);
             }else{
-                polygon(c,new float[]{0,-22,-12,-3,-23,7,-18,14,-4,10,0,20,4,10,18,14,
-                        23,7,12,-3},0xFF583D55);
-                polygon(c,new float[]{0,-18,-7,0,-17,8,0,12,17,8,7,0},color);
-                circle(c,0,-3,4,GOLD);
+                shadedPolygon(c,new float[]{0,-23,-14,-4,-24,6,-19,17,-4,11,0,22,4,11,19,17,24,6,14,-4},
+                        0xFF9D8E9F,0xFF473B60,0xFFBE9CB6);
+                shadedPolygon(c,new float[]{0,-19,-7,0,-15,8,0,12,15,8,7,0},
+                        0xFFFFA4AD,0xFF8C476D,0xFFFFC2C4);
+                line(c,-19,9,-7,5,0xFFFFD9D8,1.3f);
+                line(c,19,9,7,5,0xFFFFD9D8,1.3f);
+                glow(c,0,-3,10,0x88FFC78C,0x00FFC78C);
+                circle(c,0,-3,3,GOLD);
             }
-            if(e.hp<e.maxHp)box(c,-17,-31,34*clamp((float)e.hp/e.maxHp,0,1),2,GOLD);
+            if(e.hp<e.maxHp){
+                box(c,-17,-35,34,3,0xDD111B30);
+                box(c,-17,-35,34*clamp((float)e.hp/e.maxHp,0,1),3,GOLD);
+            }
             c.restore();
         }
     }
