@@ -59,7 +59,9 @@ public final class GameView extends View {
     private int state=MENU, previousState=MENU, inputMode=0, world=0, stage=1;
     private boolean tutorialActive=false, tutorialComplete=false, secondarySeen=false,
             shopIntroSeen=false, shopIntroShowing=false;
-    private int tutorialStep=TutorialRules.MOVE, guideKind=TutorialRules.GUIDE_NONE, guideId=-1, seenAbilityMask=0;
+    private int tutorialStep=TutorialRules.MOVE, tutorialNextStep=TutorialRules.MOVE;
+    private int guideKind=TutorialRules.GUIDE_NONE, guideId=-1, seenAbilityMask=0;
+    private boolean tutorialCheckpoint=false, tutorialRocketFired=false;
     private float tutorialTravel=0f;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
     private int fireLevel=0, damageLevel=0, magnetLevel=0, shieldLevel=0, droneLevel=0;
@@ -232,7 +234,8 @@ public final class GameView extends View {
     private void startTutorial(){
         startRun();
         tutorialActive=true;
-        tutorialStep=TutorialRules.MOVE;
+        tutorialStep=tutorialNextStep=TutorialRules.MOVE;
+        tutorialCheckpoint=false;tutorialRocketFired=false;
         tutorialTravel=0;
         enemies.clear();shots.clear();pickups.clear();particles.clear();
         x=targetX=W/2;y=targetY=570;
@@ -240,26 +243,49 @@ public final class GameView extends View {
         invulnerable=0;bannerTime=0;
         guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
     }
+    /** A lesson never jumps to the next lesson without explicit confirmation. */
     private void tutorialAction(int action) {
-        if(!tutorialActive)return;
-        int old=tutorialStep;
-        tutorialStep=TutorialRules.nextStep(old,action);
-        if(tutorialStep==old)return;
+        if(!tutorialActive||tutorialCheckpoint)return;
+        int next=TutorialRules.nextStep(tutorialStep,action);
+        if(next==tutorialStep)return;
+        tutorialNextStep=next;
+        tutorialCheckpoint=true;
+    }
+    /** Set up each safe, repeatable training situation after the player taps WEITER. */
+    private void continueTutorial() {
+        if(!tutorialActive||!tutorialCheckpoint)return;
+        tutorialCheckpoint=false;
+        tutorialStep=tutorialNextStep;
+        tutorialRocketFired=false;
+        enemies.clear();shots.clear();pickups.clear();
+        shootTimer=0f;
         if(tutorialStep==TutorialRules.TARGET){
-            enemies.clear();shots.clear();
-            Enemy target=new Enemy(0,x,275,18);
+            Enemy target=new Enemy(0,x>W/2?85:335,265,42);
             target.vy=0;target.shoot=9999;target.value=0;
             enemies.add(target);
         }else if(tutorialStep==TutorialRules.COLLECT_STAR){
-            spawnPickup(x,y-85,0,12);
-        }else if(tutorialStep==TutorialRules.ACTIVATE_SHIELD){
-            abilityCharges[0]=Math.max(1,abilityCharges[0]);
-            beginGuide(TutorialRules.GUIDE_ABILITY,0);
+            Pickup star=new Pickup(x>W/2?90:330,459,0,12);
+            star.vy=0;pickups.add(star);
+        }else if(tutorialStep>=TutorialRules.ACTIVATE_SHIELD
+                && tutorialStep<=TutorialRules.ACTIVATE_PLASMA){
+            int id=tutorialStep-TutorialRules.ACTIVATE_SHIELD;
+            abilityCharges[id]=Math.max(1,abilityCharges[id]);
+            if(id==1)shieldTime=0;
+            if(id==2)rapidTime=0;
+            if(id==3)tripleTime=0;
+            beginGuide(TutorialRules.GUIDE_ABILITY,id);
+        }else if(tutorialStep==TutorialRules.PLASMA_TARGET){
+            plasmaTime=Math.max(plasmaTime,7f);
+            Enemy target=new Enemy(3,x>W/2?100:320,265,112);
+            target.vy=0;target.shoot=9999;target.value=0;
+            enemies.add(target);
         }else if(tutorialStep==TutorialRules.FIRE_SECONDARY){
+            plasmaTime=0f;
             secCharges[0]=Math.max(1,secCharges[0]);
+            Enemy target=new Enemy(3,x>W/2?100:320,262,78);
+            target.vy=0;target.shoot=9999;target.value=0;
+            enemies.add(target);
             beginGuide(TutorialRules.GUIDE_SECONDARY,0);
-        }else if(tutorialStep==TutorialRules.COMPLETE){
-            guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
         }
     }
     private void beginGuide(int kind,int id) {
@@ -279,14 +305,16 @@ public final class GameView extends View {
         startRun();
     }
     private void updateTutorial(float dt){
+        if(tutorialCheckpoint)return;
         x+=(targetX-x)*Math.min(1,dt*16f);
         y+=(targetY-y)*Math.min(1,dt*16f);
         x=clamp(x,24,W-24);y=clamp(y,120,FIELD_BOTTOM-22);
-        if(tutorialStep==TutorialRules.TARGET) {
+        if(tutorialStep==TutorialRules.TARGET||tutorialStep==TutorialRules.PLASMA_TARGET){
             shootTimer-=dt;
             if(shootTimer<=0){firePrimary();shootTimer=GameRules.fireInterval(0,false);}
         }
-        if(tutorialStep==TutorialRules.TARGET||tutorialStep==TutorialRules.COLLECT_STAR){
+        if(tutorialStep==TutorialRules.TARGET||tutorialStep==TutorialRules.COLLECT_STAR
+                ||tutorialStep==TutorialRules.PLASMA_TARGET||tutorialStep==TutorialRules.FIRE_SECONDARY){
             updateShots(dt);
             updatePickups(dt);
         }
@@ -362,6 +390,17 @@ public final class GameView extends View {
         sound(1);
     }
     private void addScore(int points){score+=points;if(score>best){best=score;save();}}
+    /** Plasma has a silent, distinctive purple impact even against armored targets. */
+    private void plasmaImpact(float px,float py){
+        if(particles.size()>260)return;
+        for(int i=0;i<7;i++){
+            float angle=i*6.283f/7f+rnd(-.16f,.16f);
+            float speed=rnd(30,118);
+            particles.add(new Particle(px,py,
+                    (float)Math.cos(angle)*speed,(float)Math.sin(angle)*speed,
+                    rnd(.18f,.38f),rnd(2.5f,5f),i%3==0?WHITE:0xFFBE83FF));
+        }
+    }
     private void takeHit(int damage){
         if(invulnerable>0||shieldTime>0||state!=PLAY)return;
         int absorbed=Math.min(shieldLevel,damage);
@@ -374,9 +413,16 @@ public final class GameView extends View {
     private void enemyKilled(int i,Enemy e){
         explode(e.x,e.y,e.kind==5?0xFFC391FF:RED,e.kind>=3?19:9);
         addScore(e.kind>=3?110:40);
-        if(tutorialActive && tutorialStep==TutorialRules.TARGET){
+        if(tutorialActive && (tutorialStep==TutorialRules.TARGET
+                || tutorialStep==TutorialRules.PLASMA_TARGET
+                || tutorialStep==TutorialRules.FIRE_SECONDARY)){
             enemies.remove(i);
-            tutorialAction(TutorialRules.ACTION_TARGET_KILLED);
+            if(tutorialStep==TutorialRules.TARGET)
+                tutorialAction(TutorialRules.ACTION_TARGET_KILLED);
+            else if(tutorialStep==TutorialRules.PLASMA_TARGET)
+                tutorialAction(TutorialRules.ACTION_PLASMA_TARGET_KILLED);
+            else if(tutorialRocketFired)
+                tutorialAction(TutorialRules.ACTION_SECONDARY_TARGET_KILLED);
             return;
         }
         starBurst(e.x,e.y,e.value,3);
@@ -467,8 +513,8 @@ public final class GameView extends View {
         secondarySeen=true;
         if(prompted)dismissGuide();
         else save();
-        if(tutorialActive && tutorialStep==TutorialRules.FIRE_SECONDARY)
-            tutorialAction(TutorialRules.ACTION_SECONDARY_FIRED);
+        if(tutorialActive && tutorialStep==TutorialRules.FIRE_SECONDARY && which==0)
+            tutorialRocketFired=true;
         return true;
     }
     private void useAbility(int which){
@@ -487,8 +533,16 @@ public final class GameView extends View {
         seenAbilityMask=TutorialRules.markAbilitySeen(seenAbilityMask,which);
         if(guideKind==TutorialRules.GUIDE_ABILITY)dismissGuide();
         else save();
-        if(tutorialActive && tutorialStep==TutorialRules.ACTIVATE_SHIELD && which==0)
-            tutorialAction(TutorialRules.ACTION_SHIELD_USED);
+        if(tutorialActive){
+            if(tutorialStep==TutorialRules.ACTIVATE_SHIELD && which==0)
+                tutorialAction(TutorialRules.ACTION_SHIELD_USED);
+            else if(tutorialStep==TutorialRules.ACTIVATE_RAPID && which==1)
+                tutorialAction(TutorialRules.ACTION_RAPID_USED);
+            else if(tutorialStep==TutorialRules.ACTIVATE_TRIPLE && which==2)
+                tutorialAction(TutorialRules.ACTION_TRIPLE_USED);
+            else if(tutorialStep==TutorialRules.ACTIVATE_PLASMA && which==3)
+                tutorialAction(TutorialRules.ACTION_PLASMA_USED);
+        }
     }
     private void fireEnemy(float ex,float ey,float tx,float ty,int type){
         float dx=tx-ex,dy=ty-ey;
@@ -726,6 +780,7 @@ public final class GameView extends View {
                     if(n.hp<=0)continue;
                     if(dist2(s.x,s.y,n.x,n.y)<(s.radius+17)*(s.radius+17)){
                         n.hp-=s.damage;boss.hp-=s.damage;
+                        if(s.kind==3)plasmaImpact(s.x,s.y);
                         if(random.nextFloat()<.1f)explode(s.x,s.y,GOLD,2);
                         nodeDamage(n);
                         if(s.kind==3){s.damage*=.62f;
@@ -741,6 +796,7 @@ public final class GameView extends View {
                     Enemy e=enemies.get(j);
                     if(dist2(s.x,s.y,e.x,e.y)<(e.radius+s.radius)*(e.radius+s.radius)){
                         e.hp-=s.damage;
+                        if(s.kind==3)plasmaImpact(s.x,s.y);
                         if(e.hp<=0)enemyKilled(j,e);
                         else if(random.nextFloat()<.3f)explode(s.x,s.y,CYAN,3);
                         if(s.kind==3){s.damage*=.65f;if(s.damage<4)consumed=true;}
@@ -1159,6 +1215,14 @@ public final class GameView extends View {
         c.rotate(lateral);
         float inv=invulnerable>0?(.5f+.5f*(float)Math.sin(idleTime*7)):0;
         glow(c,0,24,46,0x40000000,0x00000000);
+        if(plasmaTime>0){
+            float pulse=(float)Math.sin(idleTime*12f);
+            glow(c,0,-1,53+4*pulse,0xA6A354F5,0x00190A39);
+            p.setShader(null);p.setStyle(Paint.Style.STROKE);
+            p.setColor(0xE2D5A0FF);p.setStrokeWidth(2.4f);
+            c.drawCircle(0,-2,35+2*pulse,p);
+            p.setStyle(Paint.Style.FILL);
+        }
         if(invulnerable>0){
             p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.7f);
             p.setColor(((Math.round(100+100*inv))<<24)|0x004DE5FF);
@@ -1179,6 +1243,11 @@ public final class GameView extends View {
         // Detailed 192px transparent sprite, with independently animated thrusters
         // and protective shield painted at runtime.
         atlas.drawPlayer(c,0,-2);
+        if(plasmaTime>0){
+            glow(c,0,-10,21,0xDDB578FF,0x00751CFF);
+            circle(c,0,-10,6,0xFFDCC0FF);
+            circle(c,0,-10,2.7f,WHITE);
+        }
         if(droneLevel>0){
             for(int i=0;i<Math.min(3,droneLevel);i++){
                 float dx=(i-(Math.min(3,droneLevel)-1)/2f)*43;
@@ -1268,10 +1337,18 @@ public final class GameView extends View {
             } else if(s.kind==2){
                 circle(c,s.x,s.y,11,0x4471E4FF);circle(c,s.x,s.y,6,GOLD);
                 line(c,s.x,s.y+7,s.x-s.vx*.05f,s.y-s.vy*.05f,0xFFED9F4B,3);
+            } else if(s.kind==3){
+                glow(c,s.x,s.y,21+(float)Math.sin(idleTime*18+s.age*12)*3,
+                        0xB9A34DFF,0x001D063F);
+                line(c,s.x,s.y+5,s.x-s.vx*.051f,s.y-s.vy*.051f,
+                        0xA17F3CE8,10f);
+                line(c,s.x,s.y+3,s.x-s.vx*.032f,s.y-s.vy*.032f,
+                        0xFFE1AEFF,4.7f);
+                circle(c,s.x,s.y,6.8f,0xFFD29BFF);
+                circle(c,s.x,s.y,3.1f,WHITE);
             } else {
-                int col=s.kind==3?0xFFC998FF:CYAN;
-                line(c,s.x,s.y+13,s.x-s.vx*.015f,s.y-s.vy*.015f,col,s.kind==3?5:2.7f);
-                circle(c,s.x,s.y,s.kind==3?5:2,WHITE);
+                line(c,s.x,s.y+13,s.x-s.vx*.015f,s.y-s.vy*.015f,CYAN,2.7f);
+                circle(c,s.x,s.y,2,WHITE);
             }
         }
     }
@@ -1346,7 +1423,7 @@ public final class GameView extends View {
         }
         panel(c,7,650,406,124,0xE60A1728,0x883B7E9E,11);
         txt(c,"SEKUNDÄR",15,667,10,MUTED,Paint.Align.LEFT,true);
-        txt(c,inputMode==0?"1 FINGER · LOSLASSEN":"2 FINGER · DIREKT",15,684,10,WHITE,Paint.Align.LEFT,false);
+        txt(c,"RAKETE / EMP · EINMAL TIPPEN",15,684,10,WHITE,Paint.Align.LEFT,false);
         for(int i=0;i<2;i++){
             int xx=252+i*81;
             int border=inputMode==0&&armedSecondary==i?GOLD:0xFF416D89;
@@ -1362,6 +1439,7 @@ public final class GameView extends View {
             txt(c,i==0?"RAKETE":"EMP",xx+51,675,10,WHITE,Paint.Align.CENTER,true);
             txt(c,""+secCharges[i]+"x",xx+51,693,14,secCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
         }
+        if(plasmaTime>0)textCenterAt(c,"PLASMA AKTIV",350,711,10,0xFFE0B6FF);
         for(int i=0;i<4;i++){
             int xx=13+i*100;
             boolean active=(i==0&&shieldTime>0)||(i==1&&rapidTime>0)||(i==2&&tripleTime>0)||(i==3&&plasmaTime>0);
@@ -1500,9 +1578,9 @@ public final class GameView extends View {
         screenHeader(c,"EINSTELLUNGEN","JEDERZEIT VOR DEM NÄCHSTEN RUN ÄNDERBAR");
         textCenter(c,"SEKUNDÄRWAFFEN-STEUERUNG",215,17,GOLD,true);
         button(c,"EINHAND-MODUS "+(inputMode==0?"✓":""),28,246,364,66,inputMode==0);
-        textCenter(c,"Loslassen feuert die zuvor scharfgeschaltete Waffe",333,11,MUTED,false);
+        textCenter(c,"Schiff ziehen; RAKETE / EMP direkt antippen",333,11,MUTED,false);
         button(c,"ZWEIFINGER-MODUS "+(inputMode==1?"✓":""),28,353,364,66,inputMode==1);
-        textCenter(c,"Zweiter Finger tippt direkt auf die Waffenbuttons",443,11,MUTED,false);
+        textCenter(c,"Auch beim Steuern per zweitem Finger abfeuern",443,11,MUTED,false);
         button(c,"TON: "+(soundEnabled?"EIN":"AUS"),40,478,340,52,soundEnabled);
         button(c,"VIBRATION: "+(vibrationEnabled?"EIN":"AUS"),40,540,340,52,vibrationEnabled);
         button(c,"LIZENZEN & DATENSCHUTZ",40,612,340,51,false);
@@ -1544,6 +1622,11 @@ public final class GameView extends View {
                 i==0?GOLD:i>=9?CYAN:WHITE,Paint.Align.LEFT,i==0);
         button(c,"ZURÜCK",90,690,240,55,true);
     }
+    private String tutorialStepName(int step){
+        String[] names={"STEUERN","ZIELEN","STERNE","SCHILD","SCHNELLFEUER",
+                "DREIFACH","PLASMA AKTIVIEREN","PLASMA TESTEN","RAKETEN","ABSCHLUSS"};
+        return names[Math.max(0,Math.min(step,names.length-1))];
+    }
     private void drawTutorialOverlay(Canvas c){
         if(guideKind==TutorialRules.GUIDE_NONE && !tutorialActive)return;
         if(guideKind!=TutorialRules.GUIDE_NONE){
@@ -1556,28 +1639,28 @@ public final class GameView extends View {
                     "8 SEKUNDEN SCHUTZ VOR TREFFERN",
                     "9 SEKUNDEN SCHNELLER SCHIESSEN",
                     "9 SEKUNDEN DREIFACH-SCHUSS",
-                    "7 SEKUNDEN PLASMA-MUNITION"
+                    "7 SEKUNDEN VIOLETTE PLASMA-GESCHOSSE"
                 };
                 description=descriptions[Math.max(0,Math.min(3,guideId))];
-                action="TIPPE UNTEN AUF "+title;
+                action="JETZT UNTEN AUF "+title+" TIPPEN";
             }else{
                 title="SCHWARMRAKETEN";
-                description="ZIELSUCHENDE GESCHOSSE MIT LADUNGEN";
-                action=inputMode==0?"RAKETE WAEHLEN, SCHIFF ZIEHEN, LOSLASSEN":"TIPPE UNTEN AUF RAKETE";
+                description="RAKETEN VERFOLGEN DEN TRAININGSGEGNER";
+                action="JETZT UNTEN RECHTS RAKETE ANTIPPEN";
             }
-            panel(c,22,210,376,278,0xFA0C2036,0xFF76D9FF,15);
-            txt(c,tutorialActive?"TRAINING · INTERAKTIV":"NEUE TECHNOLOGIE",210,245,14,GOLD,Paint.Align.CENTER,true);
-            textCenter(c,title,292,31,WHITE,true);
-            textCenter(c,description,328,14,MUTED,false);
-            if(ability)drawPowerupIcon(c,guideId,210,374,40);
-            else {
+            panel(c,22,205,376,282,0xFA0C2036,0xFF76D9FF,15);
+            txt(c,tutorialActive?"TRAINING · SCHRITT "+(tutorialStep+1)+"/"+TutorialRules.TOTAL_STEPS:
+                    "NEUE TECHNOLOGIE",210,240,14,GOLD,Paint.Align.CENTER,true);
+            textCenter(c,title,290,29,WHITE,true);
+            textCenter(c,description,330,13,MUTED,false);
+            if(ability)drawPowerupIcon(c,guideId,210,375,39);
+            else{
                 glow(c,210,371,38,0x665DD9FF,0x005DD9FF);
                 triangle(c,200,382,210,352,220,382,0xFF95DBF9);
                 line(c,210,354,210,335,0xFFF9C46D,4f);
             }
             textCenter(c,action,447,12,GOLD,true);
-            textCenter(c,"SPIEL PAUSIERT · ERST AKTION AUSFUEHREN",472,10,WHITE,false);
-            // Real HUD controls remain tappable. Outline the control to be used.
+            textCenter(c,"DAS SPIEL WARTET AUF DEINE AKTION",473,10,WHITE,false);
             p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3);
             p.setColor((int)(idleTime*4)%2==0?GOLD:CYAN);
             if(ability){
@@ -1587,34 +1670,66 @@ public final class GameView extends View {
                 c.drawRoundRect(250,656,329,706,8,8,p);
             }
             p.setStyle(Paint.Style.FILL);
-            if(!tutorialActive){
-                button(c,"UEBERSPRINGEN",114,552,192,46,false);
-            }
+            if(!tutorialActive)button(c,"UEBERSPRINGEN",114,552,192,46,false);
         }else if(tutorialActive){
-            String title="",detail="";
-            switch(tutorialStep){
-                case TutorialRules.MOVE:
-                    title="1/5 · STEUERN";
-                    detail="FINGER AUF DAS SCHIFF, NACH LINKS ODER RECHTS ZIEHEN";break;
-                case TutorialRules.TARGET:
-                    title="2/5 · ZIELEN";
-                    detail="SCHIFF UNTER DEN TRAININGSGEGNER BEWEGEN";break;
-                case TutorialRules.COLLECT_STAR:
-                    title="3/5 · STERNE";
-                    detail="SAMMLE DEN GELBEN STERN · SHOP-WAEHRUNG";break;
-                case TutorialRules.COMPLETE:
-                    box(c,0,0,W,650,0xC9071226);
-                    panel(c,30,229,360,274,0xF80D263B,0xFF7CE6C4,15);
-                    textCenter(c,"TRAINING ABSOLVIERT",301,26,GREEN,true);
-                    textCenter(c,"DU KENNST JETZT DIE GRUNDLAGEN",343,14,WHITE,false);
-                    textCenter(c,"STERNE · WAFFEN · FAEHIGKEITEN",371,13,GOLD,true);
-                    button(c,"SEKTOR 1 STARTEN",58,419,304,57,true);
-                    break;
-                default:break;
-            }
-            if(tutorialStep!=TutorialRules.COMPLETE){
+            if(tutorialCheckpoint){
+                box(c,0,0,W,650,0xC9071226);
+                panel(c,25,212,370,296,0xF90C253B,0xFF70D7B4,15);
+                textCenter(c,"SCHRITT "+(tutorialStep+1)+"/"+TutorialRules.TOTAL_STEPS+" GESCHAFFT",
+                        259,24,GREEN,true);
+                String[] feedback={
+                    "DU BEHERRSCHST DIE SCHIFFSSTEUERUNG",
+                    "DIE HAUPTWAFFE SCHIESST AUTOMATISCH",
+                    "STERNE SIND DIE SHOP-WAEHRUNG",
+                    "DER SCHILD SCHUETZT DICH",
+                    "SCHNELLFEUER ERHOEHT DIE FEUERRATE",
+                    "DREIFACH GIBT DIR MEHR GESCHOSSE",
+                    "DU SIEHST JETZT DEN PLASMA-EFFEKT",
+                    "PLASMA TRIFFT MIT VIOLETTEN IMPULSEN",
+                    "DIE RAKETEN FINDEN IHR ZIEL SELBST"
+                };
+                textCenter(c,feedback[Math.min(tutorialStep,feedback.length-1)],315,13,WHITE,false);
+                textCenter(c,"ALS NAECHSTES: "+tutorialStepName(tutorialNextStep),
+                        365,15,GOLD,true);
+                button(c,"WEITER",58,419,304,57,true);
+            }else if(tutorialStep==TutorialRules.COMPLETE){
+                box(c,0,0,W,650,0xC9071226);
+                panel(c,26,216,368,306,0xF80D263B,0xFF7CE6C4,15);
+                textCenter(c,"TRAINING ABGESCHLOSSEN",281,26,GREEN,true);
+                textCenter(c,"ALLE "+TutorialRules.TOTAL_STEPS+" AUFGABEN GESCHAFFT",
+                        321,15,WHITE,true);
+                textCenter(c,"SCHIFF · WAFFEN · STERNE · PLASMA",362,13,GOLD,true);
+                textCenter(c,"BEREIT FUER DEN ERSTEN SEKTOR?",396,13,WHITE,false);
+                button(c,"SEKTOR 1 STARTEN",58,419,304,57,true);
+            }else{
+                if(tutorialStep==TutorialRules.TARGET
+                        ||tutorialStep==TutorialRules.PLASMA_TARGET
+                        ||tutorialStep==TutorialRules.FIRE_SECONDARY){
+                    p.setShader(null);p.setStyle(Paint.Style.STROKE);
+                    p.setColor(0xFFDFC27B);p.setStrokeWidth(2.3f);
+                    for(Enemy e:enemies)
+                        c.drawCircle(e.x,e.y,e.radius+13+
+                                (float)Math.sin(idleTime*8)*2,p);
+                    p.setStyle(Paint.Style.FILL);
+                }
+                String detail="";
+                switch(tutorialStep){
+                    case TutorialRules.MOVE:
+                        detail="SCHIFF MIT DEM FINGER SEITLICH ZIEHEN";break;
+                    case TutorialRules.TARGET:
+                        detail="ZUM ZIEL FLIEGEN · DIE WAFFE FEUERT SELBST";break;
+                    case TutorialRules.COLLECT_STAR:
+                        detail="ZUM GELBEN STERN FLIEGEN UND IHN EINSAMMELN";break;
+                    case TutorialRules.PLASMA_TARGET:
+                        detail="ZUM ZIEL FLIEGEN · VIOLETTE TREFFER BEOBACHTEN";break;
+                    case TutorialRules.FIRE_SECONDARY:
+                        detail=tutorialRocketFired?"RAKETEN UNTERWEGS · WARTE AUF DEN TREFFER":
+                                "RAKETE UNTEN RECHTS ANTIPPEN";break;
+                    default:break;
+                }
                 panel(c,18,103,384,89,0xF5122944,0xAA67B5D8,11);
-                textCenter(c,title,137,21,GOLD,true);
+                textCenter(c,(tutorialStep+1)+"/"+TutorialRules.TOTAL_STEPS+" · "+
+                        tutorialStepName(tutorialStep),137,20,GOLD,true);
                 textCenter(c,detail,165,12,WHITE,false);
             }
         }
@@ -1670,6 +1785,10 @@ public final class GameView extends View {
                 return true;
             case PLAY:
                 if(tutorialActive && inside(px,py,297,18,109,39)){finishTutorial();return true;}
+                if(tutorialActive && tutorialCheckpoint){
+                    if(inside(px,py,58,419,304,57))continueTutorial();
+                    return true;
+                }
                 if(tutorialActive && tutorialStep==TutorialRules.COMPLETE){
                     if(inside(px,py,58,419,304,57))finishTutorial();
                     return true;
@@ -1685,10 +1804,7 @@ public final class GameView extends View {
                     }
                     if(py>=650&&py<707&&px>=252){
                         int slot=px>=333?1:0;
-                        if(slot==guideId){
-                            if(inputMode==0)armedSecondary=slot;
-                            else useSecondary(slot);
-                        }
+                        if(slot==guideId)useSecondary(slot);
                         return true;
                     }
                     return !(inputMode==0&&py<650);
@@ -1702,9 +1818,6 @@ public final class GameView extends View {
                     if(px>=252){int slot=px>=333?1:0;
                         if(!secondarySeen){
                             beginGuide(TutorialRules.GUIDE_SECONDARY,slot);
-                        }else if(inputMode==0){
-                            armedSecondary=slot;
-                            banner=SECONDARY_NAMES[slot]+" SCHARF";bannerTime=.9f;
                         }else useSecondary(slot);
                     }
                     return true;
@@ -1800,8 +1913,6 @@ public final class GameView extends View {
         }
         if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_POINTER_UP||action==MotionEvent.ACTION_CANCEL){
             if(ev.getPointerId(idx)==touchPointer){
-                if(state==PLAY && inputMode==0 && armedSecondary>=0)
-                    useSecondary(armedSecondary);
                 touchPointer=-1;downWasButton=false;
             }
             return true;

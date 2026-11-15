@@ -2,20 +2,29 @@ package de.shatterwake.game;
 
 public final class TutorialChecks {
     public static void main(String[] args){
+        final int[] actions={
+            TutorialRules.ACTION_MOVE,
+            TutorialRules.ACTION_TARGET_KILLED,
+            TutorialRules.ACTION_STAR_COLLECTED,
+            TutorialRules.ACTION_SHIELD_USED,
+            TutorialRules.ACTION_RAPID_USED,
+            TutorialRules.ACTION_TRIPLE_USED,
+            TutorialRules.ACTION_PLASMA_USED,
+            TutorialRules.ACTION_PLASMA_TARGET_KILLED,
+            TutorialRules.ACTION_SECONDARY_TARGET_KILLED
+        };
         int step=TutorialRules.MOVE;
-        assert TutorialRules.nextStep(step,TutorialRules.ACTION_STAR_COLLECTED)==TutorialRules.MOVE;
-        step=TutorialRules.nextStep(step,TutorialRules.ACTION_MOVE);
-        assert step==TutorialRules.TARGET;
-        step=TutorialRules.nextStep(step,TutorialRules.ACTION_TARGET_KILLED);
-        assert step==TutorialRules.COLLECT_STAR;
-        step=TutorialRules.nextStep(step,TutorialRules.ACTION_STAR_COLLECTED);
-        assert step==TutorialRules.ACTIVATE_SHIELD;
-        assert TutorialRules.nextStep(step,TutorialRules.ACTION_SECONDARY_FIRED)==TutorialRules.ACTIVATE_SHIELD;
-        step=TutorialRules.nextStep(step,TutorialRules.ACTION_SHIELD_USED);
-        assert step==TutorialRules.FIRE_SECONDARY;
-        step=TutorialRules.nextStep(step,TutorialRules.ACTION_SECONDARY_FIRED);
+        assert actions.length==TutorialRules.TOTAL_STEPS;
+        for(int i=0;i<actions.length;i++){
+            assert step==i;
+            assert TutorialRules.nextStep(step,(actions[i]+1)%actions.length)==step :
+                "An unrelated action must never skip a lesson";
+            step=TutorialRules.nextStep(step,actions[i]);
+        }
         assert step==TutorialRules.COMPLETE;
         assert TutorialRules.nextStep(step,TutorialRules.ACTION_MOVE)==TutorialRules.COMPLETE;
+        assert TutorialRules.nextStep(TutorialRules.FIRE_SECONDARY,
+                TutorialRules.ACTION_PLASMA_USED)==TutorialRules.FIRE_SECONDARY;
 
         assert TutorialRules.canPromptAbility(0,0);
         int seen=TutorialRules.markAbilitySeen(0,0);
@@ -34,7 +43,7 @@ public final class TutorialChecks {
         assert !TutorialRules.allowAbilityTap(TutorialRules.GUIDE_SECONDARY,0,0);
         assert TutorialRules.allowSecondaryTap(TutorialRules.GUIDE_SECONDARY,0,0);
         assert !TutorialRules.allowSecondaryTap(TutorialRules.GUIDE_SECONDARY,1,0);
-        assert TutorialRules.abilityExplanation(0).contains("acht");
-        System.out.println("PASS: onboarding path, first-discovery persistence and targeted controls");
+        assert TutorialRules.abilityExplanation(3).contains("Plasma");
+        System.out.println("PASS: nine deliberate lesson transitions, plasma and targeted controls");
     }
 }
