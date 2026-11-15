@@ -697,7 +697,7 @@ public final class GameView extends View {
         }
     }
     private void finishBoss(){
-        if(state!=PLAY||boss==null)return;
+        if(state!=PLAY||boss==null||bossSequence!=GameRules.BOSS_COMBAT)return;
         addScore(1000*stage);
         int bonus=GameRules.bossReward(world);
         stars+=bonus;
@@ -705,7 +705,7 @@ public final class GameView extends View {
         explode(210,245,CYAN,60);
         newlyUnlocked=(techMask&(1<<world))==0?world:-1;
         techMask|=1<<world;save();
-        boss=null;bossActive=false;
+        boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;
         enemies.clear();shots.clear();pickups.clear();
         buildShop();state=SHOP;
         shopMessage="BOSS BESIEGT · +"+bonus+" STERNE";
@@ -714,23 +714,23 @@ public final class GameView extends View {
     private void buildShop(){
         offers.clear();
         offers.add(new Offer(0,"SCHNELLFEUER +5,5%","Bis zu 5 Stufen",GameRules.nextFireCost(fireLevel)));
-        offers.add(new Offer(1,"WAFFENSCHADEN +12%","Mehr Schaden pro Treffer",225+damageLevel*85));
-        offers.add(new Offer(2,"REPARATUR +1 HP","Stellt einen Lebenspunkt wieder her",120));
-        offers.add(new Offer(3,"STERNENMAGNET","Sammelradius erweitern",180+magnetLevel*90));
+        offers.add(new Offer(1,"WAFFENSCHADEN +12%","Mehr Schaden pro Treffer",GameRules.nextDamageCost(damageLevel)));
+        offers.add(new Offer(2,"REPARATUR +1 HP","Stellt einen Lebenspunkt wieder her",160));
+        offers.add(new Offer(3,"STERNENMAGNET","Sammelradius erweitern",GameRules.nextMagnetCost(magnetLevel)));
         int special=(world+random.nextInt(4))%4;
-        if(special==0|| (techMask&1)!=0)offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",370+droneLevel*150));
-        else offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",345+shieldLevel*170));
-        offers.add(new Offer(6,"SPEZIAL-LADUNGEN","Je eine Ladung für vier Fähigkeiten",260));
+        if(special==0|| (techMask&1)!=0)offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",GameRules.nextDroneCost(droneLevel)));
+        else offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",GameRules.nextShieldCost(shieldLevel)));
+        offers.add(new Offer(6,"SPEZIAL-LADUNGEN","Je eine Ladung für vier Fähigkeiten",390));
     }
     private int offerPrice(Offer o){
         switch(o.id){
             case 0:return GameRules.nextFireCost(fireLevel);
-            case 1:return 225+damageLevel*85;
-            case 2:return 120;
-            case 3:return 180+magnetLevel*90;
-            case 4:return 370+droneLevel*150;
-            case 5:return 345+shieldLevel*170;
-            case 6:return 260;
+            case 1:return GameRules.nextDamageCost(damageLevel);
+            case 2:return 160;
+            case 3:return GameRules.nextMagnetCost(magnetLevel);
+            case 4:return GameRules.nextDroneCost(droneLevel);
+            case 5:return GameRules.nextShieldCost(shieldLevel);
+            case 6:return 390;
             default:return o.base;
         }
     }
@@ -777,6 +777,7 @@ public final class GameView extends View {
         if(state==PLAY||state==PAUSE){
             drawWorld(c);drawEnemies(c);drawBoss(c);drawShots(c);drawPickups(c);drawParticles(c);
             drawPlayer(c);drawHud(c);
+            drawBossTransition(c);
             if(state==PAUSE)drawPause(c);
         }else{
             if(state==MENU)drawMenu(c);
@@ -1111,6 +1112,25 @@ public final class GameView extends View {
                     (q.color&0x00FFFFFF)|(alpha<<24));
         }
     }
+    private void drawBossTransition(Canvas c){
+        if(bossSequence==GameRules.BOSS_WARNING){
+            boolean blink=(int)(idleTime*4)%2==0;
+            box(c,0,0,W,FIELD_BOTTOM,blink?0x22FF284C:0x0A89172D);
+            panel(c,15,250,390,141,0xEF240C1F,blink?0xFFFF506E:0xFF8D253D,12);
+            line(c,15,250,405,250,0xFFFF728D,3);
+            textCenter(c,blink?"!!  BOSS-WARNUNG  !!":"BOSS-WARNUNG",304,34,WHITE,true);
+            textCenter(c,BOSS_NAMES[world],341,19,0xFFFFB4C1,true);
+            textCenter(c,"ANFLUG IN "+Math.max(1,(int)Math.ceil(bossSequenceTimer))+" SEKUNDEN",373,15,WHITE,true);
+        }else if(bossSequence==GameRules.BOSS_ENTERING){
+            float progress=clamp(1f-bossSequenceTimer/GameRules.BOSS_ENTRY_SECONDS,0f,1f);
+            panel(c,62,141,296,38,0xD7141F39,0x9983C0E9,8);
+            textCenter(c,"GROSSKAMPFSCHIFF IM ANFLUG",166,15,WHITE,true);
+            box(c,78,181,264,4,0xFF314057);
+            box(c,78,181,264*progress,4,0xFFFF7995);
+        }else if(bossSequence==GameRules.BOSS_CLEARING && enemies.size()<3){
+            textCenter(c,"GEGNERWELLE ENDET",201,17,0xFFFFDFA2,true);
+        }
+    }
     private void drawHud(Canvas c){
         panel(c,7,7,406,87,0xDE0B1729,0x774DA6C6,12);
         txt(c,"SHATTERWAKE",18,28,16,WHITE,Paint.Align.LEFT,true);
@@ -1175,7 +1195,7 @@ public final class GameView extends View {
         button(c,"NEUER DURCHLAUF",51,450,318,58,true);
         button(c,"EINSTELLUNGEN",51,524,318,54,false);
         button(c,"TECHNOLOGIE-ARCHIV",51,593,318,54,false);
-        textCenter(c,"PROTOTYP 0.1  ·  OFFLINE  ·  OHNE TRACKING",725,11,MUTED,false);
+        textCenter(c,"PROTOTYP 0.3  ·  OFFLINE  ·  OHNE TRACKING",725,11,MUTED,false);
     }
     private void screenHeader(Canvas c,String title,String sub){
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);
