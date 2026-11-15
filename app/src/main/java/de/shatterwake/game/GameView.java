@@ -1374,7 +1374,7 @@ public final class GameView extends View {
             float maxTime=i==0?8f:i==3?7f:9f;
             if(activeLeft>0){
                 box(c,xx+5,760,84,2,0xFF14374F);
-                box(c,xx+5,84*clamp(activeLeft/maxTime,0,1),2,CYAN);
+                box(c,xx+5,760,84*clamp(activeLeft/maxTime,0,1),2,CYAN);
             }
         }
     }
