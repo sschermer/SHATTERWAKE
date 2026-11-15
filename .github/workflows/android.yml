@@ -29,9 +29,11 @@ jobs:
       - name: Accept SDK licenses from preinstalled GitHub SDK
         run: |
           echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
-          yes | sdkmanager --licenses >/dev/null || true
+          SDK_BIN=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          echo "SDKMANAGER=$SDK_BIN" >> "$GITHUB_ENV"
+          yes | "$SDK_BIN" --licenses >/dev/null || true
       - name: Install Android 16 API 36
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+        run: '"$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"'
       - name: Bootstrap source archive if supplied
         run: |
           if [ -f project.bundle.b64 ]; then
