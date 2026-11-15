@@ -1,4 +1,4 @@
-# SHATTERWAKE: playable prototype design (0.2.0-alpha)
+# SHATTERWAKE: playable prototype design (0.3.0-alpha)
 
 **Genre:** native Android portrait shooter with vertical scrolling and pseudo-isometric, procedurally drawn spaceships, asteroid objects and shadows. Designed for small touchscreens; no cloud services, no remote assets.
 
@@ -15,15 +15,30 @@
 - Up to two continues at death; each costs **half** of current remaining stars rounded up, keeps shop upgrades and returns hull to full.
 - Boss modular anatomy: weapon nodes, connecting nodes, cargo and reactor nodes; destroyable parts lead to rewards, changed attacks and a splitting fragment in worm fight. Bosses have changing phases.
 
-### Early-game balance targets (0.2 alpha)
+### Early-game balance targets (0.3 alpha)
 
 - Enemy fire is disabled during the initial 18 seconds of sector 1 to let players learn movement.
 - The first 20 seconds permit at most 3 concurrent enemies, increasing in tiers to 8 later in sector 1.
 - First-stage enemy shots are capped at 3 active projectiles through second 55, and capped at 5 through second 90.
 - Enemies appear more slowly, one at a time in opening waves, with reduced velocity and hull strength.
-- Starter hull increased to 6; damage invulnerability increased to 2.4 seconds.
+- Starter hull remains 6; damage invulnerability adjusted to 2 seconds.
 - Boss salvo density reduced, with slower projectiles, fewer volleys and longer pauses.
 - These are *tuning assumptions*, not yet validated by measured phone playtests.
+
+### Boss transition (0.3 alpha)
+
+1. Stop new enemy and ambient star spawns at sector timer threshold.
+2. Let remaining enemies naturally exit or be defeated; no teleporting bosses onto the ship.
+3. Clear remaining hostile shots, blink a centered warning and play an original three-second synthesized siren.
+4. Animate every boss node from fully offscreen at the top over 3.7 seconds.
+5. Allow aiming, firing, boss collisions and attacks only after the fly-in; grant 1.3 seconds of brief protection.
+
+### Star economy (0.3 alpha)
+
+- Enemy and modular boss star bursts scaled to about 55% of prior values.
+- Ambient star supply reduced to 11–14 per drop every 6.7–9.5 seconds.
+- Boss bonuses reduced; shop prices for higher weapon levels and support systems increased.
+- Prices are heuristic first-pass balance, not measured device-playtest figures.
 
 ### Explicit prototype compromises / next iteration
 
