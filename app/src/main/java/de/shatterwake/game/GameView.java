@@ -57,7 +57,8 @@ public final class GameView extends View {
     private int[] sounds=new int[5];
     private boolean soundEnabled=true, vibrationEnabled=true;
     private int state=MENU, previousState=MENU, inputMode=0, world=0, stage=1;
-    private boolean tutorialActive=false, tutorialComplete=false, secondarySeen=false;
+    private boolean tutorialActive=false, tutorialComplete=false, secondarySeen=false,
+            shopIntroSeen=false, shopIntroShowing=false;
     private int tutorialStep=TutorialRules.MOVE, guideKind=TutorialRules.GUIDE_NONE, guideId=-1, seenAbilityMask=0;
     private float tutorialTravel=0f;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
@@ -146,6 +147,7 @@ public final class GameView extends View {
         tutorialComplete=prefs.getBoolean("tutorial_complete",false);
         seenAbilityMask=prefs.getInt("seen_ability_mask",0);
         secondarySeen=prefs.getBoolean("secondary_seen",false);
+        shopIntroSeen=prefs.getBoolean("shop_intro_seen",false);
         for(int i=0;i<starX.length;i++) resetBackgroundStar(i,true);
         initSounds();
         setFocusable(true);
@@ -164,7 +166,8 @@ public final class GameView extends View {
             .putBoolean("vibration",vibrationEnabled)
             .putBoolean("tutorial_complete",tutorialComplete)
             .putInt("seen_ability_mask",seenAbilityMask)
-            .putBoolean("secondary_seen",secondarySeen).apply();}
+            .putBoolean("secondary_seen",secondarySeen)
+            .putBoolean("shop_intro_seen",shopIntroSeen).apply();}
     private void resetBackgroundStar(int i,boolean anywhere){
         starX[i]=random.nextFloat()*W;
         starY[i]=anywhere?random.nextFloat()*H:-random.nextFloat()*25;
@@ -820,6 +823,7 @@ public final class GameView extends View {
         boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;
         enemies.clear();shots.clear();pickups.clear();
         buildShop();state=SHOP;
+        if(!shopIntroSeen)shopIntroShowing=true;
         shopMessage="BOSS BESIEGT · +"+bonus+" STERNE";
         sound(2);vibrate(100);
     }
@@ -894,7 +898,7 @@ public final class GameView extends View {
             if(state==PAUSE)drawPause(c);
         }else{
             if(state==MENU)drawMenu(c);
-            else if(state==SHOP)drawShop(c);
+            else if(state==SHOP){drawShop(c);if(shopIntroShowing)drawShopIntro(c);}
             else if(state==ROUTE)drawRoute(c);
             else if(state==DEAD)drawDead(c);
             else if(state==GAME_OVER)drawGameOver(c,false);
@@ -1342,16 +1346,31 @@ public final class GameView extends View {
             int xx=252+i*81;
             int border=inputMode==0&&armedSecondary==i?GOLD:0xFF416D89;
             panel(c,xx,658,75,44,0xFF18384E,border,8);
-            txt(c,i==0?"RAKETE":"EMP",xx+37.5f,674,10,WHITE,Paint.Align.CENTER,true);
-            txt(c,""+secCharges[i],xx+37.5f,694,15,secCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
+            if(i==0){
+                triangle(c,xx+13,675,xx+22,660,xx+31,675,CYAN);
+                line(c,xx+22,671,xx+22,686,GOLD,2);
+            }else{
+                glow(c,xx+22,679,16,0x668AE6FF,0x008AE6FF);
+                circle(c,xx+22,679,5,CYAN);
+                line(c,xx+10,676,xx+34,676,WHITE,1.5f);
+            }
+            txt(c,i==0?"RAKETE":"EMP",xx+51,675,10,WHITE,Paint.Align.CENTER,true);
+            txt(c,""+secCharges[i]+"x",xx+51,693,14,secCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
         }
         for(int i=0;i<4;i++){
             int xx=13+i*100;
             boolean active=(i==0&&shieldTime>0)||(i==1&&rapidTime>0)||(i==2&&tripleTime>0)||(i==3&&plasmaTime>0);
             panel(c,xx,716,94,47,active?0xFF285976:0xFF182D45,
                     active?GOLD:0xFF42647D,8);
-            txt(c,ABILITY_NAMES[i],xx+47,734,i==2?10:11,WHITE,Paint.Align.CENTER,true);
-            txt(c,"◆ "+abilityCharges[i],xx+47,753,12,abilityCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
+            drawPowerupIcon(c,i,xx+22,739,12);
+            txt(c,ABILITY_NAMES[i],xx+59,735,i==2?10:11,WHITE,Paint.Align.CENTER,true);
+            txt(c,""+abilityCharges[i]+"x",xx+59,754,13,abilityCharges[i]>0?GOLD:MUTED,Paint.Align.CENTER,true);
+            float activeLeft=i==0?shieldTime:i==1?rapidTime:i==2?tripleTime:plasmaTime;
+            float maxTime=i==0?8f:i==3?7f:9f;
+            if(activeLeft>0){
+                box(c,xx+5,760,84,2,0xFF14374F);
+                box(c,xx+5,84*clamp(activeLeft/maxTime,0,1),2,CYAN);
+            }
         }
     }
     private void textCenterAt(Canvas c,String s,float xx,float yy,float sz,int color){
@@ -1383,6 +1402,17 @@ public final class GameView extends View {
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);
         textCenter(c,title,65,29,WHITE,true);
         textCenter(c,sub,91,12,MUTED,false);
+    }
+    private void drawShopIntro(Canvas c){
+        box(c,0,0,W,H,0xC7091322);
+        panel(c,23,207,374,338,0xF70C253B,0xFF7BDEEB,15);
+        textCenter(c,"DIE STERNENWERFT",264,28,GOLD,true);
+        textCenter(c,"DAS IST DEIN SHOP NACH JEDEM BOSS",305,13,WHITE,true);
+        textCenter(c,"STERNE SIND DIE WAEHRUNG",341,17,GOLD,true);
+        textCenter(c,"UPGRADES GELTEN BIS ZUM GAME OVER",376,13,MUTED,false);
+        textCenter(c,"PREISE STEIGEN MIT JEDER AUSBAUSTUFE",406,12,MUTED,false);
+        textCenter(c,"TIPP: ZUERST WAFFEN ODER REPARATUR",437,12,WHITE,false);
+        button(c,"VERSTANDEN",89,467,242,58,true);
     }
     private void drawShop(Canvas c){
         screenHeader(c,"STERNENWERFT","KAUF BLEIBT BIS ZUM GAME OVER AKTIV");
@@ -1665,12 +1695,12 @@ public final class GameView extends View {
                 }
                 if(py>=650&&py<707){
                     if(px>=252){int slot=px>=333?1:0;
-                        if(inputMode==0){armedSecondary=slot;
+                        if(!secondarySeen){
+                            beginGuide(TutorialRules.GUIDE_SECONDARY,slot);
+                        }else if(inputMode==0){
+                            armedSecondary=slot;
                             banner=SECONDARY_NAMES[slot]+" SCHARF";bannerTime=.9f;
                         }else useSecondary(slot);
-                        if(!secondarySeen && guideKind==TutorialRules.GUIDE_NONE){
-                            beginGuide(TutorialRules.GUIDE_SECONDARY,slot);
-                        }
                     }
                     return true;
                 }
@@ -1680,6 +1710,12 @@ public final class GameView extends View {
                 if(inside(px,py,55,408,310,58)){state=MENU;return true;}
                 return true;
             case SHOP:
+                if(shopIntroShowing){
+                    if(inside(px,py,89,467,242,58)){
+                        shopIntroShowing=false;shopIntroSeen=true;save();
+                    }
+                    return true;
+                }
                 for(int i=0;i<offers.size();i++)if(inside(px,py,20,205+i*62,380,55)){
                     buyOffer(i);return true;
                 }
