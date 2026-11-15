@@ -53,7 +53,7 @@ public final class GameView extends View {
     private final int[] secCharges=new int[]{3,2};
     private final int[] unlockLevels=new int[5];
     private SoundPool soundPool;
-    private int[] sounds=new int[4];
+    private int[] sounds=new int[5];
     private boolean soundEnabled=true, vibrationEnabled=true;
     private int state=MENU, previousState=MENU, inputMode=0, world=0, stage=1;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
@@ -65,6 +65,8 @@ public final class GameView extends View {
     private float planetOffset=0, idleTime=0, flashTime=0, bannerTime=0, nextEnemySide=1;
     private float droneShootTimer=0;
     private boolean bossActive=false, downWasButton=false;
+    private int bossSequence=GameRules.BOSS_NORMAL;
+    private float bossSequenceTimer=0f;
     private int touchPointer=-1;
     private float touchOffsetX=0, touchOffsetY=0;
     private Boss boss;
@@ -77,8 +79,8 @@ public final class GameView extends View {
         Enemy(int kind,float x,float y,int hp) {
             this.kind=kind;this.x=x;this.y=y;this.hp=hp;maxHp=hp;
             radius=kind==3?25:kind==5?24:kind==6?24:15;
-            value=(kind==3||kind==5)?45:kind==6?28:19;
-            shoot=2.2f+(kind%3)*.55f;
+            value=(kind==3||kind==5)?38:kind==6?25:20;
+            shoot=1.65f+(kind%3)*.45f;
         }
     }
     private static final class Shot {
@@ -119,7 +121,7 @@ public final class GameView extends View {
                 int part=i==0?0:(i%5==0?3:(i%4==0?2:(i%3==0?4:1)));
                 nodes.add(new Node(i,part, i==0?135f+(tier-1)*50:39f+(tier-1)*18));
             }
-            hp=445+(tier-1)*315;
+            hp=610+(tier-1)*355;
             maxHp=hp;
         }
     }
@@ -160,7 +162,8 @@ public final class GameView extends View {
     }
     private void sound(int kind){
         if(!soundEnabled||soundPool==null||kind<0||kind>=sounds.length||sounds[kind]<=0)return;
-        try {soundPool.play(sounds[kind],.18f,.18f,1,0,1);}catch(Exception ignored){}
+        try {float volume=kind==4?.58f:.18f;
+            soundPool.play(sounds[kind],volume,volume,1,0,1);}catch(Exception ignored){}
     }
     private void vibrate(long duration){
         if(!vibrationEnabled)return;
@@ -174,8 +177,9 @@ public final class GameView extends View {
             soundPool=new SoundPool.Builder().setMaxStreams(5)
                     .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build();
-            for(int s=0;s<4;s++) {
-                int rate=16000, count=s==2?5400:2400;
+            for(int s=0;s<5;s++) {
+                int rate=16000, count=s==4?rate*3:s==2?5400:2400;
+                double phase=0;
                 ByteBuffer buf=ByteBuffer.allocate(44+count*2).order(ByteOrder.LITTLE_ENDIAN);
                 buf.put(new byte[]{'R','I','F','F'}).putInt(36+count*2)
                         .put(new byte[]{'W','A','V','E','f','m','t',' '}).putInt(16)
@@ -183,10 +187,15 @@ public final class GameView extends View {
                         .putShort((short)2).putShort((short)16)
                         .put(new byte[]{'d','a','t','a'}).putInt(count*2);
                 for(int n=0;n<count;n++) {
-                    double q=(double)n/count, f=s==0?720-450*q:s==1?220+420*q:s==2?100+140*q:470-300*q;
-                    double wave=Math.sin(2*Math.PI*f*n/rate);
-                    if(s==2)wave+=.32*Math.sin(2*Math.PI*(f*.45)*n/rate);
-                    double env=Math.pow(1-q,s==2?1.9:2.6);
+                    double q=(double)n/count, f=s==0?720-450*q:s==1?220+420*q
+                            :s==2?100+140*q:s==3?470-300*q:
+                            520+310*(.5-.5*Math.cos(2*Math.PI*q*5.0));
+                    phase+=2*Math.PI*f/rate;
+                    double wave=Math.sin(phase);
+                    if(s==2)wave+=.32*Math.sin(phase*.45);
+                    if(s==4)wave=.76*Math.sin(phase)+.24*Math.sin(phase*1.99);
+                    double env=s==4?Math.min(1,Math.min(n/1300.0,(count-n)/1800.0))
+                            :Math.pow(1-q,s==2?1.9:2.6);
                     buf.putShort((short)Math.max(-32767,Math.min(32767,wave*env*11500)));
                 }
                 File file=new File(getContext().getCacheDir(),"sw_sfx_"+s+".wav");
@@ -208,7 +217,8 @@ public final class GameView extends View {
     private void startWorld(int next){
         world=next;stage=GameRules.worldTier(world);
         enemies.clear();shots.clear();pickups.clear();particles.clear();
-        boss=null;bossActive=false;stageTime=0;spawnTimer=2.5f;starTimer=2.7f;
+        boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;bossSequenceTimer=0f;
+        stageTime=0;spawnTimer=2.5f;starTimer=6.2f;
         shootTimer=0;secondaryRegen=0;droneShootTimer=0;
         x=targetX=W/2;y=targetY=573;invulnerable=4.0f;
         state=PLAY;flashTime=.7f;
@@ -222,29 +232,41 @@ public final class GameView extends View {
         kind=kind<33?0:kind<54?1:kind<74?2:kind<85?3:kind<95?4:5;
         if(stage==1 && kind==5)kind=1;
         if(stage==1 && stageTime<25f)kind=random.nextBoolean()?0:1;
-        int count=(stage==1 && stageTime<26f)?1:(kind==3||kind==5?1:(random.nextFloat()<.28f?2:1));
+        int count=(stage==1 && stageTime<22f)?1:(kind==3||kind==5?1:(random.nextFloat()<.37f?2:1));
         count=Math.min(count,GameRules.enemyCap(stage,stageTime)-enemies.size());
         float base=rnd(45,365);
         for(int i=0;i<count;i++) {
             float xx=clamp(base+(i-(count-1)/2f)*44,30,W-30);
-            Enemy e=new Enemy(kind,xx,-40-i*27,14+tier*8+(kind>=3?30:0));
+            Enemy e=new Enemy(kind,xx,-40-i*27,25+tier*8+(kind>=3?34:0));
             e.phase=rnd(0,6.28f);e.vx=random.nextBoolean()?1:-1;
-            e.vy=(rnd(48,75)+tier*12)*.75f;e.fragments=kind==6?4:0;
-            e.shoot=rnd(2.2f,4.2f);
+            e.vy=(rnd(48,75)+tier*12)*.86f;e.fragments=kind==6?4:0;
+            e.shoot=rnd(1.6f,3.1f);
             enemies.add(e);
         }
     }
+    /** Only invoked once the previous wave has cleared and the siren completed. */
     private void spawnBoss(){
-        enemies.clear();bossActive=true;
+        bossActive=true;
         boss=new Boss(world,stage);
-        flashTime=.8f;banner="BOSS · "+BOSS_NAMES[world];bannerTime=3.2f;
-        sound(2);vibrate(50);
+        bossSequence=GameRules.BOSS_ENTERING;
+        bossSequenceTimer=GameRules.BOSS_ENTRY_SECONDS;
+        boss.fireTimer=1.65f;
+        positionBossNodes();
+        banner="BOSS IM ANFLUG · "+BOSS_NAMES[world];bannerTime=2f;
+    }
+    private void beginBossWarning(){
+        bossSequence=GameRules.BOSS_WARNING;
+        bossSequenceTimer=GameRules.BOSS_WARNING_SECONDS;
+        // No lingering stray enemy bullets can unfairly hit during the warning.
+        for(int i=shots.size()-1;i>=0;i--)if(shots.get(i).hostile)shots.remove(i);
+        sound(4);vibrate(80);
     }
     private void spawnPickup(float xx,float yy,int kind,int val){
         if(pickups.size()>55)return;
         pickups.add(new Pickup(xx,yy,kind,val));
     }
     private void starBurst(float xx,float yy,int total,int pieces){
+        total=GameRules.scaleStarReward(total);
         int each=Math.max(1,total/Math.max(1,pieces));
         for(int i=0;i<pieces;i++){
             Pickup q=new Pickup(xx+rnd(-34,34),yy+rnd(-22,22),0,each);
@@ -265,7 +287,7 @@ public final class GameView extends View {
         int absorbed=Math.min(shieldLevel,damage);
         damage=Math.max(0,damage-absorbed);
         if(damage==0){invulnerable=.45f;return;}
-        hp-=damage;invulnerable=2.4f;flashTime=.3f;
+        hp-=damage;invulnerable=2.0f;flashTime=.3f;
         explode(x,y,CYAN,13);sound(3);vibrate(90);
         if(hp<=0){hp=0;state=DEAD;save();}
     }
@@ -296,7 +318,7 @@ public final class GameView extends View {
     /** Small center-biased aim correction; explicitly permits targeting individual boss nodes. */
     private float findAimAngle(){
         float chosen=0,bestCost=Float.MAX_VALUE;
-        if(bossActive && boss!=null){
+        if(bossActive && boss!=null && bossSequence==GameRules.BOSS_COMBAT){
             for(Node n:boss.nodes){
                 if(n.hp<=0)continue;
                 float dy=y-n.y,dx=n.x-x;
@@ -318,7 +340,7 @@ public final class GameView extends View {
     private float[] nearestTarget(float sx,float sy){
         float[] ret={sx,sy-240};float dmin=Float.MAX_VALUE;
         for(Enemy e:enemies){float d=dist2(sx,sy,e.x,e.y);if(d<dmin){dmin=d;ret[0]=e.x;ret[1]=e.y;}}
-        if(bossActive && boss!=null)for(Node n:boss.nodes){
+        if(bossActive && boss!=null && bossSequence==GameRules.BOSS_COMBAT)for(Node n:boss.nodes){
             if(n.hp<=0)continue;float d=dist2(sx,sy,n.x,n.y);
             if(d<dmin){dmin=d;ret[0]=n.x;ret[1]=n.y;}
         }
@@ -344,7 +366,7 @@ public final class GameView extends View {
                 if(dist2(e.x,e.y,x,y)<205*205){e.hp-=55+damageLevel*6;
                     if(e.hp<=0)enemyKilled(i,e);}
             }
-            if(bossActive&&boss!=null){
+            if(bossActive&&boss!=null&&bossSequence==GameRules.BOSS_COMBAT){
                 boss.fireTimer+=.65f;
                 for(Node n:boss.nodes)if(n.hp>0&&dist2(n.x,n.y,x,y)<210*210){
                     n.hp-=20;boss.hp-=20;nodeDamage(n);
@@ -376,13 +398,14 @@ public final class GameView extends View {
         int active=0;
         for(Shot q:shots)if(q.hostile)active++;
         if(active>=GameRules.hostileShotCap(stage,stageTime,bossActive))return;
-        float speed=type==1?102:(76+stage*12);
+        float speed=type==1?123:(98+stage*13);
         shots.add(new Shot(ex,ey,dx/len*speed,dy/len*speed,1,type==1?4:1,true));
     }
     private void bossAttack(){
         if(boss==null)return;
         int active=0;for(Shot shot:shots)if(shot.hostile)active++;
-        if(active>=GameRules.hostileShotCap(stage,stageTime,true)){boss.fireTimer=.4f;return;}
+        final int cap=GameRules.hostileShotCap(stage,stageTime,true);
+        if(active>=cap){boss.fireTimer=.4f;return;}
         int live=0;
         for(Node n:boss.nodes)if(n.hp>0&&n.type==1)live++;
         if(live==0){boss.fireTimer=1.25f;return;}
@@ -392,14 +415,16 @@ public final class GameView extends View {
             float a=start+i/(float)Math.max(1,amount-1);
             float base=(float)Math.atan2(x-210,y-225);
             float theta=base+a*.9f;
-            if(shots.size()<160)shots.add(new Shot(210,245,(float)Math.sin(theta)*142,
-                    (float)Math.cos(theta)*110,1,1,true));
+            if(active>=cap)break;
+            shots.add(new Shot(210,245,(float)Math.sin(theta)*140,
+                    (float)Math.cos(theta)*114,1,1,true));active++;
         }
         if(boss.phase>1&&world!=0&&stageTime>35f){
             for(int i=0;i<3;i++){
                 float a=boss.time*1.4f+i*2.09f;
-                if(shots.size()<170)shots.add(new Shot(210+(float)Math.cos(a)*82,
-                        245+(float)Math.sin(a)*49,(float)Math.cos(a)*122,(float)Math.sin(a)*122,1,4,true));
+                if(active>=cap)break;
+                shots.add(new Shot(210+(float)Math.cos(a)*82,
+                        245+(float)Math.sin(a)*49,(float)Math.cos(a)*112,(float)Math.sin(a)*112,1,4,true));active++;
             }
         }
         boss.fireTimer=GameRules.bossFireInterval(boss.phase,stage)+rnd(0,.25f);
@@ -449,23 +474,47 @@ public final class GameView extends View {
             }
         }
         if(!bossActive){
-            spawnTimer-=dt;
-            if(spawnTimer<=0){spawnEnemy();spawnTimer=GameRules.enemySpawnInterval(stage,stageTime)*rnd(.90f,1.12f);}
-            starTimer-=dt;
-            if(starTimer<=0){spawnPickup(rnd(30,W-30),-15,0,25);starTimer=rnd(3.3f,5.4f);}
-            if(stageTime>=GameRules.bossArrivalSeconds(stage))spawnBoss();
+            if(bossSequence==GameRules.BOSS_NORMAL
+                    &&stageTime>=GameRules.bossArrivalSeconds(stage)){
+                bossSequence=GameRules.BOSS_CLEARING;spawnTimer=Float.MAX_VALUE;
+                banner="SEKTOR GESICHERT · RESTLICHE FEINDE BESEITIGEN";bannerTime=2f;
+            }
+            if(bossSequence==GameRules.BOSS_NORMAL){
+                spawnTimer-=dt;
+                if(spawnTimer<=0){spawnEnemy();spawnTimer=GameRules.enemySpawnInterval(stage,stageTime)*rnd(.90f,1.12f);}
+                starTimer-=dt;
+                if(starTimer<=0){spawnPickup(rnd(30,W-30),-15,0,random.nextBoolean()?11:14);starTimer=rnd(6.7f,9.5f);}
+            } else if(bossSequence==GameRules.BOSS_CLEARING && enemies.isEmpty()){
+                beginBossWarning();
+            } else if(bossSequence==GameRules.BOSS_WARNING){
+                bossSequenceTimer-=dt;
+                if(bossSequenceTimer<=0)spawnBoss();
+            }
         } else if(boss!=null){
             boss.time+=dt;
-            boss.fireTimer-=dt;
-            if(boss.fireTimer<=0)bossAttack();
-            float ratio=boss.hp/boss.maxHp;
-            int phase=ratio>.65f?1:ratio>.30f?2:3;
-            if(phase>boss.phase){boss.phase=phase;boss.phaseTransition=1.2f;
-                flashTime=.30f;banner="BOSS · PHASE "+phase;bannerTime=1.7f;sound(2);}
-            if(boss.phaseTransition>0)boss.phaseTransition-=dt;
-            positionBossNodes();
-            for(Node n:boss.nodes){
-                if(n.hp>0&&dist2(n.x,n.y,x,y)<(n.id==0?31*31:25*25))takeHit(1);
+            if(bossSequence==GameRules.BOSS_ENTERING){
+                bossSequenceTimer-=dt;
+                positionBossNodes();
+                if(bossSequenceTimer<=0){
+                    bossSequence=GameRules.BOSS_COMBAT;
+                    bossSequenceTimer=0;
+                    invulnerable=Math.max(invulnerable,1.3f);
+                    boss.fireTimer=1.5f;
+                    banner="BOSS · "+BOSS_NAMES[world];bannerTime=1.5f;
+                    sound(2);
+                }
+            } else if(bossSequence==GameRules.BOSS_COMBAT){
+                boss.fireTimer-=dt;
+                if(boss.fireTimer<=0)bossAttack();
+                float ratio=boss.hp/boss.maxHp;
+                int phase=ratio>.65f?1:ratio>.30f?2:3;
+                if(phase>boss.phase){boss.phase=phase;boss.phaseTransition=1.2f;
+                    flashTime=.30f;banner="BOSS · PHASE "+phase;bannerTime=1.7f;sound(2);}
+                if(boss.phaseTransition>0)boss.phaseTransition-=dt;
+                positionBossNodes();
+                for(Node n:boss.nodes){
+                    if(n.hp>0&&dist2(n.x,n.y,x,y)<(n.id==0?31*31:25*25))takeHit(1);
+                }
             }
         }
         updateEnemies(dt);
@@ -501,6 +550,15 @@ public final class GameView extends View {
                     n.y=255+(float)Math.sin(ang)* (i%2==0?76:104);
                     break;
             }
+        }
+        if(bossSequence==GameRules.BOSS_ENTERING){
+            float fraction=clamp(1f-bossSequenceTimer/GameRules.BOSS_ENTRY_SECONDS,0f,1f);
+            float ease=fraction*fraction*(3f-2f*fraction);
+            float bottom=-10000f;
+            for(Node n:boss.nodes)bottom=Math.max(bottom,n.y);
+            // At t=0 even the lowest segment is above the playfield.
+            float offset=-(bottom+75f)*(1f-ease);
+            for(Node n:boss.nodes)n.y+=offset;
         }
     }
     private void updateEnemies(float dt){
@@ -554,7 +612,7 @@ public final class GameView extends View {
                 continue;
             }
             boolean consumed=false;
-            if(bossActive&&boss!=null){
+            if(bossActive&&boss!=null&&bossSequence==GameRules.BOSS_COMBAT){
                 for(Node n:boss.nodes){
                     if(n.hp<=0)continue;
                     if(dist2(s.x,s.y,n.x,n.y)<(s.radius+17)*(s.radius+17)){
@@ -639,7 +697,7 @@ public final class GameView extends View {
         }
     }
     private void finishBoss(){
-        if(state!=PLAY||boss==null)return;
+        if(state!=PLAY||boss==null||bossSequence!=GameRules.BOSS_COMBAT)return;
         addScore(1000*stage);
         int bonus=GameRules.bossReward(world);
         stars+=bonus;
@@ -647,7 +705,7 @@ public final class GameView extends View {
         explode(210,245,CYAN,60);
         newlyUnlocked=(techMask&(1<<world))==0?world:-1;
         techMask|=1<<world;save();
-        boss=null;bossActive=false;
+        boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;
         enemies.clear();shots.clear();pickups.clear();
         buildShop();state=SHOP;
         shopMessage="BOSS BESIEGT · +"+bonus+" STERNE";
@@ -656,23 +714,23 @@ public final class GameView extends View {
     private void buildShop(){
         offers.clear();
         offers.add(new Offer(0,"SCHNELLFEUER +5,5%","Bis zu 5 Stufen",GameRules.nextFireCost(fireLevel)));
-        offers.add(new Offer(1,"WAFFENSCHADEN +12%","Mehr Schaden pro Treffer",225+damageLevel*85));
-        offers.add(new Offer(2,"REPARATUR +1 HP","Stellt einen Lebenspunkt wieder her",120));
-        offers.add(new Offer(3,"STERNENMAGNET","Sammelradius erweitern",180+magnetLevel*90));
+        offers.add(new Offer(1,"WAFFENSCHADEN +12%","Mehr Schaden pro Treffer",GameRules.nextDamageCost(damageLevel)));
+        offers.add(new Offer(2,"REPARATUR +1 HP","Stellt einen Lebenspunkt wieder her",160));
+        offers.add(new Offer(3,"STERNENMAGNET","Sammelradius erweitern",GameRules.nextMagnetCost(magnetLevel)));
         int special=(world+random.nextInt(4))%4;
-        if(special==0|| (techMask&1)!=0)offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",370+droneLevel*150));
-        else offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",345+shieldLevel*170));
-        offers.add(new Offer(6,"SPEZIAL-LADUNGEN","Je eine Ladung für vier Fähigkeiten",260));
+        if(special==0|| (techMask&1)!=0)offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",GameRules.nextDroneCost(droneLevel)));
+        else offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",GameRules.nextShieldCost(shieldLevel)));
+        offers.add(new Offer(6,"SPEZIAL-LADUNGEN","Je eine Ladung für vier Fähigkeiten",390));
     }
     private int offerPrice(Offer o){
         switch(o.id){
             case 0:return GameRules.nextFireCost(fireLevel);
-            case 1:return 225+damageLevel*85;
-            case 2:return 120;
-            case 3:return 180+magnetLevel*90;
-            case 4:return 370+droneLevel*150;
-            case 5:return 345+shieldLevel*170;
-            case 6:return 260;
+            case 1:return GameRules.nextDamageCost(damageLevel);
+            case 2:return 160;
+            case 3:return GameRules.nextMagnetCost(magnetLevel);
+            case 4:return GameRules.nextDroneCost(droneLevel);
+            case 5:return GameRules.nextShieldCost(shieldLevel);
+            case 6:return 390;
             default:return o.base;
         }
     }
@@ -719,6 +777,7 @@ public final class GameView extends View {
         if(state==PLAY||state==PAUSE){
             drawWorld(c);drawEnemies(c);drawBoss(c);drawShots(c);drawPickups(c);drawParticles(c);
             drawPlayer(c);drawHud(c);
+            drawBossTransition(c);
             if(state==PAUSE)drawPause(c);
         }else{
             if(state==MENU)drawMenu(c);
@@ -772,57 +831,165 @@ public final class GameView extends View {
         p.setShader(null);p.setColor(color);p.setStyle(Paint.Style.FILL);c.drawPath(path,p);
     }
     private void drawBackground(Canvas c){
-        int base=(state==PLAY||state==PAUSE)?WORLD_COLORS[world]:0xFF101D35;
-        fill(c,base);
-        int hue=(state==PLAY||state==PAUSE)?world:2;
-        float nebulaX=75+(float)Math.sin(idleTime*.12)*25;
-        p.setShader(new RadialGradient(nebulaX,230,250,
-                new int[]{(hue==2?0x554C2B85:0x39365781),0x00213549},null,Shader.TileMode.CLAMP));
-        c.drawCircle(nebulaX,230,250,p);p.setShader(null);
-        p.setShader(new RadialGradient(335,515,270,
-                new int[]{hue==4?0x553E789B:0x25266D88,0x00213549},null,Shader.TileMode.CLAMP));
-        c.drawCircle(335,515,270,p);p.setShader(null);
-        for(int i=0;i<starX.length;i++){
-            float r=i%9==0?1.8f:i%4==0?1.1f:.65f;
-            circle(c,starX[i],starY[i],r,i%7==0?CYAN:0x99DAEFFF);
-            if(i%15==0)line(c,starX[i],starY[i]-starV[i]*.09f,
-                    starX[i],starY[i]+3,0x4479DFF9,1);
+        final int w=(state==PLAY||state==PAUSE)?world:2;
+        final int[][] tone={
+            {0xFF050A17,0xFF101C35,0xFF213E4C},
+            {0xFF090D19,0xFF1C223C,0xFF35415C},
+            {0xFF0D0820,0xFF241936,0xFF4D2B68},
+            {0xFF050D1B,0xFF142944,0xFF1F5578},
+            {0xFF090A1C,0xFF1A2040,0xFF36314F}
+        };
+        p.setStyle(Paint.Style.FILL);p.setColor(WHITE);
+        p.setShader(new LinearGradient(0,0,W,H,tone[w],null,Shader.TileMode.CLAMP));
+        c.drawRect(0,0,W,H,p);p.setShader(null);
+        float scroll=planetOffset;
+        float offset=(float)Math.sin(idleTime*.09f)*18f;
+        int highlight=w==2?0x665C3C9F:w==3?0x6631C8FF:w==4?0x666D6CAD:0x5651B3CA;
+        p.setShader(new RadialGradient(85+offset,222,270,new int[]{highlight,0x004D6789},null,Shader.TileMode.CLAMP));
+        c.drawCircle(85+offset,222,270,p);p.setShader(null);
+        p.setShader(new RadialGradient(360-offset,492,295,
+                new int[]{w==2?0x666E3A9B:0x664468A0,0x00335A7A},null,Shader.TileMode.CLAMP));
+        c.drawCircle(360-offset,492,295,p);p.setShader(null);
+        // Distant dust wisps are semi-transparent, slow parallax bands.
+        for(int i=0;i<7;i++){
+            float yy=(i*171+scroll*.22f)%1120-210;
+            float xx=52+(i*117)%330;
+            p.setShader(new RadialGradient(xx,yy,47+i%3*17,
+                    new int[]{i%2==0?0x1620DDE8:0x204E8CCB,0x001A3C72},
+                    null,Shader.TileMode.CLAMP));
+            c.drawOval(xx-105,yy-36,xx+105,yy+36,p);p.setShader(null);
         }
-        if(flashTime>0)box(c,0,0,W,H,0x11FFFFFF);
+        for(int i=0;i<starX.length;i++){
+            float r=i%13==0?2.3f:i%5==0?1.4f:.7f;
+            int color=i%9==0?0xFFF8E8C9:i%7==0?0xFF96EEFF:0x99DAEFFF;
+            if(i%13==0)glow(c,starX[i],starY[i],7,0x44BBE9FF,0x00BBE9FF);
+            circle(c,starX[i],starY[i],r,color);
+            if(i%15==0)line(c,starX[i],starY[i]-starV[i]*.11f,
+                    starX[i],starY[i]+4,0x666EBBEF,1.4f);
+        }
+        // A rim-lit distant planet provides scale without obstructing bullets.
+        float moonX=w==3?369:52;
+        float moonY=(w==4?232:114)+(float)Math.sin(idleTime*.06f)*9f;
+        float radius=w==4?71:48;
+        glow(c,moonX,moonY,radius*2.2f,0x1836BBDD,0x0036BBDD);
+        p.setShader(new RadialGradient(moonX-radius*.25f,moonY-radius*.25f,radius*1.45f,
+                new int[]{0xFF536D93,0xFF0C1C32,0xFF040918},null,Shader.TileMode.CLAMP));
+        c.drawCircle(moonX,moonY,radius,p);p.setShader(null);
+        p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1.4f);
+        p.setColor(0xAA6E9FC8);c.drawArc(moonX-radius,moonY-radius,moonX+radius,moonY+radius,192,144,false,p);
+        p.setStyle(Paint.Style.FILL);
+        if(flashTime>0)box(c,0,0,W,H,0x14FFFFFF);
     }
     private void drawWorld(Canvas c){
+        float scroll=planetOffset;
         if(world==0){
-            for(int k=0;k<5;k++){
-                float px=45+k*89+(float)Math.sin(k*8.2)*20;
-                float py=(k*167+planetOffset*1.2f)%920-60;
-                asteroid(c,px,py,17+(k%3)*15);
-            }
-        } else if(world==1){
+            // Debris field and a shattered ship silhouette, each independently scrolling.
             for(int k=0;k<8;k++){
-                float py=(k*121+planetOffset*1.1f)%905-50;
-                float px=k%2==0?10:410;
-                line(c,px,py,px+(k%2==0?46:-46),py-23,0x4444DDE8,4);
-                polygon(c,new float[]{px,py-12,px+(k%2==0?32:-32),py-25,
-                        px+(k%2==0?38:-38),py+7},0x443F8096);
+                float px=33+k*73+(float)Math.sin(k*8.2)*23;
+                float py=(k*127+scroll*(.65f+k%3*.18f))%1010-140;
+                float rr=11+(k%4)*10;
+                asteroid(c,px,py,rr);
+                if(k%2==0){
+                    shadedPolygon(c,new float[]{px-rr*.8f,py+rr*.7f,px-rr*.2f,py-rr*.9f,
+                            px+rr,py-rr*.3f,px+rr*.7f,py+rr*.6f},
+                            0xFF697E8A,0xFF213447,0xFF426779);
+                    line(c,px-rr*.35f,py-rr*.5f,px+rr*.8f,py+rr*.3f,0xAAB6DBE8,1.4f);
+                }
             }
-        } else if(world==2){
+            for(int i=0;i<2;i++){
+                float yy=(i*560+scroll*.42f)%1120-170;
+                drawShipwreck(c,i==0?-27:346,yy, i==0?1f:-1f);
+            }
+        }else if(world==1){
+            for(int k=0;k<7;k++){
+                float py=(k*177+scroll*.9f)%1050-125;
+                drawIndustrialFrame(c,k%2==0?-29:449,py,k%2==0?1:-1);
+            }
+        }else if(world==2){
             for(int k=0;k<10;k++){
-                float xx=(k*91)%400+10,yy=(k*117+planetOffset*.8f)%840-20;
-                polygon(c,new float[]{xx,yy-17,xx+11,yy+2,xx-2,yy+23,xx-12,yy+3},0x554D3B99);
+                float xx=25+(k*111)%395;
+                float yy=(k*135+scroll*.66f)%1060-140;
+                drawCrystal(c,xx,yy,12+(k%3)*10,k%2==0);
             }
-        } else if(world==3){
+        }else if(world==3){
+            for(int k=0;k<7;k++){
+                float yy=(k*163+scroll*1.13f)%1030-130;
+                float anchor=k%2==0?-24:444;
+                drawStormSpire(c,anchor,yy,k%2==0?1:-1);
+            }
+        }else{
             for(int k=0;k<6;k++){
-                float yy=(k*145+planetOffset*1.5f)%850-30;
-                line(c,15,yy,100,yy-28,0x4462B9EF,2);
-                line(c,320,yy+25,410,yy+56,0x4462B9EF,2);
-            }
-        } else {
-            for(int k=0;k<5;k++){
-                float yy=(k*160+planetOffset*.7f)%900-40;
-                line(c,40,yy,380,yy,0x336D62A9,1);
-                line(c,80,yy+19,340,yy+19,0x337F81C0,1);
+                float yy=(k*211+scroll*.6f)%1090-160;
+                drawCitadel(c,k%2==0?-35:455,yy,k%2==0?1:-1);
             }
         }
+    }
+    private void drawShipwreck(Canvas c,float x,float y,float dir){
+        c.save();c.translate(x,y);c.scale(dir,1);
+        glow(c,28,12,88,0x2926B8DB,0x0026B8DB);
+        shadedPolygon(c,new float[]{-18,-27,38,-56,116,-23,143,10,87,45,22,37},
+                0xFF7A8C9A,0xFF1C3046,0xFF8AACBD);
+        shadedPolygon(c,new float[]{8,-18,45,-38,94,-16,74,10,7,19},
+                0xFF9CB2BB,0xFF3A5C73,0xFFB9D4DB);
+        shadedPolygon(c,new float[]{70,-7,123,-21,142,11,79,31},
+                0xFF27475E,0xFF122237,0xFF608297);
+        for(int k=0;k<3;k++){
+            line(c,27+k*24,-11,25+k*23,18,0xBB1D283B,3);
+            circle(c,31+k*25,1,3,k==1?0xFFFF925E:0xFF59B3D3);
+        }
+        line(c,65,-33,88,-53,0xFFEAC0A2,2);
+        c.restore();
+    }
+    private void drawIndustrialFrame(Canvas c,float x,float y,int direction){
+        c.save();c.translate(x,y);c.scale(direction,1);
+        shadedPolygon(c,new float[]{0,-36,74,-53,101,-31,102,54,68,66,0,46},
+                0xFF8D9CA9,0xFF233C50,0xFF7DA7BD);
+        shadedPolygon(c,new float[]{28,-27,72,-36,87,-20,85,31,56,45,21,21},
+                0xFF2B5E70,0xFF0B263D,0xFF72DCE1);
+        for(int k=0;k<3;k++){
+            line(c,9,-24+k*26,81,-17+k*26,0xFF7C9AAB,3);
+            glow(c,67,-24+k*24,14,0x705CE7DC,0x005CE7DC);
+            circle(c,67,-24+k*24,2,0xFF9EF8E7);
+        }
+        c.restore();
+    }
+    private void drawCrystal(Canvas c,float x,float y,float r,boolean cyanCrystal){
+        int bright=cyanCrystal?0xFF8DEBF2:0xFFC5A5FF;
+        int dark=cyanCrystal?0xFF20647E:0xFF52357A;
+        glow(c,x,y,r*2.7f,cyanCrystal?0x443AE6EB:0x557D4DD6,0x00000000);
+        shadedPolygon(c,new float[]{x,y-r*1.6f,x-r*.65f,y-r*.2f,x-r*.3f,y+r,
+                        x+r*.55f,y+r*.8f,x+r*.7f,y-r*.3f},
+                bright,dark,0xAAE2DDF8);
+        triangle(c,x,y-r*1.55f,x+r*.65f,y-r*.3f,x,y+r*.8f,0x6678BCDA);
+        line(c,x,y-r*1.5f,x-r*.3f,y+r*.9f,0x99FFFFFF,1.1f);
+    }
+    private void drawStormSpire(Canvas c,float x,float y,int dir){
+        c.save();c.translate(x,y);c.scale(dir,1);
+        shadedPolygon(c,new float[]{0,-42,35,-74,66,-52,103,9,78,62,15,42},
+                0xFF6B95B4,0xFF152D4B,0xFF8ED8E9);
+        glow(c,60,-11,56,0x4444AFFF,0x0044AFFF);
+        for(int i=0;i<3;i++){
+            float yy=-29+i*29;
+            line(c,25,yy,65,yy+11,0xFF9DEAFF,1.8f);
+        }
+        line(c,65,-29,92,-8,0xBB8BDFFF,2);
+        line(c,92,-8,78,15,0xBB8BDFFF,2);
+        c.restore();
+    }
+    private void drawCitadel(Canvas c,float x,float y,int dir){
+        c.save();c.translate(x,y);c.scale(dir,1);
+        glow(c,60,13,75,0x333BA2D9,0x003BA2D9);
+        shadedPolygon(c,new float[]{0,-43,65,-65,111,-31,121,60,62,87,0,51},
+                0xFF8C86B7,0xFF22233F,0xFF9F9FC7);
+        shadedPolygon(c,new float[]{20,-32,65,-47,94,-20,100,43,62,62,20,37},
+                0xFF465B86,0xFF161A38,0xFF6B71B0);
+        for(int k=0;k<5;k++){
+            float yy=-19+k*15;
+            line(c,33,yy,88,yy+6,0xFF998ED1,2);
+        }
+        glow(c,64,10,27,0x6645D7FD,0x0045D7FD);
+        circle(c,64,10,4,0xFF8CFFF5);
+        c.restore();
     }
     private void asteroid(Canvas c,float sx,float sy,float r){
         glow(c,sx,sy+r*.45f,r*1.45f,0x22000000,0x00000000);
@@ -1053,6 +1220,25 @@ public final class GameView extends View {
                     (q.color&0x00FFFFFF)|(alpha<<24));
         }
     }
+    private void drawBossTransition(Canvas c){
+        if(bossSequence==GameRules.BOSS_WARNING){
+            boolean blink=(int)(idleTime*4)%2==0;
+            box(c,0,0,W,FIELD_BOTTOM,blink?0x22FF284C:0x0A89172D);
+            panel(c,15,250,390,141,0xEF240C1F,blink?0xFFFF506E:0xFF8D253D,12);
+            line(c,15,250,405,250,0xFFFF728D,3);
+            textCenter(c,blink?"!!  BOSS-WARNUNG  !!":"BOSS-WARNUNG",304,34,WHITE,true);
+            textCenter(c,BOSS_NAMES[world],341,19,0xFFFFB4C1,true);
+            textCenter(c,"ANFLUG IN "+Math.max(1,(int)Math.ceil(bossSequenceTimer))+" SEKUNDEN",373,15,WHITE,true);
+        }else if(bossSequence==GameRules.BOSS_ENTERING){
+            float progress=clamp(1f-bossSequenceTimer/GameRules.BOSS_ENTRY_SECONDS,0f,1f);
+            panel(c,62,141,296,38,0xD7141F39,0x9983C0E9,8);
+            textCenter(c,"GROSSKAMPFSCHIFF IM ANFLUG",166,15,WHITE,true);
+            box(c,78,181,264,4,0xFF314057);
+            box(c,78,181,264*progress,4,0xFFFF7995);
+        }else if(bossSequence==GameRules.BOSS_CLEARING && enemies.size()<3){
+            textCenter(c,"GEGNERWELLE ENDET",201,17,0xFFFFDFA2,true);
+        }
+    }
     private void drawHud(Canvas c){
         panel(c,7,7,406,87,0xDE0B1729,0x774DA6C6,12);
         txt(c,"SHATTERWAKE",18,28,16,WHITE,Paint.Align.LEFT,true);
@@ -1117,7 +1303,7 @@ public final class GameView extends View {
         button(c,"NEUER DURCHLAUF",51,450,318,58,true);
         button(c,"EINSTELLUNGEN",51,524,318,54,false);
         button(c,"TECHNOLOGIE-ARCHIV",51,593,318,54,false);
-        textCenter(c,"PROTOTYP 0.1  ·  OFFLINE  ·  OHNE TRACKING",725,11,MUTED,false);
+        textCenter(c,"PROTOTYP 0.3  ·  OFFLINE  ·  OHNE TRACKING",725,11,MUTED,false);
     }
     private void screenHeader(Canvas c,String title,String sub){
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);

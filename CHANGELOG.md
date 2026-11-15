@@ -1,5 +1,15 @@
 # Changes
 
+## 0.3.0-alpha — 2026-11-15
+- Corrected excessive ease of v0.2 with moderate enemy and projectile pressure; 9-second opening grace, faster spawn and gradual projectile caps.
+- Lower star rewards and much slower passive star supply; rebalanced progressive shop prices to prevent all-max upgrades by end of run.
+- Boss entrance sequence: stop new spawns; wait for enemy field to clear; purge old hostile shots; blink centered boss warning with a 3-second synthesized siren; animate boss from above over 3.7 seconds.
+- Boss collision and attacks disabled during fly-in; short protection grace at start of combat.
+- Additional original pseudo-isometric stage art: parallax clouds, wreckage, machine frameworks, glowing crystals, storm towers and citadel structures.
+- Additional deterministic regression tests for boss transition and star economy.
+- No external music, textures or third-party game libraries added.
+
+
 ## 0.2.0-alpha — 2026-11-15
 - Player-reported balance regression: first run ended in approximately 30 seconds.
 - Opening 18 seconds: enemy projectiles disabled; next 37 seconds: at most three simultaneously active hostile shots.

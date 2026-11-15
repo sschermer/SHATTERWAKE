@@ -1,32 +1,60 @@
 package de.shatterwake.game;
+/** Deterministic economy, difficulty and boss-sequence regression checks. */
 public final class RuleChecks {
     public static void main(String[] args) {
-        assert GameRules.continueCost(0) == 0;
-        assert GameRules.continueCost(1) == 1;
-        assert GameRules.continueCost(101) == 51;
-        assert GameRules.MAX_CONTINUES == 2;
-        assert GameRules.routesAfter(1)[0] != GameRules.routesAfter(1)[1];
-        assert GameRules.routesAfter(2)[0] == 3;
-        assert GameRules.routesAfter(3).length == 0;
-        assert GameRules.worldTier(2) == 2;
+        assert GameRules.continueCost(0)==0;
+        assert GameRules.continueCost(1)==1;
+        assert GameRules.continueCost(101)==51;
+        assert GameRules.MAX_CONTINUES==2;
+        assert GameRules.routesAfter(1)[0]!=GameRules.routesAfter(1)[1];
+        assert GameRules.routesAfter(2)[0]==3;
+        assert GameRules.routesAfter(3).length==0;
+        assert GameRules.worldTier(2)==2;
         assert GameRules.isFinalWorld(4);
-        assert GameRules.canAim(0, 100);
-        assert !GameRules.canAim(100, 100);
-        assert GameRules.fireInterval(5, false) < GameRules.fireInterval(0, false);
-        assert GameRules.enemyCap(1, 0) == 3;
-        assert GameRules.enemyCap(1, 30) == 5;
-        assert GameRules.enemyCap(1, 100) <= 8;
-        assert GameRules.enemySpawnInterval(1, 0) > GameRules.enemySpawnInterval(1, 90);
-        assert !GameRules.enemyFireAllowed(1, 17.99f);
-        assert GameRules.enemyFireAllowed(1, 18f);
-        assert GameRules.hostileShotCap(1, 0, false) == 0;
-        assert GameRules.hostileShotCap(1, 40, false) == 3;
-        assert GameRules.hostileShotCap(1, 40, true) == 8;
-        assert GameRules.enemyShotInterval(1, 0.5f) > 4f;
-        assert GameRules.bossVolleyCount(1,1) == 2;
-        assert GameRules.bossVolleyCount(3,1) == 4;
-        assert GameRules.bossFireInterval(3, 1) > 1.4f;
-        assert GameRules.bossArrivalSeconds(1) < 130f;
-        System.out.println("PASS: 26 game-rule assertions including early-game difficulty ramp");
+        assert GameRules.canAim(0,100);
+        assert !GameRules.canAim(100,100);
+        assert GameRules.fireInterval(5,false)<GameRules.fireInterval(0,false);
+
+        assert GameRules.enemyCap(1,0)==4;
+        assert GameRules.enemyCap(1,35)==6;
+        assert GameRules.enemyCap(1,100)==10;
+        assert GameRules.enemySpawnInterval(1,0)>GameRules.enemySpawnInterval(1,90);
+        assert !GameRules.enemyFireAllowed(1,8.99f);
+        assert GameRules.enemyFireAllowed(1,9f);
+        assert GameRules.hostileShotCap(1,0,false)==0;
+        assert GameRules.hostileShotCap(1,30,false)==5;
+        assert GameRules.hostileShotCap(1,60,false)==7;
+        assert GameRules.hostileShotCap(1,100,false)==9;
+        assert GameRules.hostileShotCap(1,50,true)==11;
+        assert GameRules.enemyShotInterval(1,.5f)>3f;
+        assert GameRules.bossVolleyCount(1,1)==3;
+        assert GameRules.bossVolleyCount(3,1)==5;
+        assert GameRules.bossFireInterval(3,1)>1.2f;
+        assert GameRules.bossArrivalSeconds(1)<130f;
+
+        assert GameRules.BOSS_WARNING_SECONDS==3f;
+        assert GameRules.BOSS_ENTRY_SECONDS>=3f;
+        int s=GameRules.BOSS_NORMAL;
+        s=GameRules.nextBossPhase(s,true,false);
+        assert s==GameRules.BOSS_CLEARING;
+        assert GameRules.nextBossPhase(s,false,false)==GameRules.BOSS_CLEARING;
+        assert GameRules.nextBossPhase(s,false,true)==GameRules.BOSS_WARNING;
+        s=GameRules.BOSS_WARNING;
+        assert GameRules.nextBossPhase(s,false,true)==GameRules.BOSS_WARNING;
+        assert GameRules.nextBossPhase(s,true,true)==GameRules.BOSS_ENTERING;
+        s=GameRules.BOSS_ENTERING;
+        assert GameRules.nextBossPhase(s,false,true)==GameRules.BOSS_ENTERING;
+        assert GameRules.nextBossPhase(s,true,true)==GameRules.BOSS_COMBAT;
+
+        assert GameRules.bossReward(0)<GameRules.bossReward(4);
+        assert GameRules.bossReward(0)<300;
+        assert GameRules.scaleStarReward(100)==55;
+        assert GameRules.scaleStarReward(0)==1;
+        assert GameRules.nextFireCost(4)>GameRules.nextFireCost(0);
+        assert GameRules.nextDamageCost(4)>GameRules.nextDamageCost(0);
+        assert GameRules.nextMagnetCost(2)>GameRules.nextMagnetCost(0);
+        assert GameRules.nextDroneCost(2)>GameRules.nextDroneCost(0);
+        assert GameRules.nextShieldCost(1)>GameRules.nextShieldCost(0);
+        System.out.println("PASS: SHATTERWAKE v0.3 balancing, economy and boss-phase assertions");
     }
 }
