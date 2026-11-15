@@ -474,23 +474,47 @@ public final class GameView extends View {
             }
         }
         if(!bossActive){
-            spawnTimer-=dt;
-            if(spawnTimer<=0){spawnEnemy();spawnTimer=GameRules.enemySpawnInterval(stage,stageTime)*rnd(.90f,1.12f);}
-            starTimer-=dt;
-            if(starTimer<=0){spawnPickup(rnd(30,W-30),-15,0,25);starTimer=rnd(3.3f,5.4f);}
-            if(stageTime>=GameRules.bossArrivalSeconds(stage))spawnBoss();
+            if(bossSequence==GameRules.BOSS_NORMAL
+                    &&stageTime>=GameRules.bossArrivalSeconds(stage)){
+                bossSequence=GameRules.BOSS_CLEARING;spawnTimer=Float.MAX_VALUE;
+                banner="SEKTOR GESICHERT · RESTLICHE FEINDE BESEITIGEN";bannerTime=2f;
+            }
+            if(bossSequence==GameRules.BOSS_NORMAL){
+                spawnTimer-=dt;
+                if(spawnTimer<=0){spawnEnemy();spawnTimer=GameRules.enemySpawnInterval(stage,stageTime)*rnd(.90f,1.12f);}
+                starTimer-=dt;
+                if(starTimer<=0){spawnPickup(rnd(30,W-30),-15,0,random.nextBoolean()?11:14);starTimer=rnd(6.7f,9.5f);}
+            } else if(bossSequence==GameRules.BOSS_CLEARING && enemies.isEmpty()){
+                beginBossWarning();
+            } else if(bossSequence==GameRules.BOSS_WARNING){
+                bossSequenceTimer-=dt;
+                if(bossSequenceTimer<=0)spawnBoss();
+            }
         } else if(boss!=null){
             boss.time+=dt;
-            boss.fireTimer-=dt;
-            if(boss.fireTimer<=0)bossAttack();
-            float ratio=boss.hp/boss.maxHp;
-            int phase=ratio>.65f?1:ratio>.30f?2:3;
-            if(phase>boss.phase){boss.phase=phase;boss.phaseTransition=1.2f;
-                flashTime=.30f;banner="BOSS · PHASE "+phase;bannerTime=1.7f;sound(2);}
-            if(boss.phaseTransition>0)boss.phaseTransition-=dt;
-            positionBossNodes();
-            for(Node n:boss.nodes){
-                if(n.hp>0&&dist2(n.x,n.y,x,y)<(n.id==0?31*31:25*25))takeHit(1);
+            if(bossSequence==GameRules.BOSS_ENTERING){
+                bossSequenceTimer-=dt;
+                positionBossNodes();
+                if(bossSequenceTimer<=0){
+                    bossSequence=GameRules.BOSS_COMBAT;
+                    bossSequenceTimer=0;
+                    invulnerable=Math.max(invulnerable,1.3f);
+                    boss.fireTimer=1.5f;
+                    banner="BOSS · "+BOSS_NAMES[world];bannerTime=1.5f;
+                    sound(2);
+                }
+            } else if(bossSequence==GameRules.BOSS_COMBAT){
+                boss.fireTimer-=dt;
+                if(boss.fireTimer<=0)bossAttack();
+                float ratio=boss.hp/boss.maxHp;
+                int phase=ratio>.65f?1:ratio>.30f?2:3;
+                if(phase>boss.phase){boss.phase=phase;boss.phaseTransition=1.2f;
+                    flashTime=.30f;banner="BOSS · PHASE "+phase;bannerTime=1.7f;sound(2);}
+                if(boss.phaseTransition>0)boss.phaseTransition-=dt;
+                positionBossNodes();
+                for(Node n:boss.nodes){
+                    if(n.hp>0&&dist2(n.x,n.y,x,y)<(n.id==0?31*31:25*25))takeHit(1);
+                }
             }
         }
         updateEnemies(dt);
@@ -526,6 +550,15 @@ public final class GameView extends View {
                     n.y=255+(float)Math.sin(ang)* (i%2==0?76:104);
                     break;
             }
+        }
+        if(bossSequence==GameRules.BOSS_ENTERING){
+            float fraction=clamp(1f-bossSequenceTimer/GameRules.BOSS_ENTRY_SECONDS,0f,1f);
+            float ease=fraction*fraction*(3f-2f*fraction);
+            float bottom=-10000f;
+            for(Node n:boss.nodes)bottom=Math.max(bottom,n.y);
+            // At t=0 even the lowest segment is above the playfield.
+            float offset=-(bottom+75f)*(1f-ease);
+            for(Node n:boss.nodes)n.y+=offset;
         }
     }
     private void updateEnemies(float dt){
@@ -579,7 +612,7 @@ public final class GameView extends View {
                 continue;
             }
             boolean consumed=false;
-            if(bossActive&&boss!=null){
+            if(bossActive&&boss!=null&&bossSequence==GameRules.BOSS_COMBAT){
                 for(Node n:boss.nodes){
                     if(n.hp<=0)continue;
                     if(dist2(s.x,s.y,n.x,n.y)<(s.radius+17)*(s.radius+17)){
