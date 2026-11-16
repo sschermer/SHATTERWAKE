@@ -1,0 +1,51 @@
+name: Kettenwurm Blender review renders (no APK integration)
+on:
+  push:
+    branches: [art/kettenwurm-blender-master]
+    paths:
+      - 'art/bosses/kettenwurm/build_master.py'
+      - '.github/workflows/kettenwurm-art.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-pil
+      - name: Generate editable master and real Blender previews
+        run: |
+          blender -b -t 4 --python art/bosses/kettenwurm/build_master.py -- art/bosses/kettenwurm/output
+      - name: Validate real render files and source
+        run: |
+          /usr/bin/python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          import json
+          p=Path('art/bosses/kettenwurm/output')
+          for f in ['kettenwurm_game.png','kettenwurm_review.png']:
+              im=Image.open(p/f)
+              assert im.size==(1024,1024) and im.mode=='RGBA',(f,im.size,im.mode)
+              assert im.getchannel('A').getextrema()[0]==0
+              assert im.getbbox() is not None
+          assert (p/'kettenwurm_master.blend').read_bytes()[:7]==b'BLENDER'
+          assert len(json.loads((p/'manifest.json').read_text())['node_types'])==12
+          print('PASS: Blender master, alpha renders, twelve node types')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kettenwurm-blender-review
+          path: art/bosses/kettenwurm/output/
+          retention-days: 30
+      - name: Preserve Blender source and preview on review branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f art/bosses/kettenwurm/output/
+          git commit -m 'art: archive genuine Blender master and Kettenwurm review renders [skip ci]' || true
+          git push origin HEAD:art/kettenwurm-blender-master
