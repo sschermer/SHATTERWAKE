@@ -9,7 +9,9 @@ os.makedirs(out,exist_ok=True)
 random.seed(27011)
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 sc=bpy.context.scene
-sc.render.engine='CYCLES';sc.cycles.samples=48
+sc.render.engine='CYCLES';sc.cycles.samples=128
+# Higher sample count plus Cycles denoising removes stochastic render grain.
+sc.view_layers[0].cycles.use_denoising=True
 sc.render.resolution_x=1024;sc.render.resolution_y=1024;sc.render.resolution_percentage=100
 sc.render.film_transparent=True;sc.render.image_settings.file_format='PNG';sc.render.image_settings.color_mode='RGBA'
 sc.view_settings.view_transform='AgX'
@@ -18,16 +20,14 @@ def material(name,c,metal=0.8,rough=.35,emit=0):
  bs=m.node_tree.nodes.get('Principled BSDF')
  bs.inputs['Base Color'].default_value=(*c,1);bs.inputs['Metallic'].default_value=metal;bs.inputs['Roughness'].default_value=rough
  if emit:bs.inputs['Emission Color'].default_value=(*c,1);bs.inputs['Emission Strength'].default_value=emit
- if metal>.5 and not emit:
-  tex=m.node_tree.nodes.new('ShaderNodeTexNoise');tex.inputs['Scale'].default_value=95;tex.inputs['Detail'].default_value=3
-  bump=m.node_tree.nodes.new('ShaderNodeBump');bump.inputs['Strength'].default_value=.13;bump.inputs['Distance'].default_value=.028
-  m.node_tree.links.new(tex.outputs['Fac'],bump.inputs['Height']);m.node_tree.links.new(bump.outputs['Normal'],bs.inputs['Normal'])
+ # Strict polished finish: no procedural noise, no bump/normal perturbations.
+ # Reflectivity comes from authentic metallic shaders, geometry and area lights.
  return m
-titanium=material('PBR charcoal titanium / micro-machining',(.075,.091,.105),.92,.29)
-red=material('scarred oxblood ceramic armor',(.29,.045,.035),.64,.38)
-edge=material('brushed silver steel exposed edges',(.35,.37,.38),.94,.28)
-carbon=material('carbon fiber seals',(.017,.021,.025),.42,.63)
-copper=material('aged bronze hydraulics',(.32,.19,.09),.85,.3)
+titanium=material('PBR mirror-polished charcoal titanium',(.082,.099,.117),.96,.125)
+red=material('polished oxblood metallic armor',(.31,.049,.041),.88,.17)
+edge=material('bright precision-polished stainless steel edges',(.43,.46,.49),.98,.105)
+carbon=material('smooth graphite gasket seals',(.018,.023,.029),.35,.38)
+copper=material('polished bronze hydraulic pistons',(.40,.25,.12),.92,.15)
 amber=material('orange heat ports',(.95,.19,.02),.18,.2,5)
 optic=material('cold sensor glass',(.025,.32,.48),.26,.14,3)
 def assign(o,name,m):
@@ -131,9 +131,9 @@ def light(name,xyz,power,size,color):
  bpy.ops.object.light_add(type='AREA',location=xyz);o=bpy.context.object;o.name=name
  o.data.energy=power;o.data.shape='DISK';o.data.size=size;o.data.color=color
  o.rotation_euler=(-o.location).to_track_quat('-Z','Y').to_euler()
-light('large cool softbox',(-4,3,8),1600,6,(.70,.85,1))
-light('warm edge light',(4,-3,6),1100,4,(1,.60,.35))
-light('rear silver rim',(1,5,7),1900,3,(.65,.85,1))
+light('controlled cool polished-metal softbox',(-4,3,8),1800,4.5,(.70,.85,1))
+light('crisp warm edge highlight',(4,-3,6),1250,2.5,(1,.66,.45))
+light('sharp rear silver rim',(1,5,7),1900,2.2,(.65,.85,1))
 def render(name,cam):
  sc.camera=cam;sc.render.filepath=os.path.join(out,name);bpy.ops.render.render(write_still=True)
 render('mk2_head_segment_review.png',cam)
@@ -141,4 +141,4 @@ render('mk2_head_segment_game.png',top)
 sc.camera=cam
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out,'kettenwurm_mk2_master.blend'))
 with open(os.path.join(out,'manifest.json'),'w') as f:
- json.dump({'purpose':'visual review only','units':['head','segment'],'engine':'Cycles','resolution':[1024,1024],'source':'100% procedural original Blender geometry','android_integration':False},f,indent=2)
+ json.dump({'purpose':'visual review only','revision':'Mk-II-polished-01','units':['head','segment'],'engine':'Cycles','samples':128,'denoising':True,'surface':'smooth metallic; no procedural noise or bump','resolution':[1024,1024],'source':'100% procedural original Blender geometry','android_integration':False},f,indent=2)
