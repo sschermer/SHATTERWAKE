@@ -11,6 +11,10 @@
       1000,
       900
     ],
+    "previews/werft_damage.png": [
+      1000,
+      900
+    ],
     "previews/werft_shield.png": [
       1000,
       900
@@ -31,6 +35,10 @@
       1024,
       1024
     ],
+    "staging/game/fighter_module_1.png": [
+      1024,
+      1024
+    ],
     "staging/game/fighter_module_4.png": [
       1024,
       1024
@@ -44,6 +52,10 @@
       2048
     ],
     "staging/werft/fighter_module_0.png": [
+      2048,
+      2048
+    ],
+    "staging/werft/fighter_module_1.png": [
       2048,
       2048
     ],
