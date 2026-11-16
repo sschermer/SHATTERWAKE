@@ -1,0 +1,89 @@
+name: SHATTERWAKE - Kettenwurm 5 types x 4 damage states (visual-only)
+on:
+  push:
+    branches: [art/kettenwurm-blender-master]
+    paths:
+      - 'art/bosses/kettenwurm/build_damage_states.py'
+      - 'art/bosses/kettenwurm/build_mk2.py'
+      - 'art/bosses/kettenwurm/damage_contract.py'
+      - 'tests/test_kettenwurm_damage.py'
+      - '.github/workflows/kettenwurm-damage.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  damage-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test independent boss damage-state contract
+        run: python3 tests/test_kettenwurm_damage.py
+      - name: Install Blender and image validator
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-pil
+      - name: Render five types in four physical damage states
+        run: |
+          blender -b -t 4 --python art/bosses/kettenwurm/build_damage_states.py -- art/bosses/kettenwurm/damage_output
+      - name: Validate RGBA sprites, geometry source and create review sheet
+        run: |
+          /usr/bin/python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageDraw,ImageChops
+          import json,hashlib
+          p=Path('art/bosses/kettenwurm/damage_output')
+          m=json.loads((p/'manifest.json').read_text())
+          assert m['node_type_by_id']==[0,1,1,4,2,3,4,1,2,4,3,1]
+          assert m['android_integration'] is False and m['visual_approval']=='PENDING'
+          assert m['export']['size']==[1024,1024] and m['export']['channels']=='RGBA'
+          names=[f'boss_type_{t}_damage_{s}.png' for t in range(5) for s in range(4)]
+          names += [f'detail_type_{t}_damage_{s}.png' for t in (0,3) for s in (1,2)]
+          for name in names:
+              img=Image.open(p/name)
+              assert img.size==(1024,1024) and img.mode=='RGBA',(name,img.size,img.mode)
+              a=img.getchannel('A')
+              assert a.getextrema()[0]==0 and a.getextrema()[1]>0,name
+              assert a.getbbox() is not None,name
+              assert all(a.getpixel(c)==0 for c in ((0,0),(1023,0),(0,1023),(1023,1023))),name
+              print('PASS sprite',name,flush=True)
+          for t in range(5):
+              states=[Image.open(p/f'boss_type_{t}_damage_{s}.png') for s in range(4)]
+              for s in range(3):
+                  assert ImageChops.difference(states[s],states[s+1]).getbbox(),(t,s)
+          blend=p/'kettenwurm_damage_master.blend'
+          assert blend.stat().st_size>100000,blend
+          cell_w,cell_h=360,365
+          sheet=Image.new('RGB',(4*cell_w,5*cell_h),(14,21,29))
+          draw=ImageDraw.Draw(sheet)
+          kinds=['KOPF','WAFFEN','TRENNKUPPLUNG','REAKTOR','ENERGIESPEICHER']
+          states=['0   INTAKT','1   LEICHT VERBEULT','2   STARK / FUNKEN','3   EXPLOSION']
+          for t in range(5):
+              for s in range(4):
+                  x,y=s*cell_w,t*cell_h
+                  draw.text((x+13,y+13),kinds[t]+'  /  '+states[s],fill=(225,235,243))
+                  img=Image.open(p/f'boss_type_{t}_damage_{s}.png')
+                  img.thumbnail((344,325),Image.Resampling.LANCZOS)
+                  sheet.paste(img,(x+(cell_w-img.width)//2,y+35),img)
+          sheet.save(p/'damage_review_matrix.jpg',quality=94,subsampling=0)
+          names+=['kettenwurm_damage_master.blend','manifest.json','damage_review_matrix.jpg']
+          (p/'SHA256SUMS.txt').write_text(''.join(
+              hashlib.sha256((p/n).read_bytes()).hexdigest()+'  '+n+'\n' for n in names))
+          print('PASS: 20 GAME sprites + 4 DETAIL renders + editable Blender + visual review sheet')
+          PY
+      - name: Remove disposable Mk-II intermediate and backup files
+        run: |
+          rm -rf art/bosses/kettenwurm/damage_output/_temporary_mk2
+          find art/bosses/kettenwurm/damage_output -name '*.blend1' -delete
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kettenwurm-all-damage-states-review
+          path: art/bosses/kettenwurm/damage_output/
+          retention-days: 30
+      - name: Archive approved-format previews on review branch, not main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f art/bosses/kettenwurm/damage_output/
+          git commit -m 'art: archive original 5x4 boss damage Blender sprites [skip ci]' || true
+          git push origin HEAD:art/kettenwurm-blender-master
