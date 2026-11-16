@@ -1,0 +1,14 @@
+{
+  "purpose": "visual review only",
+  "units": [
+    "head",
+    "segment"
+  ],
+  "engine": "Cycles",
+  "resolution": [
+    1024,
+    1024
+  ],
+  "source": "100% procedural original Blender geometry",
+  "android_integration": false
+}
