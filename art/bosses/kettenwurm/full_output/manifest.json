@@ -1,0 +1,74 @@
+{
+  "model": "SHATTERWAKE Kettenwurm / complete twelve-node Mk-II polished source",
+  "version": "boss-full-preview-01",
+  "source": "Original procedural Blender geometry, polished Mk-II materials",
+  "base_main_commit": "3eb83b7880b4a4b3111bd252e21d176726eca56a",
+  "node_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "node_types": [
+    0,
+    1,
+    1,
+    4,
+    2,
+    3,
+    4,
+    1,
+    2,
+    4,
+    3,
+    1
+  ],
+  "state_intact": [
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact",
+    "intact"
+  ],
+  "state_damaged": [
+    "intact",
+    "cracked",
+    "intact",
+    "critical",
+    "destroyed",
+    "critical",
+    "intact",
+    "cracked",
+    "cracked",
+    "intact",
+    "critical",
+    "intact"
+  ],
+  "trajectory_reference": "GameView.positionBossNodes: world==0",
+  "viewport": {
+    "game_camera": "orthographic +Y up",
+    "resolution": [
+      1024,
+      1024
+    ],
+    "alpha": true
+  },
+  "android_integration": false,
+  "visual_approval": "PENDING",
+  "credits": "Original procedural Blender geometry; no third-party model, texture, music or font"
+}
