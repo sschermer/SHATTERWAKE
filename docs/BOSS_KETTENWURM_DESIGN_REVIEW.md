@@ -1,3 +1,17 @@
+# Kettenwurm – freigegebene Bossgrafik und Android-Integration (16.11.2026)
+
+**VERBINDLICH/FREIGEGEBEN:** Mk-II polierte Hard-Surface-Metalloptik, vollständiger zwölfgliedriger Boss, vier visuelle Zustände je fünf Typen. Der Nutzer hat alle 20 Schadensdarstellungen zur Integration freigegeben. Die erste Mk-I-Zeichnung unten ist historisch und nicht mehr das gültige Abnahmekriterium.
+
+**IMPLEMENTIERT (Integrationsbranch):** Die 20 originalen Blender-PNGs unter `app/src/main/assets/rendered/boss/`; geometrische Blender-Quelle und editierbare Masterdatei unter `art/bosses/kettenwurm/`; HP-basiertes Sprite-Rendering nur für Boss type 0. Die bestehenden 12 Node-IDs, HP-Hitboxen, Sinusbewegung, Split-Spezialeffekte, Drops, Boss- und Werftsequenz bleiben unverändert.
+
+**SCHADENSVERTRAG:** Zustand 0 bei HP > 2/3, Zustand 1 bis einschließlich 2/3, Zustand 2 bis einschließlich 1/3 bei HP > 0; Zustand 3 bei HP <= 0. Stufe 3 ist eine kurz sichtbare Explosion; anschließend wird die Node weiterhin wie bisher aus dem Rendering entfernt. Explosionspartikel und physische Belohnungen bleiben im GameView.
+
+**BERECHNUNG DER ANIMATION:** Rotation aus der unveränderten Nachbarknoten-Position; visuelle Funken und dezenter Reaktorrauch bei Stufe 2. Nur die Grafik dreht, keine Trefferzone wird verschoben oder vergrößert. Ein zentrierter Ausschnitt aus den 1024-Pixel-Renderings sorgt für bessere Lesbarkeit auf dem Handy; das 256px-Cache-LOD und der 26MB-Cache bestehen fort.
+
+**VERIFIZIERUNG:** Quelle und gepackte Debug-APK werden gegen die SHA256-Prüfsummen der vom Nutzer freigegebenen Renderings geprüft. Reine Java-Regressionen kontrollieren 1/3, 2/3, 0 HP und Ausrichtung. Der unveränderte Signatur-Fingerprint muss weiterhin mit v0.6.1-alpha übereinstimmen. Nur nach erfolgreichem CI-Build von main wird der Release `v0.6.2-alpha` veröffentlicht.
+
+## Historischer Erstentwurf
+
 # Kettenwurm Mk-I — Design review (unapproved)
 
 Status: VORSCHLAG / design preview only. Not integrated into Android.
