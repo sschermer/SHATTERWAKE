@@ -1,3 +1,13 @@
+## 0.6.4-alpha — optionale Offline-Sprachbefehle (16.11.2026)
+
+- Führe eine abschaltbare Push-to-Talk-Steuerung für die vier bestehenden Spezialfähigkeiten ein: Schild, Turbo/Schnellfeuer, Dreifach und Plasma.
+- Ein zweiter Finger im Spielfeld startet eine einzige kurze lokale Mikrofon-Sitzung, während der erste Finger das Schiff weitersteuert. Rakete/EMP und Power-up-Touchbuttons bleiben vollständig bedienbar.
+- Nutze ausschließlich Androids lokale Spracherkennung ab API 31, mit Deutsch (de-DE); keine Internetberechtigung, Online-Rückfallebene, Cloud-Analyse, Audiomitschnitte oder zusätzlichen Libraries.
+- RECORD_AUDIO wird ausschließlich bei freiwilliger Aktivierung in den Einstellungen angefragt. Bei fehlendem lokalen Erkennungsdienst oder verweigerter Berechtigung bleiben die normalen Touch-Steuerungen nutzbar.
+- Automatischer Timeout und Lifecycle-Abbruch bei Verlassen/Pausieren der App. Keine Sprachsteuerung in Menüs, der Werft oder während des Tutorials.
+- Ergänze Java-Grammatik-, Falschaktivierungs-, Multitouch- und APK-Berechtigungstests. Alter Android-Paketname, Speicherstand, permanent signierender PKCS12-Schlüssel und sämtliche bisherigen Assets bleiben identisch.
+- Veröffentliche eine separate signierte v0.6.4-alpha-APK; v0.6.3-alpha bleibt als vorangegangene Testversion abrufbar.
+
 ## 0.6.3-alpha — FINAL SORTIE: Namenswechsel und App-Icon (2026-11-16)
 
 - **VERBINDLICH:** Der sichtbare Spielname lautet ab jetzt **FINAL SORTIE** (früher SHATTERWAKE).
