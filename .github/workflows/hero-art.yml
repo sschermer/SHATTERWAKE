@@ -24,64 +24,69 @@ jobs:
       - name: Validate script and remove old generated files
         run: |
           python3 -m py_compile art/hero_fighter/build_master.py
-          # No pre-existing renders may satisfy the artifact validator.
+          # Keep previously reviewed ship/hardpoints identical; remove only
+          # the new render targets so stale PNGs can never pass validation.
           rm -f art/hero_fighter/hero_fighter.blend
-          rm -f art/hero_fighter/previews/*.png art/hero_fighter/previews/*.jpg
-          rm -f art/hero_fighter/staging/game/*.png art/hero_fighter/staging/werft/*.png
+          rm -f art/hero_fighter/previews/werft_{magnet*,target*,special*,repair*,damage_state*}.{png,jpg}
+          rm -f art/hero_fighter/staging/game/fighter_module_{2,3,6,7}*.png
+          rm -f art/hero_fighter/staging/werft/fighter_module_{2,3,6,7}*.png
+          rm -f art/hero_fighter/staging/game/fighter_hull_damage_*.png
+          rm -f art/hero_fighter/staging/werft/fighter_hull_damage_*.png
       - name: Build editable 3D master and image previews, without touching Android
         run: |
-          blender -b -t 4 --python art/hero_fighter/build_master.py -- art/hero_fighter
-          test -s art/hero_fighter/previews/werft_before.png
+          SW_ART_UPDATE_ONLY=1 blender -b -t 4 --python art/hero_fighter/build_master.py -- art/hero_fighter
           test -s art/hero_fighter/hero_fighter.blend
-          test -s art/hero_fighter/previews/werft_weapons.png
-          test -s art/hero_fighter/previews/werft_damage.png
-          test -s art/hero_fighter/previews/werft_shield.png
-          test -s art/hero_fighter/previews/werft_drones.png
-          # Never pass with an old committed render while Blender failed.
-          /usr/bin/python3 - <<'PY'
-          from pathlib import Path
-          import time
-          images=Path("art/hero_fighter/previews")
-          for path in images.glob("*.png"):
-              assert time.time()-path.stat().st_mtime < 3600,("stale render",path)
-          PY
+          for key in werft_magnet werft_magnet_max werft_target werft_target_max \
+                     werft_special werft_repair werft_damage_state_1 \
+                     werft_damage_state_2 werft_damage_state_3; do
+            test -s "art/hero_fighter/previews/${key}.png"
+          done
           /usr/bin/python3 - <<'PY'
           from PIL import Image
           from pathlib import Path
           root=Path("art/hero_fighter/previews")
-          for key in ["werft_before","werft_weapons","werft_damage","werft_shield","werft_drones"]:
-              img=Image.open(root/(key+".png")).convert("RGB")
-              img.save(root/(key+".jpg"),quality=90,subsampling=0,optimize=True)
+          names=["werft_magnet","werft_magnet_max","werft_target",
+                 "werft_target_max","werft_special","werft_repair",
+                 "werft_damage_state_1","werft_damage_state_2",
+                 "werft_damage_state_3"]
+          for name in names:
+              src=root/(name+".png")
+              im=Image.open(src).convert("RGB")
+              assert im.size==(1000,900),(name,im.size)
+              im.save(root/(name+".jpg"),quality=88,optimize=True,subsampling=0)
           PY
-      - name: Validate outputs
+      - name: Validate real PNG output and transparent layers
         run: |
           python3 - <<'PY'
           import os,struct,json
           root="art/hero_fighter"
-          dimensions={
-            "previews/werft_before.png":(1000,900),
-            "previews/werft_weapons.png":(1000,900),
-            "previews/werft_damage.png":(1000,900),
-            "previews/werft_shield.png":(1000,900),
-            "previews/werft_drones.png":(1000,900),
-            "previews/game_nose_up.png":(1024,1024)}
-          for view,res in [("game",1024),("werft",2048)]:
-              for name in ["fighter_base.png","fighter_module_0.png",
-                           "fighter_module_1.png","fighter_module_4.png","fighter_module_5.png"]:
-                  dimensions["staging/"+view+"/"+name]=(res,res)
-          for name,expected in dimensions.items():
-              path=os.path.join(root,name)
+          preview=["werft_before","werft_weapons","werft_damage",
+                   "werft_shield","werft_drones","werft_magnet","werft_magnet_max",
+                   "werft_target","werft_target_max","werft_special","werft_repair",
+                   "werft_damage_state_1","werft_damage_state_2","werft_damage_state_3"]
+          expected={"previews/"+p+".png":(1000,900) for p in preview}
+          expected["previews/game_nose_up.png"]=(1024,1024)
+          for view,size in (("game",1024),("werft",2048)):
+              prefix="staging/"+view+"/"
+              names=["fighter_base.png"]+["fighter_module_%d.png"%n for n in range(8)]
+              names += ["fighter_module_3_L%d.png"%k for k in (2,3)]
+              names += ["fighter_module_7_L%d.png"%k for k in (2,3,4,5)]
+              names += ["fighter_hull_damage_%d.png"%k for k in (1,2,3)]
+              for name in names:expected[prefix+name]=(size,size)
+          for relative,dim in expected.items():
+              path=os.path.join(root,relative)
               with open(path,"rb") as f:hdr=f.read(26)
-              assert hdr[:8]==b'\x89PNG\r\n\x1a\n',name
-              assert struct.unpack(">II",hdr[16:24])==expected,(name,"dimensions")
-              assert hdr[25]==6,(name,"RGBA required")
-              print("VERIFIED",name,os.stat(path).st_size)
+              assert hdr[:8]==b'\x89PNG\r\n\x1a\n',relative
+              assert struct.unpack(">II",hdr[16:24])==dim,(relative,"dimensions")
+              assert hdr[25]==6,(relative,"must be RGBA")
+              print("ART-004 validated",relative,os.stat(path).st_size,flush=True)
           assert os.stat(root+"/hero_fighter.blend").st_size>100000
           with open(root+"/render_report.json","w") as f:
-              json.dump({"status":"rendered_not_approved",
-                         "author":"original SHATTERWAKE Blender construction",
-                         "no_external_assets":True,
-                         "outputs":dimensions},f,indent=2)
+              json.dump({"status":"new_graphics_rendered_not_yet_user_approved",
+                         "modules":[0,1,2,3,4,5,6,7],
+                         "magnet_stages":[1,2,3],"target_stages":[1,2,3,4,5],
+                         "hull_damage_tiers":[1,2,3],
+                         "original_project_geometry":True,"files":expected},f,indent=2)
           PY
       - name: Publish previews and editable master to ART branch only
         run: |
