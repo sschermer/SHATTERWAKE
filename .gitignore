@@ -10,3 +10,11 @@ out/
 *.jks
 *.apk
 *.aab
+
+# Never commit private signing key material or plaintext credentials.
+*.p12
+*.pfx
+*.pem
+*.key
+signing/
+SHATTERWAKE-GitHub-Secrets.txt

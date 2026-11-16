@@ -135,37 +135,80 @@ jobs:
           assert not missing,("Missing approved art in APK",sorted(missing))
           print("PASS: 46 original 3D art files and layout packaged")
           PY
-      - name: Prepare artifact + checksum
+      # Keep test/debug builds as CI checks; NEVER distribute their ephemeral key.
+      # Configure two repository-level GitHub Actions secrets to enable real
+      # update signing. One missing secret is an error, not a fallback.
+      - name: Configure permanent private APK signing key
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          SHATTERWAKE_KEYSTORE_BASE64: ${{ secrets.SHATTERWAKE_KEYSTORE_BASE64 }}
+          SHATTERWAKE_KEYSTORE_PASSWORD: ${{ secrets.SHATTERWAKE_KEYSTORE_PASSWORD }}
         run: |
-          mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk out/SHATTERWAKE-v0.6.0-alpha-debug.apk
-          cd out
-          sha256sum SHATTERWAKE-v0.6.0-alpha-debug.apk > SHA256SUMS.txt
-      - name: Verify installable APK and checksum
+          set -euo pipefail
+          if [ -z "$SHATTERWAKE_KEYSTORE_BASE64" ] && [ -z "$SHATTERWAKE_KEYSTORE_PASSWORD" ]; then
+            echo "::notice::Signed release not yet configured. Add the two GitHub Actions signing secrets and rerun this workflow."
+            echo "SHATTERWAKE_SIGNING_READY=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [ -z "$SHATTERWAKE_KEYSTORE_BASE64" ] || [ -z "$SHATTERWAKE_KEYSTORE_PASSWORD" ]; then
+            echo "::error::Signing secrets incomplete: require both KEYSTORE_BASE64 and KEYSTORE_PASSWORD."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/shatterwake-signing"
+          printf '%s' "$SHATTERWAKE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/shatterwake-signing/shatterwake.p12"
+          chmod 600 "$RUNNER_TEMP/shatterwake-signing/shatterwake.p12"
+          keytool -list -keystore "$RUNNER_TEMP/shatterwake-signing/shatterwake.p12" \
+            -storetype PKCS12 -alias shatterwake-updates \
+            -storepass:env SHATTERWAKE_KEYSTORE_PASSWORD >/dev/null
+          echo "SHATTERWAKE_KEYSTORE_PATH=$RUNNER_TEMP/shatterwake-signing/shatterwake.p12" >> "$GITHUB_ENV"
+          # A new run number is higher than any previous build of this workflow.
+          echo "SHATTERWAKE_BUILD_NUMBER=$((10000+GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "SHATTERWAKE_VERSION_NAME=0.6.1-alpha.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "SHATTERWAKE_SIGNING_READY=true" >> "$GITHUB_ENV"
+      - name: Build installable permanently signed release APK
+        if: env.SHATTERWAKE_SIGNING_READY == 'true'
+        env:
+          SHATTERWAKE_KEYSTORE_PASSWORD: ${{ secrets.SHATTERWAKE_KEYSTORE_PASSWORD }}
+        run: gradle --no-daemon --stacktrace :app:assembleRelease
+      - name: Verify APK signing certificate matches SHATTERWAKE forever key
+        if: env.SHATTERWAKE_SIGNING_READY == 'true'
         run: |
-          test -s out/SHATTERWAKE-v0.6.0-alpha-debug.apk
-          (cd out && sha256sum -c SHA256SUMS.txt)
-      - name: Publish APK in repository without Actions artifact quota
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+          set -euo pipefail
+          apk=app/build/outputs/apk/release/app-release.apk
+          test -s "$apk"
+          signer="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$signer" verify --verbose --print-certs "$apk" > "$RUNNER_TEMP/signature-check.txt"
+          cat "$RUNNER_TEMP/signature-check.txt"
+          actual=$(awk -F ': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2)}' "$RUNNER_TEMP/signature-check.txt" | head -n 1)
+          expected="12fc96a90b8ca79d7e01f8e1a420f97e872ec71dc32ebe2b10ba59919776fc06"
+          test -n "$actual"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Wrong signing certificate: refusing to publish an APK that would break updates."
+            exit 1
+          fi
+          echo "PASS: correctly signed APK, trusted permanent certificate SHA256=$actual"
+      - name: Package signed release and checksum
+        if: env.SHATTERWAKE_SIGNING_READY == 'true'
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          mkdir -p dist
-          cp out/SHATTERWAKE-v0.6.0-alpha-debug.apk dist/
-          cp out/SHA256SUMS.txt dist/
-          git add -f dist/SHATTERWAKE-v0.6.0-alpha-debug.apk dist/SHA256SUMS.txt
-
-          git commit -m 'Publish tested SHATTERWAKE 0.6 alpha APK [skip ci]' || true
-          git push origin HEAD:main
-      - name: Create downloadable GitHub prerelease APK
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+          mkdir -p out/signed
+          cp app/build/outputs/apk/release/app-release.apk out/signed/SHATTERWAKE-v0.6.1-alpha-signed.apk
+          (cd out/signed && sha256sum SHATTERWAKE-v0.6.1-alpha-signed.apk > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+      - name: Publish signed APK to separate stable-key GitHub prerelease
+        if: env.SHATTERWAKE_SIGNING_READY == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.6.0-alpha >/dev/null 2>&1; then
-            gh release upload v0.6.0-alpha out/SHATTERWAKE-v0.6.0-alpha-debug.apk out/SHA256SUMS.txt --clobber
+          set -euo pipefail
+          tag=v0.6.1-alpha
+          apk=out/signed/SHATTERWAKE-v0.6.1-alpha-signed.apk
+          sums=out/signed/SHA256SUMS.txt
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$apk" "$sums" --clobber
           else
-            gh release create v0.6.0-alpha out/SHATTERWAKE-v0.6.0-alpha-debug.apk out/SHA256SUMS.txt \
-              --title 'SHATTERWAKE 0.6.0-alpha (test build)' --prerelease \
-              --notes 'Playable Android prototype. Debug-signed APK for private testing only, NOT a production or Google Play release. No external game assets or runtime dependencies. See licensing and release checklist.'
+            gh release create "$tag" "$apk" "$sums" \
+              --title 'SHATTERWAKE 0.6.1-alpha – dauerhaft signiert' --prerelease \
+              --notes 'Private Android test release signed with a stable SHA-256/RSA-4096 app certificate. After the one-time switch from ephemeral debug APKs, install future signed APKs as ordinary updates. The versionCode increases with each CI run. Safeguard the signing key offline.'
           fi
+      - name: Remove temporary signing keystore from CI runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/shatterwake-signing/shatterwake.p12"

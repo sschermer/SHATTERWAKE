@@ -24,19 +24,19 @@ Visual examples in planning conversations were **never copied** into the Android
 1. Confirm legal rights and identity of the final publisher and project copyright owner; independently clear `SHATTERWAKE` and any logo (registered/unregistered trademarks, games, domains, app stores, relevant jurisdictions). This project makes no claim of exclusive trademark rights.
 2. Perform a final dependency/asset/license review including every transitive AAR, JAR, icon, typeface, sample, sound effect, screenshot, video and marketing asset; include full license texts and NOTICE files where required. Currently the direct runtime dependency set is empty.
 3. Keep current Google Play target API policy (in November 2026 new apps require Android 16 / API 36), signing, Play App Signing, 64-bit requirements if native libraries are later added, app bundle (AAB), compatibility, content rating, families/children policy where relevant, permissions, listing disclosures and privacy obligations. See https://developer.android.com/google/play/requirements/target-sdk
-4. Create a **new private upload/release keystore** and protected credential flow. The GitHub Actions output is an automatically **debug-signed** test APK; it is **NOT** a release-signed artifact and should not be uploaded as the production build. Do not commit key material.
+4. A dedicated long-lived private PKCS12 Android update-signing keystore has been generated outside GitHub and a protected GitHub Actions release-signing workflow configured. **The initial release APK is not available until two owner-managed Actions secrets are provided.** Do not commit key material. This private sideload signer is not a final Google Play App Signing upload-key policy; review separately.
 5. Verify consumer law, imprint/provider identification where applicable, tax and digital goods rules, GDPR/ePrivacy disclosures if processing changes, advertising and in-app payment rules if monetization is introduced, and any required national age rating / IARC questionnaire.
 6. Run device tests across Android versions and aspect ratios, accessibility review, performance and battery checks, security/privacy checks, stability tests and user testing. Smoke tests in CI do **not** replace real device testing.
 7. Check SDK and build-tools terms; complete upstream notices and licenses are linked in `THIRD_PARTY_NOTICES.md`. For production, create a dependency SBOM from the actual build and archive it with release records.
 
 ## 3. Source and build model
 
-- App ID: `de.shatterwake.game`, version `0.1.0-alpha`.
+- App ID: `de.shatterwake.game`, version `0.6.1-alpha` (signed workflow prepared).
 - `minSdk 26`, `targetSdk 36`, `compileSdk 36` (suitable for current Play target requirement, not sufficient for compliance by itself).
 - Android Canvas / framework with no third-party runtime dependencies.
 - Reproducible **debug build procedure**, with SHA-256 output in GitHub Actions. Build inputs may change with upstream Maven or runner images unless further pinned; artifact is not claimed bit-for-bit reproducible.
 - Runtime network access: none. Runtime permissions: vibration only.
-- Test signing: ephemeral debug key generated during CI; reinstalling across environments may require uninstalling earlier builds and will erase locally stored progress. Production signing must use a stable, protected release key.
+- Test signing: ephemeral debug key generated during CI, never offered as an update. The new signed APK is built only when two protected GitHub Actions repository secrets are present and its certificate fingerprint matches the expected long-lived update key. See `docs/SIGNING_AND_UPDATES.md`. The first switch from the old debug APK still needs an uninstall.
 
 ## 4. Attribution and license references
 

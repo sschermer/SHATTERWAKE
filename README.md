@@ -1,6 +1,6 @@
 # SHATTERWAKE
 
-**Native Android arcade space shooter — playable prototype 0.6.0-alpha.**
+**Native Android arcade space shooter — playable prototype 0.6.1-alpha (stable signing prepared).**
 
 Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight correction cone, two selectable touch input modes, distinct enemy flight patterns, destructible segmented space worm, modular multi-stage bosses, star pickups, temporary in-run star-shop upgrades, permanent tech archive unlocks and genuine branching sector paths.
 
@@ -35,6 +35,25 @@ Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight
   The training has eight stages and returns to the main menu on completion.
 - The 0.5 eSterne display, high-detail hero fighter, repaired armor and
   cinematic Werft remain in place.
+
+## Dauerhaft signierte Android-Updates
+
+Ab 0.6.1 ist eine **dauerhafte APK-Signatur** statt wechselnder
+GitHub-Actions-Debug-Schlüssel vorbereitet. Sie wird automatisch verwendet,
+**sobald** der Repository-Besitzer die beiden GitHub-Actions-Secrets
+`SHATTERWAKE_KEYSTORE_BASE64` und
+`SHATTERWAKE_KEYSTORE_PASSWORD` einrichtet. Der Schlüssel befindet
+sich aus Sicherheitsgründen **nicht** im Repository.
+
+Ausführliche [Einrichtung und Updates](docs/SIGNING_AND_UPDATES.md).
+Die neue signierte APK wird nach dem ersten erfolgreichen Workflow im
+[Release v0.6.1-alpha](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.1-alpha)
+bereitgestellt. Der Build erhöht den Android-`versionCode` automatisch.
+
+**Achtung:** Einmaliger Wechsel von der bisherigen Debug-Version erfordert
+Deinstallation; bisherige lokale Tech- und Einstellungsdaten können verloren
+gehen. **Erst wechseln, wenn die signierte APK verfügbar ist.** Danach
+sind Sideload-Updates mit Datenübernahme möglich.
 
 ## Install on an Android phone
 

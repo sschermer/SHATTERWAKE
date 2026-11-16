@@ -1,5 +1,12 @@
 plugins { id 'com.android.application' }
 
+// Stable update signing. The private PKCS12 key and its password are never
+// stored in Git. GitHub Actions supplies both values only for the signed job.
+def updateKeyFile = System.getenv('SHATTERWAKE_KEYSTORE_PATH')
+def updateKeyPassword = System.getenv('SHATTERWAKE_KEYSTORE_PASSWORD')
+def signingConfigured = updateKeyFile != null && !updateKeyFile.isEmpty()
+        && updateKeyPassword != null && !updateKeyPassword.isEmpty()
+
 android {
     namespace 'de.shatterwake.game'
     compileSdk 36
@@ -8,11 +15,31 @@ android {
         applicationId 'de.shatterwake.game'
         minSdk 26
         targetSdk 36
-        versionCode 6
-        versionName '0.6.0-alpha'
+        // Actions adds its monotonically increasing run number. Local builds
+        // default to 7; there is never an automatic downgrade of signed APKs.
+        versionCode (System.getenv('SHATTERWAKE_BUILD_NUMBER') ?: '7').toInteger()
+        versionName (System.getenv('SHATTERWAKE_VERSION_NAME') ?: '0.6.1-alpha')
+    }
+    signingConfigs {
+        if (signingConfigured) {
+            shatterwakeUpdates {
+                storeFile file(updateKeyFile)
+                storePassword updateKeyPassword
+                keyAlias 'shatterwake-updates'
+                keyPassword updateKeyPassword
+                storeType 'PKCS12'
+            }
+        }
     }
     buildTypes {
-        release { minifyEnabled false }
+        release {
+            minifyEnabled false
+            if (signingConfigured) {
+                signingConfig signingConfigs.shatterwakeUpdates
+            }
+        }
+        // Debug APKs are for CI validation only and never distributed as
+        // updates: Android will reject their ephemeral debug certificate.
         debug { debuggable true }
     }
     compileOptions {
