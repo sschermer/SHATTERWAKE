@@ -1,0 +1,48 @@
+name: Kettenwurm Mk-II head and segment Blender review
+on:
+  push:
+    branches: [art/kettenwurm-blender-master]
+    paths:
+      - 'art/bosses/kettenwurm/build_mk2.py'
+      - '.github/workflows/kettenwurm-mk2.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender and image checks
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-pil
+      - name: Render actual Mk-II geometry
+        run: blender -b -t 4 --python art/bosses/kettenwurm/build_mk2.py -- art/bosses/kettenwurm/mk2_output
+      - name: Validate source and renders
+        run: |
+          /usr/bin/python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          p=Path('art/bosses/kettenwurm/mk2_output')
+          for name in ('mk2_head_segment_review.png','mk2_head_segment_game.png'):
+              im=Image.open(p/name)
+              assert im.mode=='RGBA' and im.size==(1024,1024), (name,im.mode,im.size)
+              assert im.getchannel('A').getextrema()[0]==0
+              assert im.getchannel('A').getextrema()[1]>0
+          assert (p/'kettenwurm_mk2_master.blend').stat().st_size>10000
+          print('PASS: real Blender Mk-II alpha renders and editable master')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kettenwurm-mk2-review
+          path: art/bosses/kettenwurm/mk2_output/
+          retention-days: 30
+      - name: Archive render files on review branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f art/bosses/kettenwurm/mk2_output/
+          git commit -m 'art: archive Mk-II Blender review renders [skip ci]' || true
+          git push origin HEAD:art/kettenwurm-blender-master
