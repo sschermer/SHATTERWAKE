@@ -47,7 +47,7 @@ jobs:
         if: ${{ hashFiles('app/src/main/assets/rendered/fighter_base.png') == '' }}
         run: |
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
           mkdir -p /tmp/sw-3d app/src/main/assets/rendered
           python3 - <<'PY'
           import urllib.request,json
