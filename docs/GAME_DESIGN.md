@@ -84,3 +84,12 @@
 - Deutsche Kommandos: Schild, Turbo/Schnellfeuer, Dreifach, Plasma. Die vorhandene Ladungs- und Aktivierungslogik bleibt identisch zur Touch-Bedienung.
 - Kein Mikrofon während Tutorials, Menüs, Werft oder Pause; kurzer Timeout, kein Dauerlauschen.
 - Ausschließlich auf dem Gerät vorhandener SpeechRecognizer (Android 12/API 31+); keine Internet-Berechtigung, keine Cloud-Ausweichmöglichkeit. Gewohnte Touchsteuerung bleibt jederzeit verfügbar.
+
+## Vier frei editierbare Sprachkombinationen (v0.6.5-alpha)
+
+- Im Einstellungsmenü sind vier lokal persistierte, frei benennbare Auslösewörter mit je sechs einzeln zuschaltbaren Aktionen verfügbar. Vorgaben sind Overdrive, Inferno, Notfall und Angriff.
+- Die sechs direkten Sprachbefehle bleiben unabhängig von diesen Wortbelegungen jederzeit verfügbar: Schild, Turbo, Dreifach, Plasma, Raketen sowie Schockwelle/EMP.
+- Gesprochene Kombinationen mit „plus“, „und“ oder einer Folge einzelner Befehle werden unterstützt. Pro Äußerung und Aktion wird höchstens eine Ladung verbraucht; leere Ladungsbestände werden übersprungen.
+- Die Aktivierung ist unabhängig, sodass jede Spezialfähigkeit ihre eigene unveränderte Wirkzeit hat. Raketen und EMP führen wie bisher ihre sofortige Einzeltipp-Aktion aus.
+- Frühe Spracherkennungs-Zwischenergebnisse werden nach wiederholter Bestätigung im selben Satz inkrementell ausgelöst, ohne Duplikate beim Endergebnis. Lokal vorgehaltener Android-Sprachdienst verringert den Vorbereitungsaufwand.
+- Keine neuen Freischaltungen, Online-Services, Mikrofon-Dauerbereitschaft oder Änderungen an vorhandenen Touch-Steuerungsmodi.
