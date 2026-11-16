@@ -1,0 +1,237 @@
+{
+  "android_loader_status": "existing Android main still uses prior graphics; adapter is intentionally deferred",
+  "coordinate_conventions": {
+    "android_forward": "negative screen Y",
+    "game_canvas_android_logical_rect": [
+      -50,
+      -47,
+      50,
+      47
+    ],
+    "image_coordinates": "top-left origin, x-right, y-down",
+    "model_forward": "+Y in Blender",
+    "pixel_values_derived_from": "bpy_extras.object_utils.world_to_camera_view"
+  },
+  "master": "art/hero_fighter/hero_fighter.blend",
+  "modules_available": [
+    0,
+    4,
+    5
+  ],
+  "schema": "SHATTERWAKE.ART-001.real-render-anchors.v1",
+  "status": "visual-prototype-not-approved",
+  "views": {
+    "game": {
+      "camera": "ART-001 GAME / nose is +Y, rendered UP",
+      "module_focus_pixels": {
+        "0": [
+          313.39,
+          340.95
+        ],
+        "4": [
+          274.9,
+          750.25
+        ],
+        "5": [
+          288.64,
+          516.89
+        ]
+      },
+      "pivot": [
+        512.0,
+        512.0
+      ],
+      "projected_anchors": {
+        "cockpit_center": [
+          512.0,
+          389.82
+        ],
+        "drone_dock_left": [
+          274.9,
+          750.25
+        ],
+        "drone_dock_right": [
+          749.1,
+          750.25
+        ],
+        "engine_exhaust_left": [
+          365.62,
+          1102.12
+        ],
+        "engine_exhaust_right": [
+          658.38,
+          1102.12
+        ],
+        "nose": [
+          512.0,
+          -202.74
+        ],
+        "pivot": [
+          512.0,
+          512.0
+        ],
+        "shield_emitter_left": [
+          288.64,
+          516.89
+        ],
+        "shield_emitter_right": [
+          735.36,
+          516.89
+        ],
+        "tail": [
+          512.0,
+          1153.43
+        ],
+        "weapon_muzzle_left": [
+          313.39,
+          70.94
+        ],
+        "weapon_muzzle_right": [
+          710.61,
+          70.94
+        ]
+      },
+      "resolution": [
+        1024,
+        1024
+      ]
+    },
+    "werft": {
+      "camera": "ART-001 WERFT / cinematic 3-quarter",
+      "module_focus_pixels": {
+        "0": [
+          1406.75,
+          815.5
+        ],
+        "4": [
+          1221.4,
+          321.71
+        ],
+        "5": [
+          1338.73,
+          598.74
+        ]
+      },
+      "pivot": [
+        1024.0,
+        1046.7
+      ],
+      "projected_anchors": {
+        "cockpit_center": [
+          1095.66,
+          972.13
+        ],
+        "drone_dock_left": [
+          1221.4,
+          321.71
+        ],
+        "drone_dock_right": [
+          547.11,
+          947.43
+        ],
+        "engine_exhaust_left": [
+          886.02,
+          188.17
+        ],
+        "engine_exhaust_right": [
+          469.72,
+          574.49
+        ],
+        "nose": [
+          1443.23,
+          1733.79
+        ],
+        "pivot": [
+          1024.0,
+          1046.7
+        ],
+        "shield_emitter_left": [
+          1338.73,
+          598.74
+        ],
+        "shield_emitter_right": [
+          703.53,
+          1188.18
+        ],
+        "tail": [
+          647.77,
+          344.52
+        ],
+        "weapon_muzzle_left": [
+          1565.12,
+          1088.79
+        ],
+        "weapon_muzzle_right": [
+          1000.29,
+          1612.94
+        ]
+      },
+      "resolution": [
+        2048,
+        2048
+      ]
+    }
+  },
+  "world_anchor_units": {
+    "cockpit_center": [
+      0,
+      1.0,
+      1.31
+    ],
+    "drone_dock_left": [
+      -3.45,
+      -1.95,
+      1.13
+    ],
+    "drone_dock_right": [
+      3.45,
+      -1.95,
+      1.13
+    ],
+    "engine_exhaust_left": [
+      -2.13,
+      -4.83,
+      0.45
+    ],
+    "engine_exhaust_right": [
+      2.13,
+      -4.83,
+      0.45
+    ],
+    "nose": [
+      0,
+      5.85,
+      0.24
+    ],
+    "pivot": [
+      0,
+      0,
+      0
+    ],
+    "shield_emitter_left": [
+      -3.25,
+      -0.04,
+      0.98
+    ],
+    "shield_emitter_right": [
+      3.25,
+      -0.04,
+      0.98
+    ],
+    "tail": [
+      0,
+      -5.25,
+      0.35
+    ],
+    "weapon_muzzle_left": [
+      -2.89,
+      3.61,
+      0.94
+    ],
+    "weapon_muzzle_right": [
+      2.89,
+      3.61,
+      0.94
+    ]
+  }
+}
