@@ -1,7 +1,6 @@
 # SHATTERWAKE – dauerhaft signierte Android-Updates
 
-**Status:** Signatur-Build im GitHub-Projekt vorbereitet. Noch keine
-signierte APK veröffentlicht, solange die zwei Repository-Secrets fehlen.
+**Status (2026-11-16):** Die dauerhaft signierte v0.6.1-alpha wurde nachweislich als GitHub-Release veröffentlicht. v0.6.2-alpha nutzt denselben Zertifikats-Fingerprint und eine höhere versionCode; eine neue Version wird erst nach erfolgreichem GitHub-Actions-Build veröffentlicht.
 Der private Schlüssel ist **nicht im Repository** hinterlegt.
 
 ## 1. Einmalige Einrichtung
@@ -21,8 +20,8 @@ Sicherungspaket mit dem **PKCS12**-Schlüssel
    direkt unter diesem Namen aus derselben Datei.
 6. **Actions → Build native Android APK → Run workflow**, Branch `main`.
 7. Nach **erfolgreichem** Durchlauf signierte APK aus dem
-   [Release v0.6.1-alpha](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.1-alpha)
-   herunterladen (`SHATTERWAKE-v0.6.1-alpha-signed.apk`).
+   [Release v0.6.2-alpha](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.2-alpha)
+   herunterladen (`SHATTERWAKE-v0.6.2-alpha-signed.apk`).
 
 Secrets können mit dem verfügbaren GitHub-Connector nicht geschrieben werden.
 Daher sind Schritte 3–6 nur durch die berechtigte Repository-Verwaltung möglich.
@@ -39,8 +38,8 @@ Daher sind Schritte 3–6 nur durch die berechtigte Repository-Verwaltung mögli
 - Die Versionsnummer (Android-`versionCode`) steigt bei jedem
   erneuten Actions-Lauf automatisch: `10000 + github.run_number`.
   Die lesbare Versionsbezeichnung ergänzt die jeweilige Run-Nummer.
-- GitHub-Release `v0.6.1-alpha` liefert das aktuell signierte Build.
-  Eine hochgeladene spätere Version ersetzt dort die vorherige APK.
+- GitHub-Releases `v0.6.1-alpha` und `v0.6.2-alpha` sind getrennte, dauerhafte Artefakte.
+  Version 0.6.2 wird nicht über den alten Release-Tag hochgeladen; der alte APK-Link bleibt erhalten.
 - Die frühere Debug-Pipeline stellt keine neuen Debug-APKs mehr als
   vermeintliche Update-Dateien bereit.
 

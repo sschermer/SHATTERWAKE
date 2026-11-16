@@ -1,3 +1,13 @@
+## 0.6.2-alpha — Kettenwurm Bossgrafik und modulare Schadensstufen (2026-11-16)
+
+- Integriere die 20 vom Nutzer visuell freigegebenen originalen 1024-RGBA-Blender-Sprites für den ersten Boss: fünf Bauteiltypen und vier Schadenszustände (0 intakt, 1 verbeult, 2 stark beschädigt mit Funken, 3 Explosion).
+- Jedes der zwölf Segmente wählt seine Grafik anhand der eigenen HP (Schwellen: 2/3, 1/3, 0), behält seine vorhandenen Trefferzonen, Typ-IDs und Gameplay-Wirkungen.
+- Kettenwurm-Grafiken folgen der vorhandenen vorhersehbaren Sinusbahn; kurze Funken- und Explosionseffekte laufen ohne neue Schussausweich-KI.
+- Bewahre die ursprüngliche Android-Canvas-Bosslogik der anderen Welten, Sternen-/Tech-Drops, Werft, Tutorial und beide Steuerungsarten.
+- Füge die editierbare Blender-Masterdatei, reproduzierbare Blender-Erzeuger und SHA256-Nachweise hinzu; prüfe alle 20 Assets in Quellen und tatsächlich gebauter APK.
+- Signierter Update-Build behält die PKCS12-Zertifikatsidentität, Paketkennung und SharedPreferences bei; neues, eigenständiges GitHub-Prerelease v0.6.2-alpha (die bisherige v0.6.1-alpha bleibt erhalten).
+- Debug-APK nur als CI-Regressionstest, niemals als installierbares Update veröffentlichen.
+
 ## 0.6.0-alpha — Blender enemy fleet, fair flight and clearer upgrades
 
 - Eight unique original metallic 3D hostile ship models, transparent renders,

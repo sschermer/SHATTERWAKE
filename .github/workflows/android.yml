@@ -104,6 +104,8 @@ jobs:
             assert header[25]==6,name
           print("PASS: original 3D fleet: 8 RGBA sprites",flush=True)
           PY
+      - name: Validate all approved Kettenwurm boss sprites against Blender SHA256
+        run: python3 tests/check_kettenwurm_assets.py
       - name: Verify pure Java game rules
         run: |
           mkdir -p /tmp/sw-test
@@ -135,6 +137,8 @@ jobs:
           assert not missing,("Missing approved art in APK",sorted(missing))
           print("PASS: 46 original 3D art files and layout packaged")
           PY
+      - name: Verify approved Kettenwurm assets inside the actual APK
+        run: python3 tests/check_kettenwurm_assets.py app/build/outputs/apk/debug/app-debug.apk
       # Keep test/debug builds as CI checks; NEVER distribute their ephemeral key.
       # Configure two repository-level GitHub Actions secrets to enable real
       # update signing. One missing secret is an error, not a fallback.
@@ -163,7 +167,7 @@ jobs:
           echo "SHATTERWAKE_KEYSTORE_PATH=$RUNNER_TEMP/shatterwake-signing/shatterwake.p12" >> "$GITHUB_ENV"
           # A new run number is higher than any previous build of this workflow.
           echo "SHATTERWAKE_BUILD_NUMBER=$((10000+GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-          echo "SHATTERWAKE_VERSION_NAME=0.6.1-alpha.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "SHATTERWAKE_VERSION_NAME=0.6.2-alpha.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
           echo "SHATTERWAKE_SIGNING_READY=true" >> "$GITHUB_ENV"
       - name: Build installable permanently signed release APK
         if: env.SHATTERWAKE_SIGNING_READY == 'true'
@@ -191,7 +195,7 @@ jobs:
         if: env.SHATTERWAKE_SIGNING_READY == 'true'
         run: |
           mkdir -p out/signed
-          cp app/build/outputs/apk/release/app-release.apk out/signed/SHATTERWAKE-v0.6.1-alpha-signed.apk
+          cp app/build/outputs/apk/release/app-release.apk out/signed/SHATTERWAKE-v0.6.2-alpha-signed.apk
           (cd out/signed && sha256sum SHATTERWAKE-v0.6.1-alpha-signed.apk > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
       - name: Publish signed APK to separate stable-key GitHub prerelease
         if: env.SHATTERWAKE_SIGNING_READY == 'true'
@@ -199,15 +203,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag=v0.6.1-alpha
+          tag=v0.6.2-alpha
           apk=out/signed/SHATTERWAKE-v0.6.1-alpha-signed.apk
           sums=out/signed/SHA256SUMS.txt
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$apk" "$sums" --clobber
           else
             gh release create "$tag" "$apk" "$sums" \
-              --title 'SHATTERWAKE 0.6.1-alpha – dauerhaft signiert' --prerelease \
-              --notes 'Private Android test release signed with a stable SHA-256/RSA-4096 app certificate. After the one-time switch from ephemeral debug APKs, install future signed APKs as ordinary updates. The versionCode increases with each CI run. Safeguard the signing key offline.'
+              --title 'SHATTERWAKE 0.6.2-alpha - Kettenwurm Bossgrafik (signiert)' --prerelease \
+              --notes 'Sector 1: original Blender Kettenwurm, 12 modular boss nodes with four per-node HP-dependent damage visuals, sparks and destruction frames. Stable signing certificate matches v0.6.1-alpha. Existing game saves are preserved by normal update installation (same package name, signing key, larger versionCode). Original Blender source and SHA256 checks are documented in the repository. No telemetry or remote content.'
           fi
       - name: Remove temporary signing keystore from CI runner
         if: always()
