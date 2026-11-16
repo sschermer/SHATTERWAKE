@@ -45,6 +45,8 @@ final class VoiceCommandController {
     }
 
     boolean isLocalAvailable(){return localAvailable;}
+    /** Warm an already-approved recognizer at startup; never prompts for mic access. */
+    void prepareIfEnabled(){prepareRecognizer();}
     boolean isListening(){return listening;}
 
     /** The local recognizer is prepared when voice is enabled, not in combat. */
