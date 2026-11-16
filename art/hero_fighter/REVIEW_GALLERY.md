@@ -29,7 +29,36 @@ oder das dunkle Geschütz (ID 1) ausgewählt – beide niemals gleichzeitig.
 ## 5. Drohnen: montierte Start- und Ladedocks
 ![Fighter mit Drohnendocks](previews/werft_drones.jpg)
 
-## 6. Tatsächliche Gameplay-Ausrichtung
+## 6. Sternenmagnet
+
+![Stufe 1: kompakte gepanzerte Magnetprojektoren](previews/werft_magnet.jpg)
+
+![Stufe 3: zusätzliche äußere Magnetspulen](previews/werft_magnet_max.jpg)
+
+## 7. Zielkorrektur
+
+![Stufe 1: mechanische Sensor- und Zieloptik](previews/werft_target.jpg)
+
+![Stufe 5: ausgebaute optische Zielanlage](previews/werft_target_max.jpg)
+
+Zielkorrektur ist im Spiel in fünf 3-%-Stufen vorgesehen (bis 15 %).
+
+## 8. Spezialladungen
+
+![Mechanisch integrierte Raketen- und Energiemagazine](previews/werft_special.jpg)
+
+## 9. Reparatur und Schäden
+
+![Beschädigte Rumpfpanzerung: drei sichtbare Trefferstufen](previews/werft_damage_state_3.jpg)
+
+![Rumpf mit ausgetauschten, intakten Panzerplatten](previews/werft_repair.jpg)
+
+Die vollen Rumpf-HP werden ohne Beschädigungs-Overlay gezeigt. Fehlende
+Rumpf-HP wählen aus drei Schadensstufen; bei Reparaturen reduziert sich
+die sichtbare Schadensstufe entsprechend. Die Darstellung ist separat
+vom numerischen Schaden/HP-System.
+
+## 10. Tatsächliche Gameplay-Ausrichtung
 ![Fighter GAME – Nase oben](previews/game_nose_up.png)
 
 ## Bearbeitbare Quelle / Integration

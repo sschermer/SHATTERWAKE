@@ -26,3 +26,9 @@ Der Nutzer wünscht ausdrücklich **keine Körnung**. Das Master-Skript erzeugt 
 ## ART-003: Erhöhter Waffenschaden
 
 Der Waffenschaden (ID 1) bekommt genau die gleiche Kanonengeometrie wie Schnellfeuer (ID 0), nur in glattem dunklem Gunmetal. Beide Perspektiven exportieren `fighter_module_1.png` im identischen Koordinatensystem. Die Varianten ersetzen einander optisch und dürfen nicht übereinandergelegt werden. **Darstellungspriorität:** `damageLevel>0 → ID 1`, sonst `fireLevel>0 → ID 0`. Ihre Spielwerte bleiben unabhängig. Vorschau: `previews/werft_damage.jpg`.
+
+## ART-004: Vier fehlende Systeme (IDs 2,3,6,7)
+
+Das editierbare Modell enthält nun alle acht Werft-Systeme. **Sternenmagnet** (ID 3): zwei integrierte Fangspulen in Stufen 1–3 mit tatsächlich zusätzlichen Metallringen. **Zielkorrektur** (ID 7): stabilisierte Sensorik an der Nase, fünf eindeutig unterscheidbare Stufen (jeweils 3 %, maximal 15 %). **Spezialladungen** (ID 6): tatsächliche Panzermagazine mit zwei versenkten Raketenschächten pro Seite. **Reparatur/Rumpf** (ID 2): austauschbare Metallplatten; separat gerenderte, mit fehlenden HP steigende Schäden (1,2,3+ Trefferstufen), die bei Reparatur wieder verschwinden.
+
+`staging/game` (1024²) und `staging/werft` (2048²) besitzen identisch registrierte, transparente Layer für jedes neue System. Zusätzliche `fighter_module_3_L2/L3.png` und `fighter_module_7_L2/L3/L4/L5.png` enthalten die gewachsenen 3D-Formen **komplett** und ersetzen den Level-1-Layer, statt zu ihm addiert zu werden. `fighter_hull_damage_1/2/3.png` entsprechen steigenden HP-Verlusten und dürfen nur in der passenden Stufe gerendert werden. Kein Android-Merge vor visueller Freigabe.

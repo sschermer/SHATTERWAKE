@@ -31,12 +31,23 @@ world={
     "shield_emitter_right":(3.25,-.04,.98),
     "drone_dock_left":(-3.45,-1.95,1.13),
     "drone_dock_right":(3.45,-1.95,1.13),
-    "cockpit_center":(0,1.0,1.31)
+    "cockpit_center":(0,1.0,1.31),
+    "magnet_left":(-1.34,-1.28,1.65),
+    "magnet_right":(1.34,-1.28,1.65),
+    "target_sensor":(0,3.55,1.28),
+    "special_magazine_left":(-4.52,.12,.80),
+    "special_magazine_right":(4.52,.12,.80),
+    "repair_plate_left":(-3.60,-1.0,.70),
+    "repair_plate_right":(3.60,-1.0,.70)
 }
 anchors={
     "0":(-2.89,1.4,.94),   # normal weapon hardpoint focus
     "1":(-2.89,1.4,.94),   # dark damage gun at same hardpoint
+    "2":(-3.60,-1.0,.70),   # replaceable wing armor
+    "3":(-1.34,-1.28,1.65), # magnetic collector
     "4":(-3.45,-1.95,1.13),# drone dock focus
+    "6":(4.52,.12,.80),    # special ammunition pod
+    "7":(0,3.55,1.28),    # stabilized target optic
     "5":(-3.25,-.04,.98)  # shield emitter focus
 }
 def xy(cam,p,size):
@@ -71,7 +82,7 @@ for view_name,view in views.items():
     for name,pixel in view["projected_anchors"].items():
         assert 0<=pixel[0]<=width and 0<=pixel[1]<=height,(
             view_name,name,"projected outside image:",pixel)
-assert len(views["game"]["module_focus_pixels"])==4
+assert len(views["game"]["module_focus_pixels"])==8
 out={
     "schema":"SHATTERWAKE.ART-001.real-render-anchors.v1",
     "status":"visual-prototype-not-approved",
@@ -83,7 +94,7 @@ out={
         "game_canvas_android_logical_rect":[-50,-47,50,47],
         "pixel_values_derived_from":"bpy_extras.object_utils.world_to_camera_view",
     },
-    "modules_available":[0,1,4,5],
+    "modules_available":list(range(8)),
     "android_loader_status":"existing Android main still uses prior graphics; adapter is intentionally deferred",
     "views":views,
     "world_anchor_units":world

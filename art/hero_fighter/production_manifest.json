@@ -9,7 +9,7 @@
     "creator_credit": "voluntary_per_asset_THIRD_PARTY_NOTICES.md"
   },
   "source_scene": "art/hero_fighter/hero_fighter.blend",
-  "source_model_status": "original_editable_blender_master_created_no_external_assets",
+  "source_model_status": "original_editable_blender_master_with_all_eight_mechanical_modules_and_damage_layers",
   "coordinate_system": {
     "screen_x": "right",
     "screen_y": "down",
@@ -213,8 +213,12 @@
   "prototyped_module_ids": [
     0,
     1,
+    2,
+    3,
     4,
-    5
+    5,
+    6,
+    7
   ],
   "rendered_source_files": [
     "art/hero_fighter/hero_fighter.blend",
@@ -227,14 +231,68 @@
     "review": "art/hero_fighter/REVIEW_GALLERY.md"
   },
   "unimplemented_until_approval": [
-    "Android Werft camera adapter",
-    "Remaining module meshes (1,2,3,6,7)",
-    "Additional level geometry"
+    "Android Werft view loader",
+    "Android upgrade-level sprite selection",
+    "Android hull-damage overlay state selection",
+    "Visually differentiated tiers for remaining 0,1,4,5"
   ],
   "weapon_appearance_policy": {
     "state_selection": "when damageLevel>0 use fighter_module_1.png, else if fireLevel>0 use fighter_module_0.png, else no cannon overlay",
     "shape": "identical 3D cannon geometry; anthracite metal variant for higher damage",
     "compositing": "mutually exclusive replacement layers, never drawn simultaneously",
     "unaffected_gameplay": "rapid-fire and damage stats remain independent"
+  },
+  "render_pipeline_status": "rendering_not_yet_confirmed_awaiting_qa",
+  "new_visuals": {
+    "magnet": {
+      "id": 3,
+      "levels": [
+        1,
+        2,
+        3
+      ],
+      "files": [
+        "fighter_module_3.png",
+        "fighter_module_3_L2.png",
+        "fighter_module_3_L3.png"
+      ]
+    },
+    "targeting": {
+      "id": 7,
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "real_increments_percent": 3,
+      "max_percentage": 15,
+      "files": [
+        "fighter_module_7.png",
+        "fighter_module_7_L2.png",
+        "fighter_module_7_L3.png",
+        "fighter_module_7_L4.png",
+        "fighter_module_7_L5.png"
+      ]
+    },
+    "specials": {
+      "id": 6,
+      "files": [
+        "fighter_module_6.png"
+      ],
+      "mechanic": "special charges remain consumables; magazine is visual hardware"
+    },
+    "repairs": {
+      "id": 2,
+      "files": [
+        "fighter_module_2.png",
+        "fighter_hull_damage_1.png",
+        "fighter_hull_damage_2.png",
+        "fighter_hull_damage_3.png"
+      ],
+      "state_mappings": "missing HP=0: none, 1: tier1, 2: tier2, >=3: tier3; visual plate rebuild and repair overlay only in Werft preview"
+    },
+    "all_other_modules": "0 and 1 are mutually exclusive appearance variants of same twin cannons; 4 and 5 remain unchanged"
   }
 }
