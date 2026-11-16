@@ -25,6 +25,7 @@ final class VoiceCommandController {
     private static final long FINAL_RESULT_GRACE_MS=1600L;
     private final Activity activity;
     private final GameView game;
+    private final boolean localAvailable;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private SpeechRecognizer recognizer;
     private boolean listening=false;
@@ -33,13 +34,15 @@ final class VoiceCommandController {
     VoiceCommandController(Activity activity,GameView game){
         this.activity=activity;
         this.game=game;
+        boolean available=false;
+        if(Build.VERSION.SDK_INT>=31){
+            try{available=SpeechRecognizer.isOnDeviceRecognitionAvailable(activity);}
+            catch(Exception ignored){}
+        }
+        localAvailable=available;
     }
 
-    boolean isLocalAvailable(){
-        if(Build.VERSION.SDK_INT<31)return false;
-        try{return SpeechRecognizer.isOnDeviceRecognitionAvailable(activity);}
-        catch(Exception ignored){return false;}
-    }
+    boolean isLocalAvailable(){return localAvailable;}
 
     boolean isListening(){return listening;}
 
