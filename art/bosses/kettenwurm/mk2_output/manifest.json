@@ -1,10 +1,14 @@
 {
   "purpose": "visual review only",
+  "revision": "Mk-II-polished-01",
   "units": [
     "head",
     "segment"
   ],
   "engine": "Cycles",
+  "samples": 128,
+  "denoising": true,
+  "surface": "smooth metallic; no procedural noise or bump",
   "resolution": [
     1024,
     1024
