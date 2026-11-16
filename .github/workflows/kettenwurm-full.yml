@@ -1,0 +1,94 @@
+name: SHATTERWAKE - complete Kettenwurm visual approval build
+on:
+  push:
+    branches: [art/kettenwurm-blender-master]
+    paths:
+      - 'art/bosses/kettenwurm/build_full_worm.py'
+      - 'art/bosses/kettenwurm/build_mk2.py'
+      - '.github/workflows/kettenwurm-full.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  full-boss-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender and PIL
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-pil
+      - name: Generate complete editable 12-segment Blender boss
+        run: |
+          blender -b -t 4 --python art/bosses/kettenwurm/build_full_worm.py -- art/bosses/kettenwurm/full_output
+      - name: Validate genuine alpha PNGs, source and damage states
+        run: |
+          /usr/bin/python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image,ImageDraw
+          import json,hashlib
+          p=Path('art/bosses/kettenwurm/full_output')
+          names=[
+              'full_worm_game_intact.png',
+              'full_worm_game_damaged.png',
+              'full_worm_hero_intact.png',
+              'full_worm_hero_damaged.png',
+              'segment_damage_detail.png',
+          ]
+          for name in names:
+              image=Image.open(p/name)
+              assert image.mode=='RGBA' and image.size==(1024,1024),(name,image.mode,image.size)
+              alpha=image.getchannel('A')
+              assert alpha.getextrema()[0]==0 and alpha.getextrema()[1]>0,name
+              assert alpha.getbbox(),name
+              assert all(image.getpixel(pt)[3]==0 for pt in [(0,0),(0,1023),(1023,0),(1023,1023)]),name
+              print('PASS: RGBA 1024, transparent edges, art content:',name)
+          master=p/'kettenwurm_full_master.blend'
+          assert master.is_file() and master.stat().st_size>100000,'Missing editable Blender master'
+          data=json.loads((p/'manifest.json').read_text())
+          assert data['node_ids']==list(range(12))
+          assert data['node_types']==[0,1,1,4,2,3,4,1,2,4,3,1],data['node_types']
+          assert data['state_damaged'].count('destroyed')==1
+          assert data['android_integration'] is False and data['visual_approval']=='PENDING'
+          assert (p/'full_worm_game_intact.png').read_bytes()!=(p/'full_worm_game_damaged.png').read_bytes()
+          sheet=Image.new('RGB',(1200,1260),(16,22,30))
+          draw=ImageDraw.Draw(sheet)
+          captions=[
+              ('GAME - intact',names[0]),
+              ('GAME - damaged',names[1]),
+              ('3D - intact',names[2]),
+              ('DAMAGE - detail',names[4]),
+          ]
+          for i,(label,name) in enumerate(captions):
+              x=(i%2)*600
+              y=(i//2)*630
+              draw.text((x+16,y+12),label,fill=(230,234,239))
+              img=Image.open(p/name)
+              img.thumbnail((584,584),Image.Resampling.LANCZOS)
+              sheet.paste(img,(x+(600-img.width)//2,y+32),img)
+          sheet.save(p/'review_contact_sheet.jpg',quality=92,subsampling=0)
+          (p/'SHA256SUMS.txt').write_text(''.join(
+              hashlib.sha256((p/n).read_bytes()).hexdigest()+'  '+n+'\n'
+              for n in names+['kettenwurm_full_master.blend','manifest.json','review_contact_sheet.jpg']
+          ))
+          print('PASS: complete 12-node model, 5 types, damage preview, SHA256 inventory',flush=True)
+          PY
+      - name: Remove disposable Mk-II intermediate renders and Blender backup
+        run: |
+          rm -rf art/bosses/kettenwurm/full_output/_prototype
+          find art/bosses/kettenwurm/full_output -name '*.blend1' -delete
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kettenwurm-complete-blender-review
+          path: art/bosses/kettenwurm/full_output/
+          retention-days: 30
+      - name: Archive original master and previews on visual review branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f art/bosses/kettenwurm/full_output/
+          git commit -m 'art: archive full twelve-segment Kettenwurm Blender previews [skip ci]' || true
+          git push origin HEAD:art/kettenwurm-blender-master
