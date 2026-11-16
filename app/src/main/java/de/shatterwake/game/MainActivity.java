@@ -33,7 +33,7 @@ public final class MainActivity extends Activity {
         if(gameView!=null)gameView.resumeClock();
     }
     @Override protected void onDestroy(){
-        if(voiceController!=null)voiceController.cancelListening();
+        if(voiceController!=null)voiceController.releaseRecognizer();
         super.onDestroy();
     }
     @Override public void onRequestPermissionsResult(
