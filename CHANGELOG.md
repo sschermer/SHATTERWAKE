@@ -1,3 +1,12 @@
+## 0.6.5-alpha — konfigurierbare Sprachkombinationen und beschleunigte Erkennung (16.11.2026)
+
+- Vier frei benennbare Auslösewörter mit direkt im Canvas antippbaren sechs Aktionsschaltern und dauerhafter lokaler Speicherung; Vorbelegung: Overdrive (vier Spezialfähigkeiten), Inferno (Turbo/Dreifach/Plasma/Raketen), Notfall (Schild/EMP), Angriff (Turbo/Raketen).
+- Die sechs Einzelbefehle Schild, Turbo/Rapid/Schnellfeuer, Dreifach, Plasma, Rakete(n), Schockwelle/EMP bleiben jederzeit nutzbar; mit „plus“/„und“ verknüpfte Befehle ebenfalls. Doppelte Auslöser werden in einer Äußerung nur einmal ausgeführt.
+- Jede vorhandene Ladung wirkt unabhängig nach ihrer eigenen Wirkzeit; leere Magazine werden übersprungen. Raketen und EMP sind sofortige Sekundärwaffen, deren bisheriger Codepfad unverändert bleibt.
+- Offline-Android-Recognizer beim Start mit bereits erteilter Berechtigung vorbereiten und wiederverwenden; zwei übereinstimmende Teil-Erkennungsergebnisse erlauben eine frühere Aktivierung, endgültige Ergebnisse ergänzen ausschließlich noch nicht ausgelöste Aktionen. Android-Dienst darf Timing-Hinweise ignorieren.
+- Erhaltung der bestehenden Ein-Finger-Steuerung, optionalen Zweitfinger-Push-to-Talk-Geste, Tutorial, Werft, Tech-Fortschritte, sämtlicher Blender-Grafiken und Android-Signatur.
+- Erweiterte deterministische Java-Sprachtests, Datenschutz-/APK-, Branding-, Grafik- und Gameplay-Regressionsprüfungen. Neues eigenständiges signiertes Release v0.6.5-alpha; bisherige v0.6.4-alpha bleibt erhalten.
+
 ## 0.6.4-alpha — optionale Offline-Sprachbefehle (16.11.2026)
 
 - Führe eine abschaltbare Push-to-Talk-Steuerung für die vier bestehenden Spezialfähigkeiten ein: Schild, Turbo/Schnellfeuer, Dreifach und Plasma.
