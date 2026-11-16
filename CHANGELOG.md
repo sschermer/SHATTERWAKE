@@ -1,3 +1,16 @@
+## Integrated original Blender art and physical Werft upgrades — 2026-11-16
+- Replace rejected Grab3D ship on Android with the visually approved ART-004
+  original Blender fighter in 1024px GAME and 2048px WERFT perspective.
+- Add an independently rendered shipyard background; remove toy-like grid.
+- Use actual 3D-projected muzzle, engine and per-module zoom anchors.
+- Draw all eight real ship systems, magnetic coil levels, targeting levels
+  and the dark *replacement* damage-gun finish.
+- Render missing-HP hull damage and repair-preview state; preserve exact
+  one-HP-per-purchase economy and second-step confirmation.
+- Show drone and shield offers together. Cache bitmaps at reduced decoding
+  size with bounded memory to avoid Android heap pressure.
+- Test deterministic visual selection, tier bounds and damage mapping.
+
 ## 0.5.0-alpha — understandable training and high-visibility plasma
 
 - Boss final component now triggers a full-screen scale multi-stage detonation with shockwaves, secondary blasts, module wreckage and tangible collectible bonus stars, ability drops and technology chip. Do not enter the Werft while any loot remains in reach; chip technology must be physically collected to unlock.

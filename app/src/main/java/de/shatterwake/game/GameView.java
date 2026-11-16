@@ -67,6 +67,8 @@ public final class GameView extends View {
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
     private int fireLevel=0, damageLevel=0, magnetLevel=0, shieldLevel=0, droneLevel=0;
     private int targetingLevel=0;
+    private int specialMagazinePurchases=0;
+    private boolean nextGunRight=false;
     private int techMask=0, newlyUnlocked=-1, armedSecondary=-1;
     private float x=W/2, y=573, targetX=x, targetY=y;
     private float stageTime=0, spawnTimer=0, starTimer=0, shootTimer=0, secondaryRegen=0;
@@ -239,6 +241,7 @@ public final class GameView extends View {
         tutorialActive=false;guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
         stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
         fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=targetingLevel=0;
+        specialMagazinePurchases=0;nextGunRight=false;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
         newlyUnlocked=-1;werftPreviewIndex=-1;werftZoom=0f;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
@@ -506,7 +509,13 @@ public final class GameView extends View {
         float damage=(13+damageLevel*2.7f)*(plasmaTime>0?1.55f:1f);
         float angle=findAimAngle();
         int kind=plasmaTime>0?3:0;
-        spawnFriendly(x,y-25,angle,damage,kind);
+        // A single shot alternates between the *actual* left and right
+        // muzzles of the approved 3D gun model; damage per shot is unchanged.
+        if(fireLevel>0||damageLevel>0){
+            nextGunRight=!nextGunRight;
+            int side=nextGunRight?1:0;
+            spawnFriendly(x+atlas.muzzleX(side),y+atlas.muzzleY(side),angle,damage,kind);
+        }else spawnFriendly(x,y-25,angle,damage,kind);
         if(tripleTime>0){spawnFriendly(x-13,y-14,angle-.17f,damage*.67f,kind);
             spawnFriendly(x+13,y-14,angle+.17f,damage*.67f,kind);}
         if(random.nextInt(3)==0)sound(0);
@@ -1078,9 +1087,9 @@ public final class GameView extends View {
         offers.add(new Offer(1,"WAFFENSCHADEN +12%","Mehr Schaden pro Treffer",GameRules.nextDamageCost(damageLevel)));
         offers.add(new Offer(2,"REPARATUR +1 HP","Stellt einen Lebenspunkt wieder her",160));
         offers.add(new Offer(3,"STERNENMAGNET","Sammelradius erweitern",GameRules.nextMagnetCost(magnetLevel)));
-        int special=(world+random.nextInt(4))%4;
-        if(special==0|| (techMask&1)!=0)offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",GameRules.nextDroneCost(droneLevel)));
-        else offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",GameRules.nextShieldCost(shieldLevel)));
+        // All eight distinct physical ship systems are available in the Werft.
+        offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",GameRules.nextDroneCost(droneLevel)));
+        offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",GameRules.nextShieldCost(shieldLevel)));
         offers.add(new Offer(6,"SPEZIAL-LADUNGEN","Je eine Ladung für vier Fähigkeiten",390));
         offers.add(new Offer(7,"ZIELKORREKTUR +3%","Bis zu 15% verbesserte Zielkorrektur",
                 GameRules.nextTargetingCost(targetingLevel)));
@@ -1125,7 +1134,8 @@ public final class GameView extends View {
             case 3:magnetLevel++;break;
             case 4:droneLevel++;break;
             case 5:shieldLevel++;break;
-            case 6:for(int a=0;a<4;a++)abilityCharges[a]=Math.min(3,abilityCharges[a]+1);break;
+            case 6:specialMagazinePurchases++;
+                for(int a=0;a<4;a++)abilityCharges[a]=Math.min(3,abilityCharges[a]+1);break;
             case 7:targetingLevel++;break;
             default:break;
         }
@@ -1407,18 +1417,29 @@ public final class GameView extends View {
         p.setColor(WHITE);p.setStyle(Paint.Style.FILL);
         c.drawCircle(gx,gy,radius,p);p.setShader(null);
     }
-    /** The real Blender render layers replace procedural overlays when present. */
-    private void drawEquipment(Canvas c,int preview){
-        if(atlas.hasRenderedFighter()){
-            if(fireLevel>0||preview==0)atlas.drawHardware(c,0);
-            if(damageLevel>0||preview==1)atlas.drawHardware(c,1);
-            if(hp==maxHp||preview==2)atlas.drawHardware(c,2);
-            if(magnetLevel>0||preview==3)atlas.drawHardware(c,3);
-            if(droneLevel>0||preview==4)atlas.drawHardware(c,4);
-            if(shieldLevel>0||preview==5)atlas.drawHardware(c,5);
-            if(abilityCharges[3]>1||preview==6)atlas.drawHardware(c,6);
-            if(targetingLevel>0||preview==7)atlas.drawHardware(c,7);
-        }else drawShipHardware(c,preview);
+    /** One consistent art compositor in combat and in the zoomable Werft.
+     * The preview renders the NEXT level without spending any stars.
+     */
+    private void drawEquipment(Canvas c,int preview,boolean werft){
+        if(!atlas.hasRenderedFighter()){
+            drawShipHardware(c,preview);
+            return;
+        }
+        int weapon=GameRules.visibleWeaponModule(fireLevel,damageLevel,preview);
+        if(weapon>=0)atlas.drawHardware(c,weapon,1,werft);
+        int magnet=GameRules.visualUpgradeLevel(magnetLevel,3,preview==3);
+        if(magnet>0)atlas.drawHardware(c,3,magnet,werft);
+        if(droneLevel>0||preview==4)atlas.drawHardware(c,4,1,werft);
+        if(shieldLevel>0||preview==5)atlas.drawHardware(c,5,1,werft);
+        if(specialMagazinePurchases>0||preview==6)
+            atlas.drawHardware(c,6,1,werft);
+        int targeting=GameRules.visualUpgradeLevel(targetingLevel,5,preview==7);
+        if(targeting>0)atlas.drawHardware(c,7,targeting,werft);
+        // Damage is independent of installed modules. In the repair preview
+        // display the prospective +1 HP hull, never prematurely change HP.
+        int shownHp=preview==2?Math.min(maxHp,hp+1):hp;
+        atlas.drawHullDamage(c,GameRules.hullDamageTier(shownHp,maxHp),werft);
+        if(preview==2&&hp<maxHp)atlas.drawHardware(c,2,1,werft);
     }
     /** Metal hardware is part of the ship, not a highlight or HUD marker.
      * Preview modules are fitted as transparent holographic blueprints and the
@@ -1579,27 +1600,27 @@ public final class GameView extends View {
             c.drawOval(-34,-37,34,31,p);p.setStyle(Paint.Style.FILL);
         }
         float flame=15+7*(float)Math.sin(idleTime*23);
-        glow(c,-9,23,24,0x6648C8FF,0x0048C8FF);
-        glow(c,9,23,24,0x66FFB55F,0x00FFB55F);
-        triangle(c,-15,18,-4,18,-9,20+flame,0xFF2F92D4);
-        triangle(c,4,18,15,18,9,20+flame,0xFFFAB367);
-        triangle(c,-12,19,-7,19,-9,18+flame*.75f,WHITE);
-        triangle(c,7,19,12,19,9,18+flame*.75f,WHITE);
-        // Detailed 192px transparent sprite, with independently animated thrusters
-        // and protective shield painted at runtime.
-        atlas.drawPlayer(c,0,-2);
-        drawEquipment(c,-1);
+        float ex0=atlas.engineX(0),ex1=atlas.engineX(1);
+        float ey0=atlas.engineY(0),ey1=atlas.engineY(1);
+        glow(c,ex0,ey0,24,0x6648C8FF,0x0048C8FF);
+        glow(c,ex1,ey1,24,0x66FFB55F,0x00FFB55F);
+        triangle(c,ex0-5,ey0-1,ex0+5,ey0-1,ex0,ey0+flame,0xFF2F92D4);
+        triangle(c,ex1-5,ey1-1,ex1+5,ey1-1,ex1,ey1+flame,0xFFFAB367);
+        triangle(c,ex0-2,ey0,ex0+2,ey0,ex0,ey0+flame*.75f,WHITE);
+        triangle(c,ex1-2,ey1,ex1+2,ey1,ex1,ey1+flame*.75f,WHITE);
+        atlas.drawPlayer(c,0,0);
+        drawEquipment(c,-1,false);
         if(rapidTime>0){
             for(int side=-1;side<=1;side+=2){
                 glow(c,side*13f,-32f,12f,0x99FFB059,0x00FFB059);
             }
         }
         if(tripleTime>0){
-            for(int side=-1;side<=1;side+=2){
-                shadedPolygon(c,new float[]{side*26f,-7f,side*40f,-27f,
-                        side*47f,-28f,side*39f,-4f},
-                        0xFFD3E6EB,0xFF35617A,0xFF20384A);
-                circle(c,side*42f,-27f,3f,GREEN);
+            // No cheap add-on polygon wings on the approved metal hull.
+            // The temporary triple-shot is indicated at the real muzzles.
+            for(int side=0;side<2;side++){
+                glow(c,atlas.muzzleX(side),atlas.muzzleY(side),9f,
+                        0x9962E5AF,0x0062E5AF);
             }
         }
         if(plasmaTime>0){
@@ -1889,8 +1910,9 @@ public final class GameView extends View {
     }
     private void drawMenu(Canvas c){
         logo(c,172,43);
-        c.save();c.translate(210,309);c.scale(1.8f,1.8f);
-        c.translate(-x,-y);drawPlayer(c);
+        c.save();c.translate(210,298);c.scale(2.35f,2.35f);
+        atlas.drawPlayer(c,0,0,true);
+        drawEquipment(c,-1,true);
         c.restore();
         textCenter(c,"VERTIKALER SCI-FI ARCADE-SHOOTER",411,13,MUTED,false);
         button(c,"NEUER DURCHLAUF",51,450,318,58,true);
@@ -1917,28 +1939,25 @@ public final class GameView extends View {
     }
     private void drawWerftShip(Canvas c,int highlightedId,float progress){
         float ease=progress*progress*(3f-2f*progress);
-        float focusX=GameRules.werftFocusX(highlightedId);
-        float focusY=GameRules.werftFocusY(highlightedId);
+        float focusX=atlas.werftFocusX(highlightedId);
+        float focusY=atlas.werftFocusY(highlightedId);
         float scale=3.15f+3.65f*ease;
         // Smooth, parallax-like focus interpolation between entire craft and part.
         float centerX=210f-focusX*scale*ease;
         float centerY=310f-focusY*scale*ease;
         c.save();c.clipRect(17,112,403,468);
-        glow(c,210f,297f,184f,0x453D8A9C,0x002C5878);
-        for(int i=0;i<8;i++){
-            float gx=58+i*44f;
-            line(c,gx,120,gx,466,0x143CA6C9,1f);
+        if(!atlas.drawWerftHangar(c,17,112,403,468)){
+            glow(c,210f,297f,184f,0x453D8A9C,0x002C5878);
+            for(int i=0;i<8;i++){
+                float gx=58+i*44f;
+                line(c,gx,120,gx,466,0x143CA6C9,1f);
+            }
         }
-        line(c,24,467,396,467,0x776BD3F9,3f);
-        for(int k=0;k<5;k++){
-            float gx=210f+(k-2)*76f;
-            line(c,gx,454,gx+(gx-210f)*.6f,465,0x3373E6FF,1f);
-        }
+        // Small grounded contact shadow is separate from the transparent ship.
+        glow(c,210,344,125,0x33000000,0x00000000);
         c.translate(centerX,centerY);c.scale(scale,scale);
-        // Render actual ship hardpoints in the same positions as during combat.
-        atlas.drawPlayer(c,0,-2);
-        drawEquipment(c,highlightedId);
-        if(droneLevel>0)drawOrbitingDrones(c);
+        atlas.drawPlayer(c,0,0,true);
+        drawEquipment(c,highlightedId,true);
         c.restore();
         if(highlightedId>=0 && ease>.65f){
             float alpha=clamp((ease-.65f)*2.85f,0f,1f);

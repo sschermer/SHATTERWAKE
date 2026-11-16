@@ -43,36 +43,54 @@ jobs:
             sed -i 's/, `android-actions\/setup-android@v3`//' THIRD_PARTY_NOTICES.md
           fi
           test -f app/src/main/java/de/shatterwake/game/GameView.java
-      - name: Render licensed 3D fighter and modular upgrades (first build)
-        if: ${{ hashFiles('app/src/main/assets/rendered/fighter_base.png') == '' }}
+      - name: Verify approved project-authored fighter and Werft art
         run: |
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
-          mkdir -p /tmp/sw-3d app/src/main/assets/rendered
-          python3 - <<'PY'
-          import urllib.request,json
-          api="https://grab3d.com/api/v1/models/spaceship.json"
-          req=urllib.request.Request(api,headers={"User-Agent":"SHATTERWAKE-asset-builder/1.0"})
-          with urllib.request.urlopen(req,timeout=65) as response:
-              data=json.load(response)
-          model=data.get("model",data)
-          license=model.get("license","")
-          assert license in ("CC0","CC0-1.0","CC0 1.0"),f"Expected CC0 model, got {license}"
-          choices=[f for f in model["files"] if f.get("format")=="glb" and f.get("variant")=="full"]
-          assert choices,"No full GLB download link from official source"
-          url=choices[0]["url"]
-          assert url.startswith("https://grab3d.com/"),"Non-official asset URL"
-          print("Rendering CC0:",url,flush=True)
-          urllib.request.urlretrieve(url,"/tmp/sw-3d/ship.glb")
-          with open("/tmp/sw-3d/ship.glb","rb") as source:
-              assert source.read(4)==b"glTF","Downloaded file is not GLB"
-          PY
-          blender -b -t 2 --python tools/render_cc0_fighter.py -- \
-            /tmp/sw-3d/ship.glb app/src/main/assets/rendered
-          test -s app/src/main/assets/rendered/fighter_base.png
+          set -eu
+          root=app/src/main/assets/rendered
+          test -s "$root/fighter_base.png"
+          test -s "$root/fighter_layout.json"
+          test -s "$root/werft/fighter_base.png"
+          test -s "$root/werft/hangar_background.png"
           for i in 0 1 2 3 4 5 6 7; do
-            test -s "app/src/main/assets/rendered/fighter_module_${i}.png"
+            test -s "$root/fighter_module_${i}.png"
+            test -s "$root/werft/fighter_module_${i}.png"
           done
+          for tier in 2 3; do
+            test -s "$root/fighter_module_3_L${tier}.png"
+            test -s "$root/werft/fighter_module_3_L${tier}.png"
+          done
+          for tier in 2 3 4 5; do
+            test -s "$root/fighter_module_7_L${tier}.png"
+            test -s "$root/werft/fighter_module_7_L${tier}.png"
+          done
+          for tier in 1 2 3; do
+            test -s "$root/fighter_hull_damage_${tier}.png"
+            test -s "$root/werft/fighter_hull_damage_${tier}.png"
+          done
+          python3 - <<'PY'
+          import json,os,struct
+          root="app/src/main/assets/rendered"
+          with open(root+"/fighter_layout.json") as f:a=json.load(f)
+          assert list(map(int,a["modules_available"]))==list(range(8))
+          game=a["views"]["game"]
+          px=game["projected_anchors"]
+          assert px["nose"][1]<px["tail"][1]
+          assert abs(px["nose"][0]-px["tail"][0])<25
+          paths=[root+"/fighter_base.png",root+"/werft/fighter_base.png",
+                 root+"/werft/hangar_background.png"]
+          for v,size in (("",1024),("werft/",2048)):
+            for i in range(8):paths.append(root+"/"+v+"fighter_module_%d.png"%i)
+            for lvl in (2,3):paths.append(root+"/"+v+"fighter_module_3_L%d.png"%lvl)
+            for lvl in (2,3,4,5):paths.append(root+"/"+v+"fighter_module_7_L%d.png"%lvl)
+            for lvl in (1,2,3):paths.append(root+"/"+v+"fighter_hull_damage_%d.png"%lvl)
+          for path in paths:
+            with open(path,"rb") as f:h=f.read(26)
+            assert h[:8]==b'\x89PNG\r\n\x1a\n',path
+            expected=2048 if "/werft/" in path else 1024
+            assert struct.unpack(">II",h[16:24])==(expected,expected),path
+            assert h[25]==6,path
+          print("PASS: all approved original PNG sprites and camera anchors",len(paths))
+          PY
       - name: Verify pure Java game rules
         run: |
           mkdir -p /tmp/sw-test
@@ -100,9 +118,7 @@ jobs:
           cp out/SHATTERWAKE-v0.5.0-alpha-debug.apk dist/
           cp out/SHA256SUMS.txt dist/
           git add -f dist/SHATTERWAKE-v0.5.0-alpha-debug.apk dist/SHA256SUMS.txt
-          if test -s app/src/main/assets/rendered/fighter_base.png; then
-            git add -f app/src/main/assets/rendered/*.png
-          fi
+
           git commit -m 'Publish tested SHATTERWAKE 0.5 alpha APK [skip ci]' || true
           git push origin HEAD:main
       - name: Create downloadable GitHub prerelease APK

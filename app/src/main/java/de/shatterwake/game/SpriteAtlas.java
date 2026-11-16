@@ -3,6 +3,10 @@ package de.shatterwake.game;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.LruCache;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -20,32 +24,132 @@ import android.graphics.Shader;
  */
 final class SpriteAtlas {
     private static final int S=384;
+    private final Context context;
     final Bitmap fighter;
     final Bitmap renderedFighter;
-    final Bitmap[] renderedModules=new Bitmap[8];
     final Bitmap[] enemies=new Bitmap[7];
     final Bitmap[] modules=new Bitmap[5];
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
+    // BitmapFactory downsampling preserves realistic 3D surfaces while
+    // avoiding hundreds of MiB of resident 2048px Werft sprite variants.
+    private final LruCache<String,Bitmap> gameCache=new LruCache<String,Bitmap>(26*1024*1024){
+        @Override protected int sizeOf(String key,Bitmap bitmap){return bitmap.getByteCount();}
+    };
+    private final LruCache<String,Bitmap> werftCache=new LruCache<String,Bitmap>(48*1024*1024){
+        @Override protected int sizeOf(String key,Bitmap bitmap){return bitmap.getByteCount();}
+    };
+    private final float[] focusX=new float[8],focusY=new float[8];
+    private final float[] muzzleX=new float[]{-18,18},muzzleY=new float[]{-25,-25};
+    private final float[] engineX=new float[]{-11,11},engineY=new float[]{26,26};
+    private boolean approvedAnchors=false;
 
-    SpriteAtlas(Context context){
-        renderedFighter=load(context,"rendered/fighter_base.png");
-        for(int i=0;i<renderedModules.length;i++)
-            renderedModules[i]=load(context,"rendered/fighter_module_"+i+".png");
+    SpriteAtlas(Context ctx){
+        context=ctx.getApplicationContext();
+        for(int i=0;i<8;i++){
+            focusX[i]=GameRules.werftFocusX(i);
+            focusY[i]=GameRules.werftFocusY(i);
+        }
+        // Use the exact sprites staged from art/hero_fighter, never a
+        // reconstructed or independently rotated Android-only drawing.
+        renderedFighter=bitmapFor(false,"fighter_base.png");
         fighter=renderedFighter==null?makeFighter():null;
+        readAnchors();
         for(int i=0;i<enemies.length;i++)enemies[i]=makeEnemy(i);
         for(int i=0;i<modules.length;i++)modules[i]=makeModule(i);
     }
-    private Bitmap load(Context ctx,String name){
-        try(InputStream in=ctx.getAssets().open(name)){
-            return BitmapFactory.decodeStream(in);
+
+    private Bitmap bitmapFor(boolean werft,String filename){
+        String full=(werft?"rendered/werft/":"rendered/")+filename;
+        LruCache<String,Bitmap> cache=werft?werftCache:gameCache;
+        Bitmap result=cache.get(full);
+        if(result!=null)return result;
+        try(InputStream in=context.getAssets().open(full)){
+            BitmapFactory.Options opt=new BitmapFactory.Options();
+            opt.inScaled=false;
+            opt.inPreferredConfig=Bitmap.Config.ARGB_8888;
+            opt.inSampleSize=2; // GAME 512px, WERFT 1024px
+            result=BitmapFactory.decodeStream(in,null,opt);
+            if(result!=null)cache.put(full,result);
+            return result;
         }catch(Exception ignored){return null;}
     }
     boolean hasRenderedFighter(){return renderedFighter!=null;}
-    void drawHardware(Canvas c,int index){
-        if(index<0||index>=renderedModules.length)return;
-        Bitmap b=renderedModules[index];if(b==null)return;
+    boolean hasWerftArt(){return bitmapFor(true,"fighter_base.png")!=null;}
+    private void paintBitmap(Canvas c,Bitmap bitmap,RectF rect){
         p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);
-        c.drawBitmap(b,null,new RectF(-50,-47,50,47),p);
+        p.setStyle(Paint.Style.FILL);
+        c.drawBitmap(bitmap,null,rect,p);
+    }
+    void drawHardware(Canvas c,int id,int level,boolean werft){
+        if(id<0||id>=8)return;
+        String name="fighter_module_"+id;
+        if(level>1&&(id==3||id==7))name+="_L"+level;
+        Bitmap bitmap=bitmapFor(werft,name+".png");
+        if(bitmap!=null)paintBitmap(c,bitmap,new RectF(-50,-47,50,47));
+    }
+    void drawHullDamage(Canvas c,int damageTier,boolean werft){
+        if(damageTier<1)return;
+        Bitmap bitmap=bitmapFor(werft,"fighter_hull_damage_"+Math.min(3,damageTier)+".png");
+        if(bitmap!=null)paintBitmap(c,bitmap,new RectF(-50,-47,50,47));
+    }
+    boolean drawWerftHangar(Canvas c,float left,float top,float right,float bottom){
+        Bitmap bg=bitmapFor(true,"hangar_background.png");
+        if(bg==null)return false;
+        paintBitmap(c,bg,new RectF(left,top,right,bottom));
+        return true;
+    }
+    float werftFocusX(int id){return id>=0&&id<8?focusX[id]:0f;}
+    float werftFocusY(int id){return id>=0&&id<8?focusY[id]:0f;}
+    float muzzleX(int side){return muzzleX[side<=0?0:1];}
+    float muzzleY(int side){return muzzleY[side<=0?0:1];}
+    float engineX(int side){return engineX[side<=0?0:1];}
+    float engineY(int side){return engineY[side<=0?0:1];}
+    private static float xCoord(JSONArray point,float width){
+        return ((float)point.optDouble(0)/width-.5f)*100f;
+    }
+    private static float yCoord(JSONArray point,float height){
+        return ((float)point.optDouble(1)/height-.5f)*94f;
+    }
+    private void readAnchors(){
+        try(InputStream in=context.getAssets().open("rendered/fighter_layout.json")){
+            ByteArrayOutputStream result=new ByteArrayOutputStream();
+            byte[] buffer=new byte[8192];int n;
+            while((n=in.read(buffer))!=-1)result.write(buffer,0,n);
+            JSONObject root=new JSONObject(result.toString("UTF-8"));
+            JSONObject game=root.getJSONObject("views").getJSONObject("game");
+            JSONObject werft=root.getJSONObject("views").getJSONObject("werft");
+            JSONArray gameSize=game.getJSONArray("resolution");
+            JSONArray werftSize=werft.getJSONArray("resolution");
+            float gx=gameSize.getInt(0),gy=gameSize.getInt(1);
+            float wx=werftSize.getInt(0),wy=werftSize.getInt(1);
+            JSONObject focus=werft.getJSONObject("module_focus_pixels");
+            for(int i=0;i<8;i++){
+                JSONArray point=focus.getJSONArray(Integer.toString(i));
+                focusX[i]=xCoord(point,wx);focusY[i]=yCoord(point,wy);
+            }
+            JSONObject gamePoints=game.getJSONObject("projected_anchors");
+            String[] guns={"weapon_muzzle_left","weapon_muzzle_right"};
+            String[] engines={"engine_exhaust_left","engine_exhaust_right"};
+            for(int i=0;i<2;i++){
+                JSONArray m=gamePoints.getJSONArray(guns[i]),e=gamePoints.getJSONArray(engines[i]);
+                muzzleX[i]=xCoord(m,gx);muzzleY[i]=yCoord(m,gy);
+                engineX[i]=xCoord(e,gx);engineY[i]=yCoord(e,gy);
+            }
+            // Verify pose is nose-up in gameplay, not the earlier sideways import.
+            JSONArray nose=gamePoints.getJSONArray("nose"),tail=gamePoints.getJSONArray("tail");
+            approvedAnchors=nose.getDouble(1)<tail.getDouble(1)
+                    && Math.abs(nose.getDouble(0)-tail.getDouble(0))<25;
+        }catch(Exception ignored){approvedAnchors=false;}
+        if(!approvedAnchors){
+            for(int i=0;i<8;i++){
+                focusX[i]=GameRules.werftFocusX(i);
+                focusY[i]=GameRules.werftFocusY(i);
+            }
+            muzzleX[0]=-18;muzzleX[1]=18;
+            muzzleY[0]=muzzleY[1]=-25;
+            engineX[0]=-11;engineX[1]=11;
+            engineY[0]=engineY[1]=26;
+        }
     }
     private Canvas bitmap(Canvas[] out){
         Bitmap b=Bitmap.createBitmap(S,S,Bitmap.Config.ARGB_8888);
@@ -262,11 +366,11 @@ final class SpriteAtlas {
         rivets(c,60,117,14,6,0xFF455C72);
         return b;
     }
-    void drawPlayer(Canvas c,float x,float y){
-        p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);
-        if(renderedFighter!=null)
-            c.drawBitmap(renderedFighter,null,new RectF(x-50,y-47,x+50,y+47),p);
-        else c.drawBitmap(fighter,null,new RectF(x-44,y-47,x+44,y+46),p);
+    void drawPlayer(Canvas c,float x,float y){drawPlayer(c,x,y,false);}
+    void drawPlayer(Canvas c,float x,float y,boolean werft){
+        Bitmap body=werft?bitmapFor(true,"fighter_base.png"):renderedFighter;
+        if(body!=null)paintBitmap(c,body,new RectF(x-50,y-47,x+50,y+47));
+        else if(fighter!=null)paintBitmap(c,fighter,new RectF(x-44,y-47,x+44,y+46));
     }
     void drawEnemy(Canvas c,Bitmap b,float x,float y,float radius){
         p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);

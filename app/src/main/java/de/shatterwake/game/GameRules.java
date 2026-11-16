@@ -20,6 +20,21 @@ public final class GameRules {
     public static int fullRepairCost(int hp,int maxHp,int pricePerPoint) {
         return repairsNeeded(hp,maxHp)*Math.max(0,pricePerPoint);
     }
+    public static int hullDamageTier(int hp,int maxHp){
+        return Math.min(3,repairsNeeded(hp,maxHp));
+    }
+    public static int visualUpgradeLevel(int current,int max,boolean previewNext){
+        int level=Math.max(0,Math.min(max,current));
+        return Math.min(max,level+(previewNext&&level<max?1:0));
+    }
+    /** The original and dark gun models occupy the same hardpoints.
+     * Dark, higher-damage hardware takes precedence, never draw both.
+     */
+    public static int visibleWeaponModule(int fireLevel,int damageLevel,int preview){
+        if(damageLevel>0||preview==1)return 1;
+        if(fireLevel>0||preview==0)return 0;
+        return -1;
+    }
     public static int nextFireCost(int level) { return FIRE_COST[Math.max(0, Math.min(level, FIRE_COST.length - 1))]; }
     public static float fireInterval(int level, boolean rapid) {
         float base = Math.max(.105f, .265f * (1f - .055f * Math.max(0, Math.min(5, level))));

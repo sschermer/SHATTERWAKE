@@ -76,3 +76,25 @@ The repair offer now shows the current hull HP against maximum HP, how many hull
 ## Verbindlicher Grafik-Neustart
 
 Der **[Grafik-Produktionsstandard ART-001](docs/GRAPHICS_PRODUCTION_STANDARD.md)** und der [maschinenlesbare Hero-Fighter-Vertrag](art/hero_fighter/production_manifest.json) definieren das getrennte Grafikproduktions-/Freigabeverfahren für das neue hochwertige Raumschiff. **Wichtig:** Das derzeitige einfache 3D-Modell ist nicht visuell freigegeben. Neue Render-Assets werden erst nach Abnahme übernommen; die bestehenden Produktionsdateinamen und Modul-IDs bleiben erhalten.
+
+## Hero Fighter ART-004 — integrated Android sprites
+
+The Android app now uses the user-approved, **original project-modeled, smooth
+metal Blender hero fighter**, rendered in two cameras. The GAME view is nose-up
+with physical muzzle / engine anchors; the WERFT uses a cinematic 3/4 view and
+a separately rendered hangar, using camera-projected module focus points in
+`rendered/fighter_layout.json`. Transparent PNGs are copied **unchanged** by Git
+blob SHA from `art/hero-fighter-v1/art/hero_fighter/staging/`. No second
+rendering process, copy-paste edits, or external 3D asset is involved.
+
+All eight ship systems are always offered, including drones and shields. New
+modules actually change the hull: magnetic projector tiers (1–3), targeting
+sensor tiers (1–5), physical magazines and restored armor. Dark high-damage
+cannons replace, rather than overlap, standard silver guns. The simulation
+selects the corresponding physical projectile launch points; displayed
+thrusters use the geometry-projected exhaust points. Tiered hull overlays map
+to missing HP and disappear incrementally on repair. The detail preview
+shows the NEXT physical level before purchase. Gameplay and shop each load
+their own PNG set through a bounded bitmap cache.
+
+Reference source: [editable Blender master](https://github.com/sschermer/SHATTERWAKE/tree/art/hero-fighter-v1/art/hero_fighter).
