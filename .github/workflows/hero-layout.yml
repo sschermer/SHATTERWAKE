@@ -1,0 +1,35 @@
+name: SHATTERWAKE - export accurate Blender camera anchors
+
+on:
+  push:
+    branches: [art/hero-fighter-v1]
+    paths:
+      - '.github/workflows/hero-layout.yml'
+      - 'art/hero_fighter/export_layout.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender and NumPy
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
+      - name: Project world coordinates from exact GAME and WERFT cameras
+        run: |
+          blender -b art/hero_fighter/hero_fighter.blend -t 2 \
+            --python art/hero_fighter/export_layout.py -- art/hero_fighter
+          test -s art/hero_fighter/staging/fighter_layout.json
+      - name: Commit image layout without altering game assets
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f art/hero_fighter/staging/fighter_layout.json
+          git commit -m 'Export true GAME and Werft anchor projections [skip ci]' || true
+          git push origin HEAD:art/hero-fighter-v1
