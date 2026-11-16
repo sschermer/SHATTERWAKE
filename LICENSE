@@ -6,6 +6,11 @@ This repository contains original SHATTERWAKE application source code,
 vector artwork, gameplay rules, interface design and algorithmically generated
 audio routines prepared for the repository owner.
 
+External CC0 artists will be credited voluntarily, even when credit is not
+legally required. The current candidate artists and each future actually
+included asset are documented separately in THIRD_PARTY_NOTICES.md.
+Their freely released assets remain subject to their original CC0 terms.
+
 Except where separately identified in THIRD_PARTY_NOTICES.md, no right to
 copy, modify, redistribute, sublicense, publicly perform, sell, or incorporate
 this original project into another product is granted to third parties without
