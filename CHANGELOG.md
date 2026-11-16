@@ -62,3 +62,9 @@
 - High-resolution procedural ship atlas with richer industrial shading, vents, bolts and a distinct gold elite silhouette.
 - Real painted upgrade modules fitted directly to the hull and shared between the close-up Werft and gameplay: gun upgrades, armor repair panels, shield emitters, drone docks, targeting turret, magnet and capacitor.
 - Orbiting drone movement replaces the old fixed companion line.
+
+### Sternenwerft hull repair information
+
+- Repair overview tile displays current HP and number of 1-HP repairs needed to reach full integrity.
+- Repair detail shows hull percentage, missing HP, remaining repair steps, individual repair price and combined full-repair price.
+- Each purchase updates the displays instantly; repairing a full hull remains disabled. Added Java regression assertions for missing-HP and repair-cost calculations.

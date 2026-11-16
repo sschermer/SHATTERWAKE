@@ -68,3 +68,7 @@ All ships, enemies, HUD, backgrounds and sound effects are newly drawn/programma
 ## First actual 3D asset integration
 
 The game now loads transparent baked 3D ship imagery from `app/src/main/assets/rendered/` when present. The artwork comes from a high-detail **CC0 spaceship by Grab3D** rendered in Blender, plus eight distinct physically modeled project-created upgrade components. Each module is rendered in the *same camera position* as the base hull, enabling actual body changes during play and in the zooming Werft instead of bright hand-drawn marks. The initial Android CI run builds and commits the PNGs; subsequent runs use the committed PNG files without needing Blender or another network download. Procedural graphics remain a fallback when the 3D pipeline has not yet run. Model license and voluntary source credit: `THIRD_PARTY_NOTICES.md`.
+
+## Sternenwerft: repair transparency
+
+The repair offer now shows the current hull HP against maximum HP, how many hull points are missing, and how many 1-HP repair purchases are required for 100% integrity. The detail view includes a live hull bar, the current and maximum HP, the cost of one repair and the full repair cost at the current per-point price. Counts and totals update after each purchase. At 100% the repair action is disabled and clearly labeled. These are **currently missing hull points**, not a historical counter of all hits (including shielded damage).

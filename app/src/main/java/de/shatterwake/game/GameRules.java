@@ -9,6 +9,17 @@ public final class GameRules {
     public static final int MAX_CONTINUES = 2;
     public static final int[] FIRE_COST = {250, 350, 480, 640, 830};
     public static int continueCost(int stars) { return (Math.max(0, stars) + 1) / 2; }
+    /** Every purchased repair restores exactly one missing hull point. */
+    public static int repairsNeeded(int hp,int maxHp) {
+        return Math.max(0, Math.max(0,maxHp)-Math.max(0,hp));
+    }
+    public static int hullPercent(int hp,int maxHp) {
+        if(maxHp<=0)return 100;
+        return Math.max(0,Math.min(100,Math.round(100f*hp/maxHp)));
+    }
+    public static int fullRepairCost(int hp,int maxHp,int pricePerPoint) {
+        return repairsNeeded(hp,maxHp)*Math.max(0,pricePerPoint);
+    }
     public static int nextFireCost(int level) { return FIRE_COST[Math.max(0, Math.min(level, FIRE_COST.length - 1))]; }
     public static float fireInterval(int level, boolean rapid) {
         float base = Math.max(.105f, .265f * (1f - .055f * Math.max(0, Math.min(5, level))));

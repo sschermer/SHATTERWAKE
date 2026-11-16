@@ -1961,14 +1961,33 @@ public final class GameView extends View {
                 boolean available=offerAvailable(chosen),affordable=stars>=price;
                 drawWerftShip(c,chosen.id,werftZoom);
                 panel(c,17,499,386,225,0xF5122A43,0xFF7DCBE8,13);
-                textCenter(c,chosen.title,531,22,WHITE,true);
-                textCenter(c,chosen.description,559,13,MUTED,false);
-                textCenter(c,"BAUTEIL: "+GameRules.werftPartLabel(chosen.id),
-                        585,13,GOLD,true);
-                textCenter(c,available?"KOSTEN: ★ "+price:"MAXIMAL AUSGEBAUT",
-                        612,15,available?GOLD:MUTED,true);
+                if(chosen.id==2){
+                    int missing=GameRules.repairsNeeded(hp,maxHp);
+                    int percent=GameRules.hullPercent(hp,maxHp);
+                    textCenter(c,"RUMPFREPARATUR",529,21,WHITE,true);
+                    textCenter(c,"RUMPF: "+hp+" / "+maxHp+" HP ("+percent+"%)",
+                            554,13,WHITE,true);
+                    box(c,60,566,300,10,0xFF1B3448);
+                    box(c,60,566,300f*percent/100f,10,
+                            missing>0?0xFFCF9D65:GREEN);
+                    textCenter(c,missing==0?"KEINE REPARATUR MEHR NOETIG":
+                            "SCHADEN: "+missing+" HP  ·  NOCH "+missing+" REPARATUREN",
+                            594,13,missing>0?GOLD:GREEN,true);
+                    textCenter(c,missing==0?"RUMPF VOLLSTAENDIG INTAKT":
+                            "1x: ★ "+price+"  ·  BIS 100%: ★ "+
+                                    GameRules.fullRepairCost(hp,maxHp,price),
+                            617,13,missing>0?WHITE:GREEN,false);
+                }else{
+                    textCenter(c,chosen.title,531,22,WHITE,true);
+                    textCenter(c,chosen.description,559,13,MUTED,false);
+                    textCenter(c,"BAUTEIL: "+GameRules.werftPartLabel(chosen.id),
+                            585,13,GOLD,true);
+                    textCenter(c,available?"KOSTEN: ★ "+price:"MAXIMAL AUSGEBAUT",
+                            612,15,available?GOLD:MUTED,true);
+                }
                 button(c,"ZURUECK",28,647,170,62,false);
-                button(c,!available?"MAX":!affordable?"STERNE FEHLEN":
+                button(c,!available?(chosen.id==2?"100%":"MAX"):
+                        !affordable?"STERNE FEHLEN":
                         werftZoom<.995f?"BITTE ANSEHEN":"JETZT KAUFEN",
                         222,647,170,62,available&&affordable&&werftZoom>=.995f);
                 textCenter(c,shopMessage,750,11,GREEN,false);
@@ -1986,10 +2005,21 @@ public final class GameView extends View {
             boolean available=offerAvailable(offer),affordable=stars>=offerPrice(offer);
             panel(c,left,top,193,46,0xE91C334B,
                     available&&affordable?0xFF64B6DE:0xFF496A83,9);
-            txt(c,offer.title,left+9,top+17,11,available?WHITE:MUTED,
-                    Paint.Align.LEFT,true);
-            txt(c,available?"★ "+offerPrice(offer):"MAX",left+10,top+36,11,
-                    available&&affordable?GOLD:MUTED,Paint.Align.LEFT,false);
+            if(offer.id==2){
+                int missing=GameRules.repairsNeeded(hp,maxHp);
+                txt(c,"REPARATUR · "+hp+"/"+maxHp+" HP",left+9,top+17,11,
+                        missing>0?WHITE:GREEN,Paint.Align.LEFT,true);
+                txt(c,missing==0?"RUMPF 100%":
+                        missing+"x NOETIG · ★ "+offerPrice(offer),
+                        left+10,top+36,11,
+                        missing==0?GREEN:affordable?GOLD:MUTED,
+                        Paint.Align.LEFT,false);
+            }else{
+                txt(c,offer.title,left+9,top+17,11,available?WHITE:MUTED,
+                        Paint.Align.LEFT,true);
+                txt(c,available?"★ "+offerPrice(offer):"MAX",left+10,top+36,11,
+                        available&&affordable?GOLD:MUTED,Paint.Align.LEFT,false);
+            }
             txt(c,"ANSEHEN ›",left+181,top+36,10,CYAN,Paint.Align.RIGHT,true);
         }
         button(c,stage==3?"RUN ABSCHLIESSEN":"WERFT VERLASSEN · ROUTE",

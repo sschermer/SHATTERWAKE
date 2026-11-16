@@ -5,6 +5,17 @@ public final class RuleChecks {
         assert GameRules.continueCost(0)==0;
         assert GameRules.continueCost(1)==1;
         assert GameRules.continueCost(101)==51;
+        assert GameRules.repairsNeeded(4,6)==2;
+        assert GameRules.fullRepairCost(4,6,160)==320;
+        assert GameRules.hullPercent(4,6)==67;
+        assert GameRules.repairsNeeded(5,6)==1;
+        assert GameRules.fullRepairCost(5,6,160)==160;
+        assert GameRules.repairsNeeded(6,6)==0;
+        assert GameRules.hullPercent(6,6)==100;
+        assert GameRules.fullRepairCost(6,6,160)==0;
+        assert GameRules.repairsNeeded(9,6)==0;
+        assert GameRules.repairsNeeded(-1,6)==6;
+        assert GameRules.hullPercent(0,6)==0;
         assert GameRules.MAX_CONTINUES==2;
         assert GameRules.routesAfter(1)[0]!=GameRules.routesAfter(1)[1];
         assert GameRules.routesAfter(2)[0]==3;
