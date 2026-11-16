@@ -66,6 +66,7 @@ public final class GameView extends View {
     private boolean tutorialPowerupTrialStarted=false;
     private int stars=0, score=0, best=0, hp=5, maxHp=5, continuesUsed=0;
     private int fireLevel=0, damageLevel=0, magnetLevel=0, shieldLevel=0, droneLevel=0;
+    private int targetingLevel=0;
     private int techMask=0, newlyUnlocked=-1, armedSecondary=-1;
     private float x=W/2, y=573, targetX=x, targetY=y;
     private float stageTime=0, spawnTimer=0, starTimer=0, shootTimer=0, secondaryRegen=0;
@@ -89,10 +90,12 @@ public final class GameView extends View {
     private static final class Enemy {
         int kind, hp, maxHp, value, fragments;
         float x,y,vx,vy,t,shoot,phase,radius;
+        float originX,originY,flightSide=1f,flightTargetX,heading;
+        final float[] flight=new float[2];
         Enemy(int kind,float x,float y,int hp) {
-            this.kind=kind;this.x=x;this.y=y;this.hp=hp;maxHp=hp;
-            radius=kind==3?25:kind==5?24:kind==6?24:15;
-            value=(kind==3||kind==5)?38:kind==6?25:20;
+            this.kind=kind;this.x=x;this.y=y;originX=x;originY=y;this.hp=hp;maxHp=hp;
+            radius=kind==7?27:kind==3?25:kind==5?24:kind==6?24:15;
+            value=kind==7?260:(kind==3||kind==5)?38:kind==6?25:20;
             shoot=1.65f+(kind%3)*.45f;
         }
     }
@@ -234,7 +237,7 @@ public final class GameView extends View {
     private void startRun(){
         tutorialActive=false;guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
         stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
-        fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=0;
+        fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=targetingLevel=0;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
         newlyUnlocked=-1;werftPreviewIndex=-1;werftZoom=0f;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
@@ -286,13 +289,11 @@ public final class GameView extends View {
                 && tutorialStep<=TutorialRules.ACTIVATE_PLASMA){
             int id=TutorialRules.abilityForStep(tutorialStep);
             abilityCharges[id]=Math.max(1,abilityCharges[id]);
-            // A sturdy stationary target lets the player see actual rapid,
-            // triple and plasma hits for the entire practice window.
-            if(id>0){
-                Enemy target=new Enemy(3,x>W/2?100:320,267,20000);
-                target.vy=0;target.shoot=9999;target.value=0;
-                enemies.add(target);
-            }
+            // Shield practice includes an actual stationary enemy attacker.
+            Enemy target=new Enemy(id==0?1:3,id==0?210f:(x>W/2?100:320),
+                    id==0?212f:267f,20000);
+            target.vy=0;target.shoot=9999;target.value=0;
+            enemies.add(target);
             beginGuide(TutorialRules.GUIDE_ABILITY,id);
         }else if(tutorialStep==TutorialRules.PLASMA_TARGET){
             plasmaTime=Math.max(plasmaTime,7f);
@@ -332,7 +333,7 @@ public final class GameView extends View {
         boolean testingPowerup=tutorialPowerupTrialStarted
                 && TutorialRules.isPowerupStep(tutorialStep);
         if(testingPowerup){
-            // The 15 seconds count only during active gameplay, not while a
+            // The 5 seconds count only during active gameplay, not while a
             // guide, confirmation, or the Android pause screen is visible.
             tutorialPowerupRemaining=TutorialRules.remainingTrialTime(
                     tutorialPowerupRemaining,dt);
@@ -360,8 +361,14 @@ public final class GameView extends View {
             // Harmless incoming training shots visibly strike the active shield.
             tutorialShieldShotTimer-=dt;
             if(tutorialShieldShotTimer<=0){
-                shots.add(new Shot(x,y-165f,0f,190f,1f,1,true));
-                tutorialShieldShotTimer=1.55f;
+                if(!enemies.isEmpty()){
+                    Enemy attacker=enemies.get(0);
+                    float dx=x-attacker.x,dy=y-attacker.y;
+                    float len=(float)Math.sqrt(dx*dx+dy*dy);
+                    if(len>1f)shots.add(new Shot(attacker.x,attacker.y+12f,
+                            dx/len*195f,dy/len*195f,1f,1,true));
+                }
+                tutorialShieldShotTimer=.95f;
             }
         }
         if(testingPowerup||tutorialStep==TutorialRules.TARGET
@@ -391,17 +398,21 @@ public final class GameView extends View {
     private void spawnEnemy(){
         if(enemies.size()>=GameRules.enemyCap(stage,stageTime))return;
         int tier=GameRules.worldTier(world);
-        int kind=random.nextInt(100);
-        kind=kind<33?0:kind<54?1:kind<74?2:kind<85?3:kind<95?4:5;
+        int roll=random.nextInt(1000);
+        int kind=roll<23 && stageTime>24f?7:
+                roll<329?0:roll<535?1:roll<740?2:roll<849?3:roll<954?4:5;
         if(stage==1 && kind==5)kind=1;
         if(stage==1 && stageTime<25f)kind=random.nextBoolean()?0:1;
-        int count=(stage==1 && stageTime<22f)?1:(kind==3||kind==5?1:(random.nextFloat()<.37f?2:1));
+        int count=(stage==1 && stageTime<22f)?1:(kind==3||kind==5||kind==7?1:(random.nextFloat()<.37f?2:1));
         count=Math.min(count,GameRules.enemyCap(stage,stageTime)-enemies.size());
         float base=rnd(45,365);
         for(int i=0;i<count;i++) {
             float xx=clamp(base+(i-(count-1)/2f)*44,30,W-30);
-            Enemy e=new Enemy(kind,xx,-40-i*27,25+tier*8+(kind>=3?34:0));
-            e.phase=rnd(0,6.28f);e.vx=random.nextBoolean()?1:-1;
+            Enemy e=new Enemy(kind,xx,-40-i*27,
+                    kind==7?165+tier*55:25+tier*8+(kind>=3?34:0));
+            e.phase=rnd(0,6.28f);
+            e.flightSide=random.nextBoolean()?1f:-1f;
+            e.flightTargetX=x;
             e.vy=(rnd(48,75)+tier*12)*.86f;e.fragments=kind==6?4:0;
             e.shoot=rnd(1.6f,3.1f);
             enemies.add(e);
@@ -480,7 +491,11 @@ public final class GameView extends View {
                 tutorialAction(TutorialRules.ACTION_SECONDARY_TARGET_KILLED);
             return;
         }
-        starBurst(e.x,e.y,e.value,3);
+        starBurst(e.x,e.y,e.value,e.kind==7?14:3);
+        if(e.kind==7){
+            banner="STERNENJAEGER ZERSTOERT · GROSSER FUND";bannerTime=2.3f;
+            for(int j=0;j<3;j++)spawnPickup(e.x+rnd(-20,20),e.y+rnd(-16,16),0,20);
+        }
         if(random.nextFloat()<.16f)spawnPickup(e.x,e.y,1+random.nextInt(4),1);
         if(random.nextFloat()<.09f)spawnPickup(e.x,e.y,5,1);
         secondaryRegen+=1.1f;
@@ -501,8 +516,9 @@ public final class GameView extends View {
         shots.add(new Shot(sx,sy,(float)Math.sin(angle)*speed,
                 -(float)Math.cos(angle)*speed,damage,kind,false));
     }
-    /** Small center-biased aim correction; explicitly permits targeting individual boss nodes. */
+    /** Zero assistance at run start. The upgrade applies 3% correction per level. */
     private float findAimAngle(){
+        if(targetingLevel<=0)return 0f;
         float chosen=0,bestCost=Float.MAX_VALUE;
         if(bossActive && boss!=null && bossSequence==GameRules.BOSS_COMBAT){
             for(Node n:boss.nodes){
@@ -521,7 +537,7 @@ public final class GameView extends View {
             float cost=Math.abs(a)*230+dy*.13f;
             if(cost<bestCost){chosen=a;bestCost=cost;}
         }
-        return chosen;
+        return chosen*GameRules.aimCorrectionFraction(targetingLevel);
     }
     private float[] nearestTarget(float sx,float sy){
         float[] ret={sx,sy-240};float dmin=Float.MAX_VALUE;
@@ -592,7 +608,7 @@ public final class GameView extends View {
         if(guideKind==TutorialRules.GUIDE_ABILITY)dismissGuide();
         else save();
         if(tutorialActive){
-            // Activation starts the lesson. Only 15 seconds of actual practice
+            // Activation starts the lesson. Only 5 seconds of actual practice
             // may unlock the next WEITER confirmation.
             tutorialPowerupTrialStarted=true;
             tutorialPowerupRemaining=TutorialRules.POWERUP_TRIAL_SECONDS;
@@ -795,33 +811,50 @@ public final class GameView extends View {
     }
     private void updateEnemies(float dt){
         for(int i=enemies.size()-1;i>=0;i--){
-            Enemy e=enemies.get(i);e.t+=dt;e.y+=e.vy*dt;
-            switch(e.kind){
-                case 0:e.x+=(float)Math.sin(e.t*2.6+e.phase)*33*dt;break;
-                case 1:e.x+=(float)Math.cos(e.t*3.2+e.phase)*68*dt;break;
-                case 2:
-                    if(e.y>105)e.x+=clamp(x-e.x,-130,130)*dt*.70f;
-                    e.y+=dt*12;break;
-                case 3:e.x+=(float)Math.sin(e.t*1.25+e.phase)*22*dt;break;
-                case 4:e.x+=(float)Math.sin(e.t*2+e.phase)*100*dt;break;
-                case 5:e.x+=(float)Math.sin(e.t*1.7+e.phase)*45*dt;break;
-                case 6:e.x+=(float)Math.sin(e.t*3.6+e.phase)*115*dt;break;
-                default:break;
+            Enemy enemy=enemies.get(i);
+            if(enemy.vy>0f){
+                float lastX=enemy.x,lastY=enemy.y;
+                enemy.t+=dt;
+                FlightPaths.position(enemy.kind,enemy.originX,enemy.originY,
+                        enemy.vy,enemy.flightSide,enemy.flightTargetX,
+                        enemy.t,enemy.flight);
+                enemy.x=enemy.flight[0];enemy.y=enemy.flight[1];
+                float dx=enemy.x-lastX,dy=enemy.y-lastY;
+                if(dx*dx+dy*dy>.04f){
+                    float angle=(float)Math.toDegrees(Math.atan2(dx,-dy));
+                    if(enemy.t<=dt+.05f)enemy.heading=angle;
+                    else {
+                        float diff=(angle-enemy.heading+540f)%360f-180f;
+                        enemy.heading+=diff*Math.min(1f,dt*5f);
+                    }
+                }
+                if(enemy.kind==7 && particles.size()<240
+                        && random.nextFloat()<dt*22f)
+                    particles.add(new Particle(enemy.x,enemy.y,0f,22f,
+                            .7f,2.5f,GOLD));
             }
-            e.x=clamp(e.x,24,W-24);
-            e.shoot-=dt;
-            if(GameRules.enemyFireAllowed(stage,stageTime) && e.y>35 && e.y<FIELD_BOTTOM-85 && e.shoot<=0 && e.kind!=6){
-                fireEnemy(e.x,e.y,x,y,e.kind==5?1:0);
-                e.shoot=GameRules.enemyShotInterval(stage,random.nextFloat())*(e.kind>=3?.88f:1f);
+            enemy.shoot-=dt;
+            if(GameRules.enemyFireAllowed(stage,stageTime) && enemy.y>35
+                    && enemy.y<FIELD_BOTTOM-85 && enemy.shoot<=0
+                    && enemy.kind!=6){
+                fireEnemy(enemy.x,enemy.y,x,y,enemy.kind>=5?1:0);
+                enemy.shoot=GameRules.enemyShotInterval(stage,random.nextFloat())
+                        *(enemy.kind==7?.70f:enemy.kind>=3?.88f:1f);
             }
-            if(e.kind==3 && e.t>3.2 && (int)(e.t*2)%7==0 && random.nextFloat()<dt*.5f){
-                Enemy child=new Enemy(0,e.x+rnd(-15,15),e.y+14,24+stage*8);
-                child.vy=82;if(enemies.size()<GameRules.enemyCap(stage,stageTime))enemies.add(child);
+            if(enemy.kind==3 && enemy.t>3.2 && (int)(enemy.t*2)%7==0
+                    && random.nextFloat()<dt*.5f){
+                Enemy child=new Enemy(0,enemy.x+rnd(-15,15),
+                        enemy.y+14,24+stage*8);
+                child.vy=82f;child.flightSide=random.nextBoolean()?1f:-1f;
+                if(enemies.size()<GameRules.enemyCap(stage,stageTime))enemies.add(child);
             }
-            if(e.y>FIELD_BOTTOM+20){enemies.remove(i);continue;}
-            if(dist2(e.x,e.y,x,y)<(e.radius+12)*(e.radius+12)){
-                takeHit(1);e.hp-=28;
-                if(e.hp<=0){enemyKilled(i,e);continue;}
+            if(enemy.y>FIELD_BOTTOM+50 || enemy.x<-125 || enemy.x>W+125){
+                enemies.remove(i);continue;
+            }
+            if(dist2(enemy.x,enemy.y,x,y)
+                    <(enemy.radius+12)*(enemy.radius+12)){
+                takeHit(1);enemy.hp-=28;
+                if(enemy.hp<=0){enemyKilled(i,enemy);continue;}
             }
         }
     }
@@ -1047,6 +1080,8 @@ public final class GameView extends View {
         if(special==0|| (techMask&1)!=0)offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",GameRules.nextDroneCost(droneLevel)));
         else offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",GameRules.nextShieldCost(shieldLevel)));
         offers.add(new Offer(6,"SPEZIAL-LADUNGEN","Je eine Ladung für vier Fähigkeiten",390));
+        offers.add(new Offer(7,"ZIELKORREKTUR +3%","Bis zu 15% verbesserte Zielkorrektur",
+                GameRules.nextTargetingCost(targetingLevel)));
     }
     private int offerPrice(Offer o){
         switch(o.id){
@@ -1057,6 +1092,7 @@ public final class GameView extends View {
             case 4:return GameRules.nextDroneCost(droneLevel);
             case 5:return GameRules.nextShieldCost(shieldLevel);
             case 6:return 390;
+            case 7:return GameRules.nextTargetingCost(targetingLevel);
             default:return o.base;
         }
     }
@@ -1069,6 +1105,7 @@ public final class GameView extends View {
             case 4:return droneLevel<3;
             case 5:return shieldLevel<2;
             case 6:return true;
+            case 7:return targetingLevel<5;
             default:return false;
         }
     }
@@ -1087,6 +1124,7 @@ public final class GameView extends View {
             case 4:droneLevel++;break;
             case 5:shieldLevel++;break;
             case 6:for(int a=0;a<4;a++)abilityCharges[a]=Math.min(3,abilityCharges[a]+1);break;
+            case 7:targetingLevel++;break;
             default:break;
         }
         shopMessage=o.title+" GEKAUFT";sound(0);
@@ -1421,8 +1459,7 @@ public final class GameView extends View {
     private void drawEnemies(Canvas c){
         for(Enemy e:enemies){
             c.save();c.translate(e.x,e.y);
-            float wobble=(float)Math.sin(e.t*4+e.phase);
-            c.rotate(wobble*3);
+            c.rotate(e.vy>0f?e.heading:0f);
             int core=e.kind==5?0xFFA4A2FF:e.kind==3?0xFFFFC080:0xFFFF839C;
             glow(c,0,17,e.radius+17,0x2A000000,0x00000000);
             if(e.kind==6){
@@ -1435,7 +1472,7 @@ public final class GameView extends View {
                     c.restore();
                 }
             }else {
-                atlas.drawEnemy(c,atlas.enemies[Math.min(5,Math.max(0,e.kind))],0,0,e.radius);
+                atlas.drawEnemy(c,atlas.enemies[Math.min(6,Math.max(0,e.kind))],0,0,e.radius);
             }
             if(e.hp<e.maxHp){
                 box(c,-17,-35,34,3,0xDD111B30);
@@ -1830,18 +1867,18 @@ public final class GameView extends View {
         for(int i=0;i<offers.size();i++){
             Offer offer=offers.get(i);
             int col=i%2,row=i/2;
-            int left=13+col*201,top=467+row*64;
+            int left=13+col*201,top=474+row*51;
             boolean available=offerAvailable(offer),affordable=stars>=offerPrice(offer);
-            panel(c,left,top,193,58,0xE91C334B,
+            panel(c,left,top,193,46,0xE91C334B,
                     available&&affordable?0xFF64B6DE:0xFF496A83,9);
-            txt(c,offer.title,left+10,top+21,12,available?WHITE:MUTED,
+            txt(c,offer.title,left+9,top+17,11,available?WHITE:MUTED,
                     Paint.Align.LEFT,true);
-            txt(c,available?"★ "+offerPrice(offer):"MAX",left+10,top+44,12,
+            txt(c,available?"★ "+offerPrice(offer):"MAX",left+10,top+36,11,
                     available&&affordable?GOLD:MUTED,Paint.Align.LEFT,false);
-            txt(c,"ANSEHEN ›",left+181,top+45,10,CYAN,Paint.Align.RIGHT,true);
+            txt(c,"ANSEHEN ›",left+181,top+36,10,CYAN,Paint.Align.RIGHT,true);
         }
         button(c,stage==3?"RUN ABSCHLIESSEN":"WERFT VERLASSEN · ROUTE",
-                34,677,352,59,true);
+                34,689,352,49,true);
         textCenter(c,"KAUF NUR NACH VORSCHAU UND BESTAETIGUNG",758,10,MUTED,false);
     }
     private void drawRoute(Canvas c){
@@ -1964,10 +2001,10 @@ public final class GameView extends View {
                     "7 SEKUNDEN VIOLETTE PLASMA-GESCHOSSE"
                 };
                 String[] trainingDescriptions={
-                    "15 SEK: SCHILD WEHRT TRAININGSSCHUESSE AB",
-                    "15 SEK: SCHNELLFEUER AM ZIEL TESTEN",
-                    "15 SEK: DREI SCHUESSE GLEICHZEITIG",
-                    "15 SEK: VIOLETTE PLASMA-TREFFER TESTEN"
+                    "5 SEK: SCHILD WEHRT TRAININGSSCHUESSE AB",
+                    "5 SEK: SCHNELLFEUER AM ZIEL TESTEN",
+                    "5 SEK: DREI SCHUESSE GLEICHZEITIG",
+                    "5 SEK: VIOLETTE PLASMA-TREFFER TESTEN"
                 };
                 description=(tutorialActive?trainingDescriptions:descriptions)
                         [Math.max(0,Math.min(3,guideId))];
@@ -2194,13 +2231,13 @@ public final class GameView extends View {
                     return true;
                 }
                 for(int i=0;i<offers.size();i++){
-                    int left=13+i%2*201,top=467+i/2*64;
-                    if(inside(px,py,left,top,193,58)){
+                    int left=13+i%2*201,top=474+i/2*51;
+                    if(inside(px,py,left,top,193,46)){
                         werftPreviewIndex=i;werftZoom=0f;shopMessage="";
                         sound(0);return true;
                     }
                 }
-                if(inside(px,py,34,677,352,59)){
+                if(inside(px,py,34,689,352,49)){
                     newlyUnlocked=-1;
                     if(stage>=3){state=WIN;save();}
                     else state=ROUTE;

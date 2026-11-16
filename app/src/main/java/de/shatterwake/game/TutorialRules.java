@@ -16,7 +16,7 @@ public final class TutorialRules {
             ACTION_PLASMA_TARGET_KILLED=7, ACTION_SECONDARY_TARGET_KILLED=8;
     public static final int GUIDE_NONE=-1, GUIDE_ABILITY=0, GUIDE_SECONDARY=1;
     public static final int ALL_ABILITIES=(1<<4)-1;
-    public static final float POWERUP_TRIAL_SECONDS=15f;
+    public static final float POWERUP_TRIAL_SECONDS=5f;
     public static boolean isPowerupStep(int step) {
         return step>=ACTIVATE_SHIELD && step<=ACTIVATE_PLASMA;
     }

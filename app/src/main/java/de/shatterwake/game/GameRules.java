@@ -4,6 +4,8 @@ package de.shatterwake.game;
 public final class GameRules {
     private GameRules() { }
     public static final float AIM_RADIANS = (float) Math.toRadians(15.0);
+    public static float aimCorrectionFraction(int level){return Math.min(5,Math.max(0,level))*.03f;}
+    public static int nextTargetingCost(int level){return 220+Math.max(0,level)*145;}
     public static final int MAX_CONTINUES = 2;
     public static final int[] FIRE_COST = {250, 350, 480, 640, 830};
     public static int continueCost(int stars) { return (Math.max(0, stars) + 1) / 2; }
@@ -88,6 +90,7 @@ public final class GameRules {
             case 4:return -38f; // drone dock
             case 5:return 0f;   // shield emitter
             case 6:return 0f;   // capacitor
+            case 7:return 0f;   // targeting
             default:return 0f;
         }
     }
@@ -99,6 +102,7 @@ public final class GameRules {
             case 4:return 18f;
             case 5:return 1f;
             case 6:return -10f;
+            case 7:return -29f;
             default:return 0f;
         }
     }
@@ -111,6 +115,7 @@ public final class GameRules {
             case 4:return "DROHNEN-DOCK";
             case 5:return "SCHILD-EMITTER";
             case 6:return "ENERGIE-KONDENSATOR";
+            case 7:return "ZIELSENSOR-ARRAY";
             default:return "SCHIFFSMODUL";
         }
     }

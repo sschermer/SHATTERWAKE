@@ -14,6 +14,10 @@ public final class RuleChecks {
         assert GameRules.canAim(0,100);
         assert !GameRules.canAim(100,100);
         assert GameRules.fireInterval(5,false)<GameRules.fireInterval(0,false);
+        assert GameRules.aimCorrectionFraction(0)==0f;
+        assert Math.abs(GameRules.aimCorrectionFraction(5)-.15f)<.0001f;
+        assert GameRules.aimCorrectionFraction(8)<=.15f;
+        assert GameRules.nextTargetingCost(0)<GameRules.nextTargetingCost(4);
 
         assert GameRules.enemyCap(1,0)==4;
         assert GameRules.enemyCap(1,35)==6;
@@ -44,7 +48,7 @@ public final class RuleChecks {
         assert !GameRules.werftPurchaseEnabled(1f,false,1000,100);
         assert !GameRules.werftPurchaseEnabled(1f,true,90,100);
         assert GameRules.werftPurchaseEnabled(1f,true,100,100);
-        for(int part=0;part<7;part++){
+        for(int part=0;part<8;part++){
             assert !GameRules.werftPartLabel(part).isEmpty();
             assert GameRules.werftFocusX(part)>-100f;
             assert GameRules.werftFocusY(part)<100f;

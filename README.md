@@ -52,3 +52,9 @@ All ships, enemies, HUD, backgrounds and sound effects are newly drawn/programma
 - [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) — gameplay spec and prototype limitations.
 
 **Commercial release is not automatically legally cleared by writing a license file.** Trademark/name clearance, a real publisher identity, signing and store/legal review remain necessary.
+
+### Flight and targeting update
+
+- Four training power-ups now run for five active seconds; shield bullets visibly come from a hostile craft.
+- Shooting is strictly straight ahead at the start. Optional five-stage Werft target correction improves it by 3% per upgrade, to 15%.
+- Enemy movement uses banked smooth attack paths. A rare golden Sternenjaeger makes a full looping circuit and awards a large star haul.

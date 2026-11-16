@@ -50,3 +50,9 @@
 - Automatic aim correction, two control schemes, missile/EMP and four on-demand abilities.
 - Star economy, post-boss shop, technology archive, score and save, two paid continues.
 - Legal inventory, licensing and privacy documents; GitHub Actions debug APK build.
+
+### Combat motion and training follow-up
+
+- Five-second active power-up trials, visible hostile craft firing in shield tutorial.
+- Remove free auto-aim; five upgrade tiers at 3% each, up to 15% correction.
+- Curved enemy attack paths, banked turning and rare golden looping star-rich fighter.
