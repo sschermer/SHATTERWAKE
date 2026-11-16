@@ -2388,7 +2388,7 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "FINAL SORTIE 0.6.5-alpha",
+                "FINAL SORTIE 0.6.6-alpha",
                 "Originaler Quellcode und 3D-Spielgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",

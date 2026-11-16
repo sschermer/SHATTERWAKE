@@ -2,6 +2,7 @@
 """FINAL SORTIE branding regression: run at source checkout or with APK path."""
 from pathlib import Path
 import hashlib
+import re
 import struct
 import sys
 import zipfile
@@ -16,14 +17,21 @@ assert 'android:label="FINAL SORTIE"' in manifest
 assert 'android:icon="@drawable/ic_launcher"' in manifest
 assert 'android:roundIcon="@drawable/ic_launcher"' in manifest
 assert view.count('"FINAL SORTIE"') >= 3
-assert 'FINAL SORTIE 0.6.5-alpha' in view
+# Derive the version from Gradle instead of pinning a historical release:
+# every shipped component must agree on its current name and update identity.
+version_match = re.search(r"versionName\s*\(System\.getenv\('SHATTERWAKE_VERSION_NAME'\)\s*\?:\s*'([^']+)'\)", gradle)
+assert version_match, "Missing current app version"
+version_name = version_match.group(1)
+assert f'FINAL SORTIE {version_name}' in view, "Licenses screen has an obsolete version"
 assert '"SHATTERWAKE"' not in view, "Old display name survives in runtime"
 assert 'getSharedPreferences("shatterwake_save_v1"' in view, "Existing progress must survive rename"
 assert "applicationId 'de.shatterwake.game'" in gradle
 assert "namespace 'de.shatterwake.game'" in gradle
-assert "?: '10'" in gradle and "?: '0.6.5-alpha'" in gradle
-assert "SHATTERWAKE_VERSION_NAME=0.6.5-alpha.$GITHUB_RUN_NUMBER" in workflow
-assert 'tag=v0.6.5-alpha' in workflow
+code_match = re.search(r"versionCode\s*\(\(System\.getenv\('SHATTERWAKE_BUILD_NUMBER'\)\s*\?:\s*'(\d+)'\)", gradle)
+assert code_match and int(code_match.group(1)) >= 11, "Update versionCode regressed"
+assert f"SHATTERWAKE_VERSION_NAME={version_name}.$GITHUB_RUN_NUMBER" in workflow
+assert f"tag=v{version_name}" in workflow
+assert f"FINAL-SORTIE-v{version_name}-signed.apk" in workflow
 assert 'expected="12fc96a90b8ca79d7e01f8e1a420f97e872ec71dc32ebe2b10ba59919776fc06"' in workflow
 
 icon = root / "app/src/main/res/drawable-nodpi/ic_launcher.webp"

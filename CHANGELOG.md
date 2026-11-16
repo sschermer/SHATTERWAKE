@@ -1,5 +1,7 @@
 ## 0.6.6-alpha — Sofortreaktion auf das erste gültige Sprach-Zwischenergebnis (16.11.2026)
 
+- CI-Korrektur: dynamischer Versionsabgleich zwischen Gradle, Lizenzbildschirm und GitHub-Release statt fest verdrahteter älterer Versionsnummern; 0.6.6-Versionsanzeige im Spiel berichtigt.
+
 - **Methode B:** Die erste grammatisch gültige Teilerkennung der lokalen Android-Spracherkennung aktiviert die zugehörigen Aktionen unmittelbar. Eine zweite gleichlautende Teilerkennung ist nicht mehr erforderlich.
 - Das bestehende Aufnahmefenster von maximal **3,3 Sekunden**, die Geste mit dem zweiten Finger und das unveränderte Verhalten beim Loslassen bleiben erhalten.
 - Mehrere Teilergebnisse und das endgültige Ergebnis können jede Aktion innerhalb einer Äußerung höchstens einmal auslösen. Neue Aktionen werden unabhängig ergänzt; nicht erkannte oder negierte Formulierungen werden weiterhin durch die bestehende Grammatik verworfen.
