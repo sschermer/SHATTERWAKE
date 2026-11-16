@@ -66,9 +66,54 @@ public final class GameRules {
     // The transition is deterministic: stop spawns, clear the field,
     // sound/display a full 3-second warning, then fly in from above.
     public static final int BOSS_NORMAL=0, BOSS_CLEARING=1,
-            BOSS_WARNING=2, BOSS_ENTERING=3, BOSS_COMBAT=4;
+            BOSS_WARNING=2, BOSS_ENTERING=3, BOSS_COMBAT=4,
+            BOSS_SALVAGE=5, BOSS_DOCKING=6;
     public static final float BOSS_WARNING_SECONDS=3f;
     public static final float BOSS_ENTRY_SECONDS=3.7f;
+    public static final float BOSS_EXPLOSION_SECONDS=2.8f;
+    public static final float DOCKING_SECONDS=4.1f;
+    public static boolean canEnterShipyard(float elapsed,int drops,boolean guideOpen){
+        return elapsed>=BOSS_EXPLOSION_SECONDS && drops==0 && !guideOpen;
+    }
+    public static boolean werftPurchaseEnabled(float zoom,boolean available,
+                                                int stars,int price){
+        return zoom>=.995f && available && stars>=price;
+    }
+    public static float werftFocusX(int id){
+        switch(id){
+            case 0:return -13f; // fast gun
+            case 1:return 13f;  // enhanced gun
+            case 2:return 0f;   // hull repair
+            case 3:return 0f;   // magnetic field
+            case 4:return -38f; // drone dock
+            case 5:return 0f;   // shield emitter
+            case 6:return 0f;   // capacitor
+            default:return 0f;
+        }
+    }
+    public static float werftFocusY(int id){
+        switch(id){
+            case 0:case 1:return -27f;
+            case 2:return 8f;
+            case 3:return -1f;
+            case 4:return 18f;
+            case 5:return 1f;
+            case 6:return -10f;
+            default:return 0f;
+        }
+    }
+    public static String werftPartLabel(int id){
+        switch(id){
+            case 0:return "FEUERKONTROLLE";
+            case 1:return "HAUPTBLASTER";
+            case 2:return "RUMPF-PANZERUNG";
+            case 3:return "MAGNETFELD";
+            case 4:return "DROHNEN-DOCK";
+            case 5:return "SCHILD-EMITTER";
+            case 6:return "ENERGIE-KONDENSATOR";
+            default:return "SCHIFFSMODUL";
+        }
+    }
     public static int nextBossPhase(int phase,boolean timerExpired,boolean fieldEmpty) {
         if(phase==BOSS_NORMAL && timerExpired) return BOSS_CLEARING;
         if(phase==BOSS_CLEARING && fieldEmpty) return BOSS_WARNING;

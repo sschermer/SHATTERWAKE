@@ -75,6 +75,11 @@ public final class GameView extends View {
     private boolean bossActive=false, downWasButton=false;
     private int bossSequence=GameRules.BOSS_NORMAL;
     private float bossSequenceTimer=0f;
+    private float salvageElapsed=0f, bossExplosionX=210f, bossExplosionY=255f;
+    private float dockingElapsed=0f, dockingStartX=210f, dockingStartY=565f;
+    private int salvageBurstWave=0;
+    private int werftPreviewIndex=-1;
+    private float werftZoom=0f;
     private int touchPointer=-1;
     private float touchOffsetX=0, touchOffsetY=0;
     private Boss boss;
@@ -161,6 +166,10 @@ public final class GameView extends View {
     public boolean handleBack(){
         if(state==PLAY){state=PAUSE;return true;}
         if(state==PAUSE){state=PLAY;return true;}
+        if(state==SHOP){
+            if(werftPreviewIndex>=0){werftPreviewIndex=-1;werftZoom=0f;}
+            return true;
+        }
         if(state==MENU)return false;
         state=MENU;return true;
     }
@@ -227,6 +236,7 @@ public final class GameView extends View {
         stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
         fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=0;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
+        newlyUnlocked=-1;werftPreviewIndex=-1;werftZoom=0f;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
         for(int i=0;i<abilityCharges.length;i++)abilityCharges[i]=1;
         startWorld(0);
@@ -369,6 +379,8 @@ public final class GameView extends View {
         world=next;stage=GameRules.worldTier(world);
         enemies.clear();shots.clear();pickups.clear();particles.clear();
         boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;bossSequenceTimer=0f;
+        salvageElapsed=0f;salvageBurstWave=0;dockingElapsed=0f;
+        werftPreviewIndex=-1;werftZoom=0f;
         stageTime=0;spawnTimer=2.5f;starTimer=6.2f;
         shootTimer=0;secondaryRegen=0;droneShootTimer=0;
         x=targetX=W/2;y=targetY=573;invulnerable=4.0f;
@@ -413,7 +425,7 @@ public final class GameView extends View {
         sound(4);vibrate(80);
     }
     private void spawnPickup(float xx,float yy,int kind,int val){
-        if(pickups.size()>55)return;
+        if(pickups.size()>=160)return;
         pickups.add(new Pickup(xx,yy,kind,val));
     }
     private void starBurst(float xx,float yy,int total,int pieces){
@@ -648,6 +660,10 @@ public final class GameView extends View {
         }
         if(flashTime>0)flashTime-=dt;
         if(bannerTime>0)bannerTime-=dt;
+        if(state==SHOP){
+            if(werftPreviewIndex>=0)werftZoom=Math.min(1f,werftZoom+dt/0.85f);
+            return;
+        }
         if(state!=PLAY)return;
         // A discovered power-up pauses the entire combat simulation; only the
         // highlighted real HUD control (or explicit skip) may resume it.
@@ -655,6 +671,12 @@ public final class GameView extends View {
         if(tutorialActive) {
             if(tutorialStep!=TutorialRules.COMPLETE)updateTutorial(dt);
             return;
+        }
+        if(bossSequence==GameRules.BOSS_SALVAGE){
+            updateBossSalvage(dt);return;
+        }
+        if(bossSequence==GameRules.BOSS_DOCKING){
+            updateDocking(dt);return;
         }
         stageTime+=dt;
         x+=(targetX-x)*Math.min(1,dt*16);
@@ -902,6 +924,14 @@ public final class GameView extends View {
                     stars+=q.value;addScore(q.value);
                     if(tutorialActive && tutorialStep==TutorialRules.COLLECT_STAR)
                         tutorialAction(TutorialRules.ACTION_STAR_COLLECTED);
+                }else if(q.kind==6){
+                    // The boss technology is granted only on pickup.
+                    int technology=q.value;
+                    if(technology>=0&&technology<5 && (techMask&(1<<technology))==0){
+                        techMask|=1<<technology;newlyUnlocked=technology;
+                        banner="TECHNIK GEBORGEN · "+BOSS_NAMES[technology];
+                        bannerTime=2.4f;sound(2);vibrate(60);save();
+                    }
                 }else if(q.kind==5){
                     int randomSlot=random.nextInt(4);
                     abilityCharges[randomSlot]=Math.min(3,abilityCharges[randomSlot]+1);
@@ -922,21 +952,90 @@ public final class GameView extends View {
             if(q.y>FIELD_BOTTOM+38)pickups.remove(i);
         }
     }
+    /** Final component triggers a chain reaction; rewards remain in the world. */
     private void finishBoss(){
         if(state!=PLAY||boss==null||bossSequence!=GameRules.BOSS_COMBAT)return;
         addScore(1000*stage);
+        float xx=0f,yy=0f;
+        for(Node node:boss.nodes){xx+=node.x;yy+=node.y;}
+        bossExplosionX=clamp(xx/boss.nodes.size(),64f,W-64f);
+        bossExplosionY=clamp(yy/boss.nodes.size(),155f,395f);
+        for(Node node:boss.nodes){
+            for(int i=0;i<13;i++){
+                float angle=rnd(0f,6.283f),speed=rnd(65f,270f);
+                float life=rnd(.75f,2.15f);
+                if(particles.size()<470)particles.add(new Particle(node.x,node.y,
+                        (float)Math.cos(angle)*speed,(float)Math.sin(angle)*speed,
+                        life,rnd(2.8f,7.5f),i%4==0?WHITE:node.type==3?GOLD:RED));
+            }
+        }
+        for(int i=0;i<115;i++){
+            float angle=rnd(0f,6.283f),speed=rnd(90f,425f);
+            if(particles.size()<470)particles.add(new Particle(bossExplosionX,bossExplosionY,
+                    (float)Math.cos(angle)*speed,(float)Math.sin(angle)*speed,
+                    rnd(.7f,2.5f),rnd(3f,9f),i%5==0?WHITE:i%2==0?GOLD:RED));
+        }
+        // Exact boss reward distributed over individually catchable stars.
         int bonus=GameRules.bossReward(world);
-        stars+=bonus;
-        for(Node n:boss.nodes)if(n.hp>0)explode(n.x,n.y,GOLD,12);
-        explode(210,245,CYAN,60);
-        newlyUnlocked=(techMask&(1<<world))==0?world:-1;
-        techMask|=1<<world;save();
-        boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;
-        enemies.clear();shots.clear();pickups.clear();
-        buildShop();state=SHOP;
-        if(!shopIntroSeen)shopIntroShowing=true;
-        shopMessage="BOSS BESIEGT · +"+bonus+" STERNE";
-        sound(2);vibrate(100);
+        for(int i=0;i<12;i++){
+            Pickup star=new Pickup(clamp(bossExplosionX+rnd(-125f,125f),27f,W-27f),
+                    clamp(bossExplosionY+rnd(-100f,50f),125f,400f),0,
+                    bonus/12+(i<bonus%12?1:0));
+            star.vy=rnd(50f,85f);pickups.add(star);
+        }
+        for(int i=0;i<2+Math.min(stage,3);i++){
+            Pickup ability=new Pickup(clamp(bossExplosionX+rnd(-110f,110f),25f,W-25f),
+                    clamp(bossExplosionY+rnd(-98f,55f),130f,415f),1+(i+world)%4,1);
+            ability.vy=rnd(49f,77f);pickups.add(ability);
+        }
+        if((techMask&(1<<world))==0){
+            Pickup chip=new Pickup(clamp(bossExplosionX+rnd(-30f,30f),30f,W-30f),
+                    clamp(bossExplosionY-90f,125f,360f),6,world);
+            chip.vy=43f;pickups.add(chip);
+        }
+        boss=null;bossActive=false;bossSequence=GameRules.BOSS_SALVAGE;
+        salvageElapsed=0f;salvageBurstWave=0;
+        enemies.clear();shots.clear(); // Do NOT clear module drops or boss loot.
+        touchPointer=-1;
+        invulnerable=Math.max(invulnerable,3f);
+        banner="BOSS VERNICHTET · BEUTE BERGEN";bannerTime=2.5f;
+        sound(2);sound(1);vibrate(200);
+    }
+    private void updateBossSalvage(float dt){
+        salvageElapsed+=dt;
+        x+=(targetX-x)*Math.min(1f,dt*16f);
+        y+=(targetY-y)*Math.min(1f,dt*16f);
+        x=clamp(x,24f,W-24f);y=clamp(y,120f,FIELD_BOTTOM-22f);
+        while(salvageBurstWave<3 && salvageElapsed>=(salvageBurstWave+1)*.43f){
+            explode(clamp(bossExplosionX+rnd(-79f,79f),28f,W-28f),
+                    clamp(bossExplosionY+rnd(-65f,65f),115f,FIELD_BOTTOM-60f),
+                    salvageBurstWave==1?GOLD:RED,42);
+            salvageBurstWave++;
+        }
+        updatePickups(dt);
+        if(GameRules.canEnterShipyard(salvageElapsed,pickups.size(),
+                guideKind!=TutorialRules.GUIDE_NONE)){
+            bossSequence=GameRules.BOSS_DOCKING;dockingElapsed=0f;
+            dockingStartX=x;dockingStartY=y;
+            touchPointer=-1;targetX=x;targetY=y;
+            banner="BERGUNG ABGESCHLOSSEN · MUTTERSCHIFF IM ANFLUG";
+            bannerTime=2f;sound(2);
+        }
+    }
+    private void updateDocking(float dt){
+        dockingElapsed=Math.min(GameRules.DOCKING_SECONDS,dockingElapsed+dt);
+        float t=clamp((dockingElapsed-1.15f)/(GameRules.DOCKING_SECONDS-1.15f),0f,1f);
+        float ease=t*t*(3f-2f*t);
+        x=dockingStartX+(210f-dockingStartX)*ease;
+        y=dockingStartY+(230f-dockingStartY)*ease;
+        targetX=x;targetY=y;
+        if(dockingElapsed>=GameRules.DOCKING_SECONDS){
+            bossSequence=GameRules.BOSS_NORMAL;
+            buildShop();werftPreviewIndex=-1;werftZoom=0f;
+            shopMessage="BERGUNG ABGESCHLOSSEN";
+            if(!shopIntroSeen)shopIntroShowing=true;
+            state=SHOP;
+        }
     }
     private void buildShop(){
         offers.clear();
@@ -1002,8 +1101,17 @@ public final class GameView extends View {
         c.save();c.scale(getWidth()/W,getHeight()/H);
         drawBackground(c);
         if(state==PLAY||state==PAUSE){
-            drawWorld(c);drawEnemies(c);drawBoss(c);drawShots(c);drawPickups(c);drawParticles(c);
-            drawPlayer(c);drawHud(c);
+            drawWorld(c);drawMothership(c);
+            drawEnemies(c);drawBoss(c);drawShots(c);drawPickups(c);drawParticles(c);
+            drawBossExplosion(c);
+            if(bossSequence==GameRules.BOSS_DOCKING){
+                float progress=clamp((dockingElapsed-1.15f)
+                        /(GameRules.DOCKING_SECONDS-1.15f),0f,1f);
+                float scale=1f-.83f*progress*progress*(3f-2f*progress);
+                c.save();c.translate(x,y);c.scale(scale,scale);
+                c.translate(-x,-y);drawPlayer(c);c.restore();
+            }else drawPlayer(c);
+            drawHud(c);
             drawBossTransition(c);
             if(tutorialActive || guideKind!=TutorialRules.GUIDE_NONE)drawTutorialOverlay(c);
             if(state==PAUSE)drawPause(c);
@@ -1405,18 +1513,29 @@ public final class GameView extends View {
     private void drawPickups(Canvas c){
         for(Pickup q:pickups){
             float pulse=(float)Math.sin(q.t*9)*1.8f;
-            int col=q.kind==0?GOLD:q.kind==1?CYAN:q.kind==2?GREEN:
-                    q.kind==3?0xFFFFA676:q.kind==4?0xFFBE91FF:0xFFB8F6FB;
-            glow(c,q.x,q.y,16+pulse,0x5572CCF9,0x0072CCF9);
+            int col=q.kind==0?GOLD:q.kind==1?CYAN:q.kind==2?0xFFFFB660:
+                    q.kind==3?GREEN:q.kind==4?0xFFBE91FF:
+                    q.kind==6?0xFF8CF0FF:0xFFB8F6FB;
+            glow(c,q.x,q.y,q.kind==6?29+pulse:18+pulse,
+                    (col&0xFFFFFF)|0x77000000,col&0xFFFFFF);
             if(q.kind==0){
                 float[] vertices=new float[20];
                 for(int k=0;k<10;k++){
                     float a=(float)(-Math.PI/2+k*Math.PI/5);
                     float r=k%2==0?10:4.5f;
-                    vertices[2*k]=q.x+(float)Math.cos(a)*r;
-                    vertices[2*k+1]=q.y+(float)Math.sin(a)*r;
+                    vertices[k*2]=q.x+(float)Math.cos(a)*r;
+                    vertices[k*2+1]=q.y+(float)Math.sin(a)*r;
                 }
-                polygon(c,vertices,col);
+                polygon(c,vertices,col);circle(c,q.x,q.y,2f,WHITE);
+            }else if(q.kind==6){
+                c.save();c.translate(q.x,q.y);c.rotate(q.t*65f);
+                polygon(c,new float[]{-15,-11,0,-18,15,-11,15,11,0,18,-15,11},CYAN);
+                polygon(c,new float[]{-10,-7,0,-12,10,-7,10,7,0,12,-10,7},0xFF244779);
+                circle(c,0,0,6,GOLD);circle(c,0,0,3,WHITE);
+                c.restore();textCenterAt(c,"TECH",q.x,q.y-23,12,WHITE);
+            }else if(q.kind>=1&&q.kind<=4){
+                circle(c,q.x,q.y,12f,0xD9132943);
+                drawPowerupIcon(c,q.kind-1,q.x,q.y,10f);
             }else{
                 circle(c,q.x,q.y,8,col);circle(c,q.x,q.y,3,WHITE);
             }
@@ -1429,8 +1548,68 @@ public final class GameView extends View {
                     (q.color&0x00FFFFFF)|(alpha<<24));
         }
     }
+    private void drawMothership(Canvas c){
+        if(bossSequence!=GameRules.BOSS_DOCKING)return;
+        float arrival=clamp(dockingElapsed/1.45f,0f,1f);
+        float smooth=arrival*arrival*(3f-2f*arrival);
+        c.save();c.translate(210f,-175f+285f*smooth);
+        glow(c,0,20,191,0x7760B6E5,0x00173467);
+        shadedPolygon(c,new float[]{-193,10,-158,-47,-72,-93,72,-93,158,-47,
+                193,10,164,88,68,120,-68,120,-164,88},
+                0xFF7893B8,0xFF182B48,0xFF9CE5FA);
+        shadedPolygon(c,new float[]{-141,-17,-78,-80,78,-80,141,-17,
+                112,70,-112,70},0xFF2E536F,0xFF0C182E,0xFF648FAF);
+        line(c,-159,35,-62,58,0xFF79DBFF,5f);
+        line(c,159,35,62,58,0xFF79DBFF,5f);
+        for(int side=-1;side<=1;side+=2){
+            glow(c,side*146,67,31,0xA84CE4FF,0x004CE4FF);
+            circle(c,side*146,67,13,CYAN);
+            line(c,side*110,-10,side*163,16,GOLD,3);
+        }
+        // Glowing open hangar under the mothership belly.
+        glow(c,0,84,79,0x9957DFFE,0x0033BCE3);
+        panel(c,-62,57,124,84,0xEE061223,0xFF60D3F3,17);
+        for(int i=0;i<5;i++)line(c,-48+i*24,73,-48+i*24,126,0x444AD7F3,2);
+        line(c,-65,57,65,57,0xFFE1FCFF,5);
+        textCenterAt(c,"HANGAR 01",0,48,15,GOLD);
+        c.restore();
+    }
+    private void drawBossExplosion(Canvas c){
+        if(bossSequence!=GameRules.BOSS_SALVAGE
+                ||salvageElapsed>=GameRules.BOSS_EXPLOSION_SECONDS)return;
+        float t=salvageElapsed;
+        c.save();c.clipRect(0,95,W,FIELD_BOTTOM);
+        float fade=clamp(1f-t/2.4f,0f,1f);
+        glow(c,bossExplosionX,bossExplosionY,55f+125f*Math.min(1f,t*1.7f),
+                ((int)(175*fade)<<24)|0x00FFCE72,0x00FF902A);
+        for(int wave=0;wave<4;wave++){
+            float age=t-wave*.28f;
+            if(age<0f||age>1.65f)continue;
+            float opacity=1f-age/1.65f;
+            float radius=13f+age*(wave==0?158f:120f);
+            int alpha=(int)(220*opacity);
+            p.setShader(null);p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(3f+6f*opacity);
+            p.setColor((alpha<<24)|(wave%2==0?0x00FFE7B0:0x00FF9163));
+            c.drawCircle(bossExplosionX,bossExplosionY,radius,p);
+            p.setStyle(Paint.Style.FILL);
+        }
+        if(t<.19f)box(c,0,95,W,FIELD_BOTTOM-95f,
+                ((int)(145*(1f-t/.19f))<<24)|0x00FFE9BE);
+        c.restore();
+    }
     private void drawBossTransition(Canvas c){
-        if(bossSequence==GameRules.BOSS_WARNING){
+        if(bossSequence==GameRules.BOSS_SALVAGE){
+            panel(c,37,153,346,53,0xE9142538,0xFFFFCD77,9);
+            textCenter(c,"BOSS ZERSTOERT · BEUTE BERGEN",173,16,GOLD,true);
+            textCenter(c,pickups.size()+" TEILE · ZEIT ZUM EINSAMMELN",193,11,WHITE,true);
+        }else if(bossSequence==GameRules.BOSS_DOCKING){
+            panel(c,25,466,370,88,0xE912273D,0xFF7AE0FF,12);
+            textCenter(c,"MUTTERSCHIFF · ANDOCKSEQUENZ",496,20,WHITE,true);
+            box(c,52,519,316,9,0xFF263F59);
+            box(c,52,519,316*clamp(dockingElapsed/GameRules.DOCKING_SECONDS,
+                    0f,1f),9,CYAN);
+        }else if(bossSequence==GameRules.BOSS_WARNING){
             boolean blink=(int)(idleTime*4)%2==0;
             box(c,0,0,W,FIELD_BOTTOM,blink?0x22FF284C:0x0A89172D);
             panel(c,15,250,390,141,0xEF240C1F,blink?0xFFFF506E:0xFF8D253D,12);
@@ -1544,37 +1723,126 @@ public final class GameView extends View {
         box(c,0,0,W,H,0xC7091322);
         panel(c,23,207,374,338,0xF70C253B,0xFF7BDEEB,15);
         textCenter(c,"DIE STERNENWERFT",264,28,GOLD,true);
-        textCenter(c,"DAS IST DEIN SHOP NACH JEDEM BOSS",305,13,WHITE,true);
+        textCenter(c,"DEIN SCHIFF LIEGT IM MUTTERSCHIFF",305,13,WHITE,true);
         textCenter(c,"STERNE SIND DIE WAEHRUNG",341,17,GOLD,true);
-        textCenter(c,"UPGRADES GELTEN BIS ZUM GAME OVER",376,13,MUTED,false);
-        textCenter(c,"PREISE STEIGEN MIT JEDER AUSBAUSTUFE",406,12,MUTED,false);
-        textCenter(c,"TIPP: ZUERST WAFFEN ODER REPARATUR",437,12,WHITE,false);
+        textCenter(c,"UPGRADES ZUERST ANSEHEN",376,13,MUTED,false);
+        textCenter(c,"ZOOM ZEIGT DEN BETROFFENEN SCHIFFSTEIL",406,12,MUTED,false);
+        textCenter(c,"ERST DANACH KAUF BESTAETIGEN",437,12,WHITE,false);
         button(c,"VERSTANDEN",89,467,242,58,true);
     }
+    private void drawWerftShip(Canvas c,int highlightedId,float progress){
+        // Camera moves toward the affected subsystem instead of simply enlarging
+        // the entire vessel. No purchases happen during this animation.
+        float ease=progress*progress*(3f-2f*progress);
+        float focusX=GameRules.werftFocusX(highlightedId);
+        float focusY=GameRules.werftFocusY(highlightedId);
+        float scale=3.15f+3.65f*ease;
+        float centerX=210f-focusX*scale*ease;
+        float centerY=314f-focusY*scale*ease;
+        c.save();c.clipRect(17,115,403,484);
+        glow(c,210f,308f,164f,0x51317A9E,0x00317A9E);
+        for(int i=0;i<8;i++){
+            float gx=58+i*44f;
+            line(c,gx,120,gx,476,0x143CA6C9,1f);
+        }
+        line(c,24,471,396,471,0x776BD3F9,3f);
+        c.translate(centerX,centerY);c.scale(scale,scale);
+        if(shieldLevel>0){
+            p.setShader(null);p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(1.4f);p.setColor(0xCC70E9FC);
+            c.drawOval(-40,-45,40,39,p);p.setStyle(Paint.Style.FILL);
+        }
+        if(magnetLevel>0){
+            p.setShader(null);p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(.8f);p.setColor(0xAA4BD1FF);
+            c.drawOval(-31,-36,31,29,p);p.setStyle(Paint.Style.FILL);
+        }
+        atlas.drawPlayer(c,0,-2);
+        if(fireLevel>0 || damageLevel>0){
+            for(int side=-1;side<=1;side+=2){
+                glow(c,side*13f,-25f,9f,fireLevel>0?0x99FF9E2C:0x99FFE185,0x00FF9E2C);
+                line(c,side*13f,-25f,side*13f,-36f,
+                        fireLevel>0?0xFFFFA54F:GOLD,2.2f);
+            }
+        }
+        if(hp<maxHp)line(c,-21f,7f,21f,7f,RED,2.5f);
+        if(hp==maxHp)line(c,-19f,7f,19f,7f,GREEN,2.5f);
+        if(droneLevel>0){
+            int count=Math.min(droneLevel,3);
+            for(int i=0;i<count;i++){
+                float a=idleTime*1.9f+i*6.283f/count;
+                float dx=(float)Math.cos(a)*43f,dy=(float)Math.sin(a)*32f;
+                glow(c,dx,dy,12f,0x8858C8FF,0x0058C8FF);
+                shadedPolygon(c,new float[]{dx,dy-7f,dx-8f,dy+5f,
+                        dx,dy+2f,dx+8f,dy+5f},WHITE,0xFF255675,CYAN);
+            }
+        }
+        if(highlightedId>=0){
+            int accent=highlightedId==4?GREEN:highlightedId==5?CYAN:
+                    highlightedId==2?0xFF7CEC9A:GOLD;
+            float pulse=1f+(float)Math.sin(idleTime*7f)*.08f;
+            glow(c,focusX,focusY,15f*pulse,0xBBFFDF75,0x00FFDF75);
+            p.setShader(null);p.setStyle(Paint.Style.STROKE);
+            p.setColor(accent);p.setStrokeWidth(1.3f);
+            c.drawCircle(focusX,focusY,10.5f*pulse,p);
+            p.setStyle(Paint.Style.FILL);
+        }
+        c.restore();
+        // Focus marker is anchored in the display, not in the zoomed vessel.
+        if(highlightedId>=0 && ease>.65f){
+            float alpha=clamp((ease-.65f)*2.85f,0f,1f);
+            txt(c,"BAUTEIL / "+GameRules.werftPartLabel(highlightedId),210,462,13,
+                    ((int)(255*alpha)<<24)|0x00FFD184,Paint.Align.CENTER,true);
+        }
+    }
     private void drawShop(Canvas c){
-        screenHeader(c,"STERNENWERFT","KAUF BLEIBT BIS ZUM GAME OVER AKTIV");
-        txt(c,"★ "+stars,29,157,25,GOLD,Paint.Align.LEFT,true);
-        txt(c,"ABSCHNITT "+stage+" BEZWUNGEN",393,155,11,WHITE,Paint.Align.RIGHT,true);
-        if(newlyUnlocked>=0){
-            panel(c,22,167,376,31,0xFF214934,0xFF5ECFA0,6);
-            textCenter(c,"NEUE TECHNOLOGIE: "+BOSS_NAMES[newlyUnlocked],188,12,GREEN,true);
-        }else{
-            txt(c,shopMessage,210,188,11,GREEN,Paint.Align.CENTER,true);
+        screenHeader(c,werftPreviewIndex<0?"STERNENWERFT":"WERFT · DETAILANSICHT",
+                werftPreviewIndex<0?"UPGRADE ANTIPPEN · BAUTEIL ANSEHEN":
+                        "ZOOM AUF DAS BETROFFENE SCHIFFSTEIL");
+        txt(c,"★ "+stars,26,144,23,GOLD,Paint.Align.LEFT,true);
+        txt(c,"SEKTOR "+stage+" ABSOLVIERT",394,142,11,WHITE,Paint.Align.RIGHT,true);
+        if(werftPreviewIndex>=0){
+            if(werftPreviewIndex>=offers.size())werftPreviewIndex=-1;
+            if(werftPreviewIndex>=0){
+                Offer chosen=offers.get(werftPreviewIndex);
+                int price=offerPrice(chosen.id>=0?chosen:offers.get(0));
+                boolean available=offerAvailable(chosen),affordable=stars>=price;
+                drawWerftShip(c,chosen.id,werftZoom);
+                panel(c,17,499,386,225,0xF5122A43,0xFF7DCBE8,13);
+                textCenter(c,chosen.title,531,22,WHITE,true);
+                textCenter(c,chosen.description,559,13,MUTED,false);
+                textCenter(c,"BAUTEIL: "+GameRules.werftPartLabel(chosen.id),
+                        585,13,GOLD,true);
+                textCenter(c,available?"KOSTEN: ★ "+price:"MAXIMAL AUSGEBAUT",
+                        612,15,available?GOLD:MUTED,true);
+                button(c,"ZURUECK",28,647,170,62,false);
+                button(c,!available?"MAX":!affordable?"STERNE FEHLEN":
+                        werftZoom<.995f?"BITTE ANSEHEN":"JETZT KAUFEN",
+                        222,647,170,62,available&&affordable&&werftZoom>=.995f);
+                textCenter(c,shopMessage,750,11,GREEN,false);
+                return;
+            }
         }
+        drawWerftShip(c,-1,0f);
+        if(newlyUnlocked>=0)textCenter(c,"TECHNOLOGIE GEBORGEN: "+
+                BOSS_NAMES[newlyUnlocked],447,12,GREEN,true);
+        else textCenter(c,shopMessage,447,12,GREEN,true);
         for(int i=0;i<offers.size();i++){
-            Offer o=offers.get(i);int yy=205+i*62;
-            int price=offerPrice(o);
-            boolean avail=offerAvailable(o),afford=stars>=price;
-            panel(c,20,yy,380,55,0xE71C3047,
-                    avail&&afford?0xFF5BA3BF:0xFF39566B,9);
-            txt(c,o.title,34,yy+21,16,avail?WHITE:MUTED,Paint.Align.LEFT,true);
-            txt(c,o.description,34,yy+40,11,MUTED,Paint.Align.LEFT,false);
-            txt(c,avail?"★ "+price:"MAX",390,yy+31,16,avail&&afford?GOLD:MUTED,
-                    Paint.Align.RIGHT,true);
+            Offer offer=offers.get(i);
+            int col=i%2,row=i/2;
+            int left=13+col*201,top=467+row*64;
+            boolean available=offerAvailable(offer),affordable=stars>=offerPrice(offer);
+            panel(c,left,top,193,58,0xE91C334B,
+                    available&&affordable?0xFF64B6DE:0xFF496A83,9);
+            txt(c,offer.title,left+10,top+21,12,available?WHITE:MUTED,
+                    Paint.Align.LEFT,true);
+            txt(c,available?"★ "+offerPrice(offer):"MAX",left+10,top+44,12,
+                    available&&affordable?GOLD:MUTED,Paint.Align.LEFT,false);
+            txt(c,"ANSEHEN ›",left+181,top+45,10,CYAN,Paint.Align.RIGHT,true);
         }
-        txt(c,shopMessage,210,638,11,GREEN,Paint.Align.CENTER,false);
-        button(c,stage==3?"RUN ABSCHLIESSEN":"WEITER ZUR ROUTENWAHL",35,673,350,62,true);
-        textCenter(c,"Keine Pflichtkäufe · übrige Sterne bleiben erhalten",762,10,MUTED,false);
+        button(c,stage==3?"RUN ABSCHLIESSEN":"WERFT VERLASSEN · ROUTE",
+                34,677,352,59,true);
+        textCenter(c,"KAUF NUR NACH VORSCHAU UND BESTAETIGUNG",758,10,MUTED,false);
     }
     private void drawRoute(Canvas c){
         screenHeader(c,"SEKTOR-NAVIGATION","DEIN WEG VERÄNDERT WELTEN UND BOSSE");
@@ -1862,6 +2130,7 @@ public final class GameView extends View {
                 if(inside(px,py,51,663,318,47)){startTutorial();return true;}
                 return true;
             case PLAY:
+                if(bossSequence==GameRules.BOSS_DOCKING)return true;
                 if(tutorialActive && inside(px,py,297,18,109,39)){finishTutorial();return true;}
                 if(tutorialActive && tutorialCheckpoint){
                     if(inside(px,py,58,419,304,57))continueTutorial();
@@ -1912,10 +2181,26 @@ public final class GameView extends View {
                     }
                     return true;
                 }
-                for(int i=0;i<offers.size();i++)if(inside(px,py,20,205+i*62,380,55)){
-                    buyOffer(i);return true;
+                if(werftPreviewIndex>=0){
+                    if(inside(px,py,28,647,170,62)){
+                        werftPreviewIndex=-1;werftZoom=0f;return true;
+                    }
+                    if(inside(px,py,222,647,170,62)
+                            &&GameRules.werftPurchaseEnabled(werftZoom,
+                                    offerAvailable(offers.get(werftPreviewIndex)),
+                                    stars,offerPrice(offers.get(werftPreviewIndex)))){
+                        buyOffer(werftPreviewIndex);
+                    }
+                    return true;
                 }
-                if(inside(px,py,35,673,350,62)){
+                for(int i=0;i<offers.size();i++){
+                    int left=13+i%2*201,top=467+i/2*64;
+                    if(inside(px,py,left,top,193,58)){
+                        werftPreviewIndex=i;werftZoom=0f;shopMessage="";
+                        sound(0);return true;
+                    }
+                }
+                if(inside(px,py,34,677,352,59)){
                     newlyUnlocked=-1;
                     if(stage>=3){state=WIN;save();}
                     else state=ROUTE;

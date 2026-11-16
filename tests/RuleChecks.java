@@ -34,6 +34,23 @@ public final class RuleChecks {
 
         assert GameRules.BOSS_WARNING_SECONDS==3f;
         assert GameRules.BOSS_ENTRY_SECONDS>=3f;
+        assert GameRules.BOSS_EXPLOSION_SECONDS>2f;
+        assert GameRules.DOCKING_SECONDS>3f;
+        assert !GameRules.canEnterShipyard(0f,0,false);
+        assert !GameRules.canEnterShipyard(100f,1,false);
+        assert !GameRules.canEnterShipyard(100f,0,true);
+        assert GameRules.canEnterShipyard(GameRules.BOSS_EXPLOSION_SECONDS,0,false);
+        assert !GameRules.werftPurchaseEnabled(.75f,true,1000,100);
+        assert !GameRules.werftPurchaseEnabled(1f,false,1000,100);
+        assert !GameRules.werftPurchaseEnabled(1f,true,90,100);
+        assert GameRules.werftPurchaseEnabled(1f,true,100,100);
+        for(int part=0;part<7;part++){
+            assert !GameRules.werftPartLabel(part).isEmpty();
+            assert GameRules.werftFocusX(part)>-100f;
+            assert GameRules.werftFocusY(part)<100f;
+        }
+        assert GameRules.nextBossPhase(GameRules.BOSS_SALVAGE,true,true)
+                ==GameRules.BOSS_SALVAGE;
         int s=GameRules.BOSS_NORMAL;
         s=GameRules.nextBossPhase(s,true,false);
         assert s==GameRules.BOSS_CLEARING;

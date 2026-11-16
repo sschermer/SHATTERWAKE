@@ -1,5 +1,7 @@
 ## 0.5.0-alpha — understandable training and high-visibility plasma
 
+- Boss final component now triggers a full-screen scale multi-stage detonation with shockwaves, secondary blasts, module wreckage and tangible collectible bonus stars, ability drops and technology chip. Do not enter the Werft while any loot remains in reach; chip technology must be physically collected to unlock.
+- After salvage, a mothership approaches and the player ship flies into its illuminated hangar. Die Sternenwerft shows a large modular fighter, a 2-column offer overview and an animated subsystem-specific zoom. Require a separate, post-animation explicit purchase; Back exits preview without spending.
 - Replace abruptly finishing five-step onboarding with nine guided tasks and a deliberate WEITER checkpoint after every success.
 - Give each of the four power-ups 15 seconds of real, counted, playable training before offering the next lesson; include a timer/progress bar, durable firing targets and harmless shield-test shots. Keep real-run durations unchanged.
 - Add hands-on rapid-fire, triple-shot and plasma lessons. Plasma must destroy a visible stationary training enemy; missile lessons likewise end only after a practice kill.
