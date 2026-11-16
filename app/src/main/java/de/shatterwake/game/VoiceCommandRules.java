@@ -49,7 +49,9 @@ final class VoiceCommandRules {
                 ||word.equals("aktiviere")||word.equals("aktivier")
                 ||word.equals("starte")||word.equals("start")
                 ||word.equals("schalte")||word.equals("ein")
-                ||word.equals("an")||word.equals("los");
+                ||word.equals("an")||word.equals("los")
+                ||word.equals("plus")||word.equals("und")
+                ||word.equals("mit");
     }
     private static int directAction(String word){
         switch(word){
