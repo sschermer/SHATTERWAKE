@@ -1,0 +1,48 @@
+name: SHATTERWAKE - separate shipyard hangar background
+
+on:
+  push:
+    branches: [art/hero-fighter-v1]
+    paths:
+      - 'art/hero_fighter/export_hangar.py'
+      - '.github/workflows/hero-hangar.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render-hangar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender and NumPy
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
+      - name: Render 2048px matching empty hangar
+        run: |
+          blender -b -t 4 art/hero_fighter/hero_fighter.blend \
+            --python art/hero_fighter/export_hangar.py -- art/hero_fighter
+          test -s art/hero_fighter/staging/werft/hangar_background.png
+      - name: Verify PNG dimensions and commit to art branch
+        run: |
+          python3 - <<'PY'
+          import struct
+          p="art/hero_fighter/staging/werft/hangar_background.png"
+          with open(p,"rb") as f:h=f.read(26)
+          assert h[:8]==b'\x89PNG\r\n\x1a\n'
+          assert struct.unpack(">II",h[16:24])==(2048,2048)
+          assert h[25]==6
+          print("PASS: 2048 RGBA hangar")
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          cp art/hero_fighter/staging/werft/hangar_background.png /tmp/shatterwake-hangar.png
+          git fetch origin art/hero-fighter-v1
+          git reset --hard FETCH_HEAD
+          cp /tmp/shatterwake-hangar.png art/hero_fighter/staging/werft/hangar_background.png
+          git add -f art/hero_fighter/staging/werft/hangar_background.png
+          git commit -m 'Add empty 3D shipyard hangar render aligned with fighter view [skip ci]' || true
+          git push origin HEAD:art/hero-fighter-v1
