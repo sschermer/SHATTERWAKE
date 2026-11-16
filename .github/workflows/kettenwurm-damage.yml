@@ -50,7 +50,7 @@ jobs:
           for t in range(5):
               states=[Image.open(p/f'boss_type_{t}_damage_{s}.png') for s in range(4)]
               for s in range(3):
-                  assert ImageChops.difference(states[s],states[s+1]).getbbox(),(t,s)
+                  assert states[s].tobytes()!=states[s+1].tobytes(),(t,s)
           blend=p/'kettenwurm_damage_master.blend'
           assert blend.stat().st_size>100000,blend
           cell_w,cell_h=360,365

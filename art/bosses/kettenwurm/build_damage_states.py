@@ -27,7 +27,7 @@ sys.argv=original_argv
 
 sc=bpy.context.scene
 sc.render.engine="CYCLES"
-sc.cycles.samples=80
+sc.cycles.samples=48
 sc.view_layers[0].cycles.use_denoising=True
 sc.render.resolution_x=1024
 sc.render.resolution_y=1024
