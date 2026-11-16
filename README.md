@@ -72,3 +72,7 @@ The game now loads transparent baked 3D ship imagery from `app/src/main/assets/r
 ## Sternenwerft: repair transparency
 
 The repair offer now shows the current hull HP against maximum HP, how many hull points are missing, and how many 1-HP repair purchases are required for 100% integrity. The detail view includes a live hull bar, the current and maximum HP, the cost of one repair and the full repair cost at the current per-point price. Counts and totals update after each purchase. At 100% the repair action is disabled and clearly labeled. These are **currently missing hull points**, not a historical counter of all hits (including shielded damage).
+
+## Verbindlicher Grafik-Neustart
+
+Der **[Grafik-Produktionsstandard ART-001](docs/GRAPHICS_PRODUCTION_STANDARD.md)** und der [maschinenlesbare Hero-Fighter-Vertrag](art/hero_fighter/production_manifest.json) definieren das getrennte Grafikproduktions-/Freigabeverfahren für das neue hochwertige Raumschiff. **Wichtig:** Das derzeitige einfache 3D-Modell ist nicht visuell freigegeben. Neue Render-Assets werden erst nach Abnahme übernommen; die bestehenden Produktionsdateinamen und Modul-IDs bleiben erhalten.

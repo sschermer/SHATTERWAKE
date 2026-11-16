@@ -1,0 +1,212 @@
+{
+  "schema": "shatterwake.hero_fighter.production_contract.v1",
+  "status": "specification_only_not_approved_artwork",
+  "reference": "Vom Nutzer am 16.11.2026 bestätigtes Hard-Surface-Raumschiff im Industriehangar (Chat-Referenz)",
+  "license_policy": {
+    "cost": "free_only",
+    "commercial_use": true,
+    "modification": true,
+    "creator_credit": "voluntary_per_asset_THIRD_PARTY_NOTICES.md"
+  },
+  "source_scene": "art/hero_fighter/hero_fighter.blend",
+  "source_model_status": "not_selected_old_Grab3D_model_rejected_visually",
+  "coordinate_system": {
+    "screen_x": "right",
+    "screen_y": "down",
+    "ship_forward": "negative_screen_y",
+    "pivot": "image_center",
+    "padding_fraction_min": 0.06,
+    "postprocess_rotation_allowed": false
+  },
+  "views": {
+    "game": {
+      "size": [
+        1024,
+        1024
+      ],
+      "png": "app/src/main/assets/rendered/fighter_base.png",
+      "module_pattern": "app/src/main/assets/rendered/fighter_module_{id}.png",
+      "level_pattern": "app/src/main/assets/rendered/fighter_module_{id}_L{level}.png",
+      "camera": "orthographic_near_top_down",
+      "integration": "existing_base_and_level1_modules_supported",
+      "logical_rect": [
+        -50,
+        -47,
+        50,
+        47
+      ]
+    },
+    "werft": {
+      "size": [
+        2048,
+        2048
+      ],
+      "png": "app/src/main/assets/rendered/werft/fighter_base.png",
+      "module_pattern": "app/src/main/assets/rendered/werft/fighter_module_{id}.png",
+      "level_pattern": "app/src/main/assets/rendered/werft/fighter_module_{id}_L{level}.png",
+      "camera": "cinematic_fixed_three_quarter",
+      "integration": "planned_loader_adapter_required",
+      "hangar": "app/src/main/assets/rendered/werft/hangar_background.png"
+    }
+  },
+  "sprites": {
+    "format": "PNG",
+    "channels": "RGBA",
+    "bit_depth": 8,
+    "color_space": "sRGB",
+    "same_camera_and_canvas_per_view": true,
+    "separate_hangar_background": true
+  },
+  "projected_anchors_file": "app/src/main/assets/rendered/fighter_layout.json",
+  "projected_anchors": {
+    "game": {
+      "muzzle_left": null,
+      "muzzle_right": null,
+      "engine_left": null,
+      "engine_right": null,
+      "drone_left": null,
+      "drone_right": null,
+      "hitbox": null,
+      "pivot": null
+    },
+    "werft": {
+      "pivot": null,
+      "module_focus": {
+        "rapid_fire": null,
+        "weapon_damage": null,
+        "hull_repair": null,
+        "star_magnet": null,
+        "drone_dock": null,
+        "shield_emitter": null,
+        "special_charges": null,
+        "target_sensor": null
+      }
+    }
+  },
+  "modules": [
+    {
+      "id": 0,
+      "key": "rapid_fire",
+      "levels": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label": "Schnellfeuer",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_0.png"
+    },
+    {
+      "id": 1,
+      "key": "weapon_damage",
+      "levels": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label": "Waffenschaden",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_1.png"
+    },
+    {
+      "id": 2,
+      "key": "hull_repair",
+      "levels": [],
+      "state": "hp/max_hp",
+      "label": "Reparatur / Rumpf",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_2.png"
+    },
+    {
+      "id": 3,
+      "key": "star_magnet",
+      "levels": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "label": "Sternenmagnet",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_3.png"
+    },
+    {
+      "id": 4,
+      "key": "drone_dock",
+      "levels": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "label": "Begleitdrohne",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_4.png"
+    },
+    {
+      "id": 5,
+      "key": "shield_emitter",
+      "levels": [
+        0,
+        1,
+        2
+      ],
+      "label": "Schildverstärkung",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_5.png"
+    },
+    {
+      "id": 6,
+      "key": "special_charges",
+      "levels": [],
+      "state": "charges",
+      "label": "Spezialladungen",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_6.png"
+    },
+    {
+      "id": 7,
+      "key": "target_sensor",
+      "levels": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label": "Zielkorrektur",
+      "game_anchor": null,
+      "werft_anchor": null,
+      "base_alias": "fighter_module_7.png"
+    }
+  ],
+  "acceptance": {
+    "nose_up": true,
+    "modules_follow_hull_orientation": true,
+    "require_three_visual_before_after": [
+      "rapid_fire",
+      "shield_emitter",
+      "drone_dock"
+    ],
+    "final_approval": "explicit_user_visual_approval_before_integration"
+  },
+  "performance_targets_mib": {
+    "game_ship_art_max": 48,
+    "werft_ship_art_max": 96
+  },
+  "integration_note": "Do not regenerate models based on PNGs. Adapt Java asset loader once; current runtime does not consume this manifest."
+}
