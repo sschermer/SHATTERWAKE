@@ -1,6 +1,6 @@
 {
   "schema": "shatterwake.hero_fighter.production_contract.v1",
-  "status": "specification_only_not_approved_artwork",
+  "status": "rendered_visual_prototype_awaiting_user_approval",
   "reference": "Vom Nutzer am 16.11.2026 bestätigtes Hard-Surface-Raumschiff im Industriehangar (Chat-Referenz)",
   "license_policy": {
     "cost": "free_only",
@@ -9,7 +9,7 @@
     "creator_credit": "voluntary_per_asset_THIRD_PARTY_NOTICES.md"
   },
   "source_scene": "art/hero_fighter/hero_fighter.blend",
-  "source_model_status": "not_selected_old_Grab3D_model_rejected_visually",
+  "source_model_status": "original_editable_blender_master_created_no_external_assets",
   "coordinate_system": {
     "screen_x": "right",
     "screen_y": "down",
@@ -202,11 +202,31 @@
       "shield_emitter",
       "drone_dock"
     ],
-    "final_approval": "explicit_user_visual_approval_before_integration"
+    "final_approval": "still_required_before_any_android_merge"
   },
   "performance_targets_mib": {
     "game_ship_art_max": 48,
     "werft_ship_art_max": 96
   },
-  "integration_note": "Do not regenerate models based on PNGs. Adapt Java asset loader once; current runtime does not consume this manifest."
+  "integration_note": "Do not regenerate models based on PNGs. Adapt Java asset loader once; current runtime does not consume this manifest.",
+  "prototyped_module_ids": [
+    0,
+    4,
+    5
+  ],
+  "rendered_source_files": [
+    "art/hero_fighter/hero_fighter.blend",
+    "art/hero_fighter/build_master.py"
+  ],
+  "prototyped_exports": {
+    "game": "art/hero_fighter/staging/game/",
+    "werft": "art/hero_fighter/staging/werft/",
+    "projected_layout": "art/hero_fighter/staging/fighter_layout.json",
+    "review": "art/hero_fighter/REVIEW_GALLERY.md"
+  },
+  "unimplemented_until_approval": [
+    "Android Werft camera adapter",
+    "Remaining module meshes (1,2,3,6,7)",
+    "Additional level geometry"
+  ]
 }
