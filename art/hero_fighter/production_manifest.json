@@ -1,6 +1,6 @@
 {
   "schema": "shatterwake.hero_fighter.production_contract.v1",
-  "status": "rendered_visual_prototype_awaiting_user_approval",
+  "status": "all_eight_modules_preview_ready_user_approval_required_before_android_integration",
   "reference": "Vom Nutzer am 16.11.2026 bestätigtes Hard-Surface-Raumschiff im Industriehangar (Chat-Referenz)",
   "license_policy": {
     "cost": "free_only",
@@ -203,7 +203,7 @@
       "shield_emitter",
       "drone_dock"
     ],
-    "final_approval": "still_required_before_any_android_merge"
+    "final_approval": "awaiting explicit user visual approval for final integration"
   },
   "performance_targets_mib": {
     "game_ship_art_max": 48,
@@ -242,7 +242,7 @@
     "compositing": "mutually exclusive replacement layers, never drawn simultaneously",
     "unaffected_gameplay": "rapid-fire and damage stats remain independent"
   },
-  "render_pipeline_status": "rendering_not_yet_confirmed_awaiting_qa",
+  "render_pipeline_status": "all_preview_and_transparent_assets_rendered_and_validated",
   "new_visuals": {
     "magnet": {
       "id": 3,
@@ -294,5 +294,6 @@
       "state_mappings": "missing HP=0: none, 1: tier1, 2: tier2, >=3: tier3; visual plate rebuild and repair overlay only in Werft preview"
     },
     "all_other_modules": "0 and 1 are mutually exclusive appearance variants of same twin cannons; 4 and 5 remain unchanged"
-  }
+  },
+  "verified_github_actions_run": "https://github.com/sschermer/SHATTERWAKE/actions/runs/43844477940"
 }

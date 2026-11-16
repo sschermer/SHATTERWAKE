@@ -1,6 +1,6 @@
 # SHATTERWAKE – Hero Fighter / Abnahmegalerie
 
-**Status:** Vorschau, nicht freigegeben. **ART-002:** Glatte, vollständig körnungsfreie Metallshader; neue Renderbilder werden mit derselben Blender-Masterszene erstellt. Keine Android-Integration.
+**Status:** Alle acht Schiffssysteme und die neuen Schadensstufen gerendert und technisch geprüft; visuelle Freigabe für Android noch ausstehend. **ART-002:** Glatte, vollständig körnungsfreie Metallshader; neue Renderbilder werden mit derselben Blender-Masterszene erstellt. Keine Android-Integration.
 
 **Stilziel:** das vom Nutzer bestätigte, realistische, schwer gepanzerte
 Sci-Fi-Schiff im Industriehangar. Diese erste bearbeitbare 3D-Konstruktion hat
@@ -69,5 +69,5 @@ vom numerischen Schaden/HP-System.
 - **Aus tatsächlicher Kameraprojektion bestimmte Koordinaten:** [staging/fighter_layout.json](staging/fighter_layout.json), wird durch den separaten Layout-Workflow exportiert
 - **Herkunft/Lizenz:** [LICENSE_SOURCES.md](LICENSE_SOURCES.md) (eigene Konstruktion, keine übernommenen Fremdmodelle)
 
-Der bereits veröffentlichte Android-Build nutzt diese Grafiken **nicht**.
+Der [erfolgreiche Grafik-Build](https://github.com/sschermer/SHATTERWAKE/actions/runs/43844477940) hat die Werftvorschauen und die 1024/2048-PNGs geprüft. Der bereits veröffentlichte Android-Build nutzt diese Grafiken **nicht**.
 Ein Wechsel erfolgt erst nach ausdrücklicher Freigabe.
