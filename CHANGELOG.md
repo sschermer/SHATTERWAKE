@@ -56,3 +56,9 @@
 - Five-second active power-up trials, visible hostile craft firing in shield tutorial.
 - Remove free auto-aim; five upgrade tiers at 3% each, up to 15% correction.
 - Curved enemy attack paths, banked turning and rare golden looping star-rich fighter.
+
+### Modular visual overhaul
+
+- High-resolution procedural ship atlas with richer industrial shading, vents, bolts and a distinct gold elite silhouette.
+- Real painted upgrade modules fitted directly to the hull and shared between the close-up Werft and gameplay: gun upgrades, armor repair panels, shield emitters, drone docks, targeting turret, magnet and capacitor.
+- Orbiting drone movement replaces the old fixed companion line.

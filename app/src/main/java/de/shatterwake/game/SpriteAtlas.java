@@ -16,9 +16,9 @@ import android.graphics.Shader;
  * No external artwork, font, model or remotely loaded resource is embedded.
  */
 final class SpriteAtlas {
-    private static final int S=192;
+    private static final int S=384;
     final Bitmap fighter;
-    final Bitmap[] enemies=new Bitmap[6];
+    final Bitmap[] enemies=new Bitmap[7];
     final Bitmap[] modules=new Bitmap[5];
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
 
@@ -68,7 +68,7 @@ final class SpriteAtlas {
     }
     private Bitmap makeFighter(){
         Bitmap b=Bitmap.createBitmap(S,S,Bitmap.Config.ARGB_8888);
-        Canvas c=new Canvas(b);
+        Canvas c=new Canvas(b);c.scale(2f,2f);
         // Long engine shadow and wing slots: the entire bitmap is transparent.
         glow(c,96,149,63,0x2837B6FF);
         path(c,0xFF233747,0xFF081322,89,73,64,108,34,117,23,147,61,148,86,133,96,155,
@@ -91,6 +91,24 @@ final class SpriteAtlas {
         stroke(c,0xFFB9ECF6,1.8f,115,75,133,111,161,133);
         stroke(c,0xFF24394E,3,42,137,62,130,70,134);
         stroke(c,0xFF24394E,3,150,137,130,130,122,134);
+        // High-contrast hatches, inlaid metal seams and recessed armored vents.
+        path(c,0xFFDEF0F1,0xFF405B72,66,90,79,81,84,96,68,115,55,125,48,116);
+        path(c,0xFFE6EFF4,0xFF3A5975,126,90,113,81,108,96,124,115,137,125,144,116);
+        path(c,0xFF93B5C5,0xFF26394E,88,115,96,108,104,115,102,137,90,137);
+        for(int side=-1;side<=1;side+=2){
+            float sx=side;
+            stroke(c,0xFF1C4057,2.7f,96+sx*24,99,96+sx*48,131);
+            stroke(c,0xFFC6E0E9,1f,96+sx*22,99,96+sx*44,124);
+            for(int j=0;j<5;j++){
+                float xx=96+sx*(30+j*5),yy=127+j*1.2f;
+                stroke(c,0xFF243C4E,2.3f,xx,yy,xx+sx*3f,yy+4f);
+            }
+            for(int j=0;j<4;j++){
+                float px=96+sx*(19+j*4),py=70+j*11;
+                oval(c,px,py,1.1f,1.1f,0xFF0C2839);
+                oval(c,px-.35f,py-.4f,.5f,.5f,0xFFD7EAF2);
+            }
+        }
         // Tiny machined vent grilles, warning markings and wing rivets.
         for(int i=0;i<4;i++){
             stroke(c,0xFF18364B,2,66+i*3,112,70+i*2,123);
@@ -112,14 +130,15 @@ final class SpriteAtlas {
     }
     private Bitmap makeEnemy(int type){
         Bitmap b=Bitmap.createBitmap(S,S,Bitmap.Config.ARGB_8888);
-        Canvas c=new Canvas(b);
+        Canvas c=new Canvas(b);c.scale(2f,2f);
         final int[][] palette={
             {0xFFB1A7B7,0xFF402A50,0xFFFF7A93},
             {0xFFC5ADAA,0xFF50303D,0xFFFF9B67},
             {0xFF9DAFC1,0xFF2D4359,0xFF9BE6FF},
             {0xFFB6C2CA,0xFF405069,0xFFFFB36E},
             {0xFFAAA9BF,0xFF303151,0xFFCC90FF},
-            {0xFFB4ACD3,0xFF41376B,0xFFAD8BFF}
+            {0xFFB4ACD3,0xFF41376B,0xFFAD8BFF},
+            {0xFFFFDCA3,0xFF6C451C,0xFFFFD45C}
         };
         int hi=palette[type][0],lo=palette[type][1],light=palette[type][2];
         glow(c,96,105,65,(light&0x00FFFFFF)|0x18000000);
@@ -130,7 +149,9 @@ final class SpriteAtlas {
             case 2: outline=new float[]{96,23,54,55,46,99,64,145,96,130,128,145,146,99,138,55};break;
             case 3: outline=new float[]{96,18,31,65,26,130,63,147,96,132,129,147,166,130,161,65};break;
             case 4: outline=new float[]{96,17,63,38,44,87,25,122,68,145,96,122,124,145,167,122,148,87,129,38};break;
-            default:outline=new float[]{96,24,51,39,29,90,51,137,96,154,141,137,163,90,141,39};break;
+            case 5:outline=new float[]{96,24,51,39,29,90,51,137,96,154,141,137,163,90,141,39};break;
+            default:outline=new float[]{96,16,64,44,28,90,42,129,72,135,
+                    96,153,120,135,150,129,164,90,128,44};break;
         }
         path(c,hi,lo,outline);
         path(c,0xFFF0E1E2,lo,96,31,75,78,94,115,116,78);
@@ -139,6 +160,18 @@ final class SpriteAtlas {
         stroke(c,0x99F6F2F2,2,126,70,146,101,124,108);
         stroke(c,0xFF20283F,2,66,117,87,127);
         stroke(c,0xFF20283F,2,126,117,105,127);
+        // Recessed wing mechanics, thermal scorching and riveted segmentation.
+        for(int side=-1;side<=1;side+=2){
+            float sx=side;
+            for(int j=0;j<4;j++){
+                float xx=96+sx*(35+j*10);
+                stroke(c,0xFF243347,2f,xx,108,xx+sx*5,120);
+                stroke(c,0xFFB1BDCD,.8f,xx+sx*2,104,xx+sx*7,114);
+            }
+            for(int j=0;j<3;j++){
+                oval(c,96+sx*(49+j*11),96+j*13,1.2f,1.2f,0xFFDBE6F1);
+            }
+        }
         // Each model has asymmetric visible armor details and own cores.
         if(type==3){
             for(int i=0;i<3;i++){
@@ -151,6 +184,17 @@ final class SpriteAtlas {
                 stroke(c,0xFFBA95F4,4,96+side*20,89,96+side*49,111);
                 oval(c,96+side*51,117,11,7,0xFF263053);
                 oval(c,96+side*51,116,5,4,light);
+            }
+        }else if(type==6){
+            for(int side=-1;side<=1;side+=2){
+                stroke(c,0xFFFFE5A2,3.2f,96+side*16,53,96+side*46,82);
+                oval(c,96+side*49,84,8f,5f,0xFF532F21);
+                oval(c,96+side*49,84,3f,2f,light);
+            }
+            for(int k=0;k<9;k++){
+                float a=(float)(k*6.283185f/9f);
+                oval(c,96+(float)Math.cos(a)*49,89+(float)Math.sin(a)*36,
+                        2.5f,1.4f,0xFFFFE7AF);
             }
         }else if(type==5){
             for(int i=0;i<5;i++){
@@ -174,7 +218,7 @@ final class SpriteAtlas {
     }
     private Bitmap makeModule(int type){
         Bitmap b=Bitmap.createBitmap(S,S,Bitmap.Config.ARGB_8888);
-        Canvas c=new Canvas(b);
+        Canvas c=new Canvas(b);c.scale(2f,2f);
         int[] core={0xFFFF728B,0xFFFF9A74,0xFF6BECCC,0xFFFFD378,0xFFC69DFF};
         glow(c,96,96,70,(core[type]&0x00FFFFFF)|0x23000000);
         path(c,0xFFC1CDDA,0xFF334E68,96,16,142,31,171,74,166,126,128,162,64,162,

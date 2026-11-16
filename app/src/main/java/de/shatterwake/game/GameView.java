@@ -677,7 +677,7 @@ public final class GameView extends View {
         if(flashTime>0)flashTime-=dt;
         if(bannerTime>0)bannerTime-=dt;
         if(state==SHOP){
-            if(werftPreviewIndex>=0)werftZoom=Math.min(1f,werftZoom+dt/0.85f);
+            if(werftPreviewIndex>=0)werftZoom=Math.min(1f,werftZoom+dt/1.05f);
             return;
         }
         if(state!=PLAY)return;
@@ -1405,6 +1405,140 @@ public final class GameView extends View {
         p.setColor(WHITE);p.setStyle(Paint.Style.FILL);
         c.drawCircle(gx,gy,radius,p);p.setShader(null);
     }
+    /** Metal hardware is part of the ship, not a highlight or HUD marker.
+     * Preview modules are fitted as transparent holographic blueprints and the
+     * actual purchased part remains visible in the next sector.
+     */
+    private void drawShipHardware(Canvas c,int preview){
+        // Reinforced metallic hardpoint rails and battle-worn segmented plating.
+        for(int side=-1;side<=1;side+=2){
+            float sx=side;
+            shadedPolygon(c,new float[]{sx*16f,-13f,sx*26f,2f,sx*29f,16f,
+                    sx*18f,17f,sx*13f,5f},
+                    0xFF9BBDCE,0xFF263E58,0xFF203348);
+            for(int k=0;k<3;k++){
+                float a=side*(19f+k*2.1f);
+                circle(c,a,3f+k*4f,.85f,0xFFE2F1F6);
+            }
+        }
+        if(hp>=maxHp || preview==2){
+            for(int side=-1;side<=1;side+=2){
+                float sx=side;
+                shadedPolygon(c,new float[]{sx*18f,5f,sx*35f,10f,
+                        sx*30f,19f,sx*16f,16f},
+                        0xFFCDE4EA,0xFF49667B,0xFF263C52);
+                shadedPolygon(c,new float[]{sx*5f,14f,sx*13f,19f,
+                        sx*10f,29f,sx*3f,22f},
+                        0xFFABCAD5,0xFF31536B,0xFF355C79);
+            }
+        }
+        // Two actual forward barrel assemblies: base weapons become visibly
+        // longer and mechanically more elaborate at higher Werft levels.
+        for(int side=-1;side<=1;side+=2){
+            float sx=side;
+            float gunX=sx*13f;
+            int level=side<0?fireLevel:damageLevel;
+            boolean ghost=preview==(side<0?0:1) && level==0;
+            if(level>0 || preview==(side<0?0:1)){
+                float extension=6f+level*1.7f;
+                shadedPolygon(c,new float[]{gunX-4.5f,-20f,gunX-5.5f,-29f-extension,
+                        gunX+5.5f,-29f-extension,gunX+4.5f,-20f},
+                        ghost?0xFF7DBDE7:0xFFDCE6EA,ghost?0xFF29577D:0xFF3F5E73,0);
+                shadedPolygon(c,new float[]{gunX-2.5f,-25f,gunX-2.5f,-35f-extension,
+                        gunX+2.5f,-35f-extension,gunX+2.5f,-25f},
+                        ghost?0xFF7BE3FA:0xFFE6B97B,0xFF283E57,0);
+                circle(c,gunX,-35f-extension,3.1f,0xFF1D2C3C);
+                circle(c,gunX,-35f-extension,1.5f,
+                        ghost?CYAN:side<0?0xFFFFB96C:0xFFEDDF9B);
+                for(int j=0;j<Math.max(1,level);j++){
+                    float yy=-22f-j*2.6f;
+                    line(c,gunX-5f,yy,gunX+5f,yy,0xFF9DCDD6,.7f);
+                }
+            }
+        }
+        // Four-piece flanged shield emitter housings, permanent hardware.
+        if(shieldLevel>0 || preview==5){
+            for(int side=-1;side<=1;side+=2){
+                float sx=side;
+                float ax=sx*32f,ay=2f;
+                shadedPolygon(c,new float[]{ax-sx*8f,ay-8f,ax+sx*3f,ay-11f,
+                        ax+sx*10f,ay,ax+sx*3f,ay+11f,ax-sx*8f,ay+7f},
+                        0xFFD1DEE7,0xFF3C5C76,0xFF243B56);
+                glow(c,ax,ay,13f,0xA14EDBF2,0x004EDBF2);
+                circle(c,ax,ay,5.7f,0xFF2B5670);
+                circle(c,ax,ay,3.2f,CYAN);
+                circle(c,ax-1f,ay-1f,1.1f,WHITE);
+            }
+        }
+        // Magnetic collector is a segmented metal toroid above the cockpit.
+        if(magnetLevel>0 || preview==3){
+            for(int side=-1;side<=1;side+=2){
+                float sx=side;
+                shadedPolygon(c,new float[]{sx*7f,-7f,sx*21f,-10f,
+                        sx*24f,-1f,sx*9f,3f},
+                        0xFFA5D0E0,0xFF254D6C,0xFF19384C);
+                circle(c,sx*19f,-4f,3.3f,CYAN);
+                circle(c,sx*19f,-4f,1.1f,WHITE);
+            }
+            glow(c,0f,-5f,24f,0x334BE1FF,0x004BE1FF);
+        }
+        // Sensor turret replaces the old invisible shot correction mechanic.
+        if(targetingLevel>0 || preview==7){
+            shadedPolygon(c,new float[]{-8f,-27f,-6f,-40f,0f,-47f,6f,-40f,
+                    8f,-27f},0xFFC8E2EA,0xFF3B617B,0xFF223B53);
+            shadedPolygon(c,new float[]{-7f,-35f,0f,-43f,7f,-35f,0f,-31f},
+                    0xFF77D9E8,0xFF245274,0);
+            glow(c,0f,-39f,8f,0xAA65EAFF,0x0065EAFF);
+            circle(c,0f,-39f,2.4f,WHITE);
+            for(int j=0;j<targetingLevel;j++)circle(c,-5f+j*2.5f,-29f,
+                    .9f,GOLD);
+        }
+        // Dedicated underwing drone docking cradles and charging contacts.
+        if(droneLevel>0 || preview==4){
+            for(int side=-1;side<=1;side+=2){
+                float sx=side;
+                shadedPolygon(c,new float[]{sx*25f,15f,sx*37f,16f,
+                        sx*42f,27f,sx*29f,31f,sx*22f,23f},
+                        0xFFC6D7E2,0xFF2E536C,0xFF1C384D);
+                line(c,sx*30f,20f,sx*38f,25f,0xFF8DDFF2,2.2f);
+                circle(c,sx*34f,24f,2.5f,GOLD);
+            }
+        }
+        // Recessed plasma capacitor and charge racks.
+        if(preview==6 || abilityCharges[3]>1){
+            shadedPolygon(c,new float[]{-8f,-12f,-5f,-23f,5f,-23f,
+                    8f,-12f,0f,-7f},0xFFC3D9EA,0xFF315579,0xFF203D5A);
+            glow(c,0f,-16f,13f,0xAA9F68FC,0x009F68FC);
+            circle(c,0f,-16f,4.6f,0xFFD4ABFF);
+        }
+        if(preview>=0){
+            // A holographic replacement is shown *on* the intended hardpoint
+            // until the explicit purchase. This is not merely a HUD stroke.
+            int glowColor=preview==5?0x4490FAFF:preview==4?0x445CE4FF:
+                    preview==7?0x44B8FDFF:0x44FFC880;
+            float px=GameRules.werftFocusX(preview);
+            float py=GameRules.werftFocusY(preview);
+            glow(c,px,py,25f,glowColor,0x00000000);
+        }
+    }
+    private void drawOrbitingDrones(Canvas c){
+        int count=Math.min(3,droneLevel);
+        for(int i=0;i<count;i++){
+            float a=idleTime*1.65f+i*6.28318f/count;
+            float dx=(float)Math.cos(a)*43f;
+            float dy=(float)Math.sin(a)*30f;
+            glow(c,dx,dy,18f,0x6678DBFF,0x0078DBFF);
+            shadedPolygon(c,new float[]{dx,dy-12f,dx-12f,dy+1f,
+                    dx-8f,dy+7f,dx,dy+3f,dx+8f,dy+7f,
+                    dx+12f,dy+1f},
+                    0xFFD5E7F2,0xFF315974,0xFF1B3A55);
+            shadedPolygon(c,new float[]{dx-4f,dy-2f,dx,dy-10f,
+                    dx+4f,dy-2f,dx,dy+4f},
+                    0xFF95D9EA,0xFF24688E,0);
+            circle(c,dx,dy-1f,2.8f,GOLD);
+            circle(c,dx,dy-1f,1.2f,WHITE);
+        }
+    }
     private void drawPlayer(Canvas c){
         c.save();c.translate(x,y);
         float lateral=clamp((targetX-x)*.12f,-7,7);
@@ -1439,21 +1573,26 @@ public final class GameView extends View {
         // Detailed 192px transparent sprite, with independently animated thrusters
         // and protective shield painted at runtime.
         atlas.drawPlayer(c,0,-2);
+        drawShipHardware(c,-1);
+        if(rapidTime>0){
+            for(int side=-1;side<=1;side+=2){
+                glow(c,side*13f,-32f,12f,0x99FFB059,0x00FFB059);
+            }
+        }
+        if(tripleTime>0){
+            for(int side=-1;side<=1;side+=2){
+                shadedPolygon(c,new float[]{side*26f,-7f,side*40f,-27f,
+                        side*47f,-28f,side*39f,-4f},
+                        0xFFD3E6EB,0xFF35617A,0xFF20384A);
+                circle(c,side*42f,-27f,3f,GREEN);
+            }
+        }
         if(plasmaTime>0){
             glow(c,0,-10,21,0xDDB578FF,0x00751CFF);
             circle(c,0,-10,6,0xFFDCC0FF);
             circle(c,0,-10,2.7f,WHITE);
         }
-        if(droneLevel>0){
-            for(int i=0;i<Math.min(3,droneLevel);i++){
-                float dx=(i-(Math.min(3,droneLevel)-1)/2f)*43;
-                float dy=31+(float)Math.sin(idleTime*3+i)*4;
-                glow(c,dx,dy,16,0x5068E6FF,0x0068E6FF);
-                shadedPolygon(c,new float[]{dx,dy-11,dx-13,dy+5,dx,dy+1,dx+13,dy+5},
-                        0xFF9EDBE9,0xFF255675,0xFF67D6F2);
-                circle(c,dx,dy,2.8f,GOLD);
-            }
-        }
+        if(droneLevel>0)drawOrbitingDrones(c);
         c.restore();
     }
     private void drawEnemies(Canvas c){
@@ -1768,68 +1907,35 @@ public final class GameView extends View {
         button(c,"VERSTANDEN",89,467,242,58,true);
     }
     private void drawWerftShip(Canvas c,int highlightedId,float progress){
-        // Camera moves toward the affected subsystem instead of simply enlarging
-        // the entire vessel. No purchases happen during this animation.
         float ease=progress*progress*(3f-2f*progress);
         float focusX=GameRules.werftFocusX(highlightedId);
         float focusY=GameRules.werftFocusY(highlightedId);
         float scale=3.15f+3.65f*ease;
+        // Smooth, parallax-like focus interpolation between entire craft and part.
         float centerX=210f-focusX*scale*ease;
-        float centerY=314f-focusY*scale*ease;
-        c.save();c.clipRect(17,115,403,484);
-        glow(c,210f,308f,164f,0x51317A9E,0x00317A9E);
+        float centerY=310f-focusY*scale*ease;
+        c.save();c.clipRect(17,112,403,468);
+        glow(c,210f,297f,184f,0x453D8A9C,0x002C5878);
         for(int i=0;i<8;i++){
             float gx=58+i*44f;
-            line(c,gx,120,gx,476,0x143CA6C9,1f);
+            line(c,gx,120,gx,466,0x143CA6C9,1f);
         }
-        line(c,24,471,396,471,0x776BD3F9,3f);
+        line(c,24,467,396,467,0x776BD3F9,3f);
+        for(int k=0;k<5;k++){
+            float gx=210f+(k-2)*76f;
+            line(c,gx,454,gx+(gx-210f)*.6f,465,0x3373E6FF,1f);
+        }
         c.translate(centerX,centerY);c.scale(scale,scale);
-        if(shieldLevel>0){
-            p.setShader(null);p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(1.4f);p.setColor(0xCC70E9FC);
-            c.drawOval(-40,-45,40,39,p);p.setStyle(Paint.Style.FILL);
-        }
-        if(magnetLevel>0){
-            p.setShader(null);p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(.8f);p.setColor(0xAA4BD1FF);
-            c.drawOval(-31,-36,31,29,p);p.setStyle(Paint.Style.FILL);
-        }
+        // Render actual ship hardpoints in the same positions as during combat.
         atlas.drawPlayer(c,0,-2);
-        if(fireLevel>0 || damageLevel>0){
-            for(int side=-1;side<=1;side+=2){
-                glow(c,side*13f,-25f,9f,fireLevel>0?0x99FF9E2C:0x99FFE185,0x00FF9E2C);
-                line(c,side*13f,-25f,side*13f,-36f,
-                        fireLevel>0?0xFFFFA54F:GOLD,2.2f);
-            }
-        }
-        if(hp<maxHp)line(c,-21f,7f,21f,7f,RED,2.5f);
-        if(hp==maxHp)line(c,-19f,7f,19f,7f,GREEN,2.5f);
-        if(droneLevel>0){
-            int count=Math.min(droneLevel,3);
-            for(int i=0;i<count;i++){
-                float a=idleTime*1.9f+i*6.283f/count;
-                float dx=(float)Math.cos(a)*43f,dy=(float)Math.sin(a)*32f;
-                glow(c,dx,dy,12f,0x8858C8FF,0x0058C8FF);
-                shadedPolygon(c,new float[]{dx,dy-7f,dx-8f,dy+5f,
-                        dx,dy+2f,dx+8f,dy+5f},WHITE,0xFF255675,CYAN);
-            }
-        }
-        if(highlightedId>=0){
-            int accent=highlightedId==4?GREEN:highlightedId==5?CYAN:
-                    highlightedId==2?0xFF7CEC9A:GOLD;
-            float pulse=1f+(float)Math.sin(idleTime*7f)*.08f;
-            glow(c,focusX,focusY,15f*pulse,0xBBFFDF75,0x00FFDF75);
-            p.setShader(null);p.setStyle(Paint.Style.STROKE);
-            p.setColor(accent);p.setStrokeWidth(1.3f);
-            c.drawCircle(focusX,focusY,10.5f*pulse,p);
-            p.setStyle(Paint.Style.FILL);
-        }
+        drawShipHardware(c,highlightedId);
+        if(droneLevel>0)drawOrbitingDrones(c);
         c.restore();
-        // Focus marker is anchored in the display, not in the zoomed vessel.
         if(highlightedId>=0 && ease>.65f){
             float alpha=clamp((ease-.65f)*2.85f,0f,1f);
-            txt(c,"BAUTEIL / "+GameRules.werftPartLabel(highlightedId),210,462,13,
-                    ((int)(255*alpha)<<24)|0x00FFD184,Paint.Align.CENTER,true);
+            txt(c,"MODUL / "+GameRules.werftPartLabel(highlightedId),
+                    210,459,13,((int)(255*alpha)<<24)|0x00FFD184,
+                    Paint.Align.CENTER,true);
         }
     }
     private void drawShop(Canvas c){

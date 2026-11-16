@@ -58,3 +58,9 @@ All ships, enemies, HUD, backgrounds and sound effects are newly drawn/programma
 - Four training power-ups now run for five active seconds; shield bullets visibly come from a hostile craft.
 - Shooting is strictly straight ahead at the start. Optional five-stage Werft target correction improves it by 3% per upgrade, to 15%.
 - Enemy movement uses banked smooth attack paths. A rare golden Sternenjaeger makes a full looping circuit and awards a large star haul.
+
+### Ship and Werft art pass
+
+- Player and hostile ships now use 384px in-memory procedural renders instead of 192px, with more faceted metal armor, recessed vents and bolts. An entirely separate rare gold star hunter design is generated.
+- The Werft and gameplay share the **same permanent modular hardware**: distinct barrel assemblies, armored plates, drone docking cradles, glowing shield emitter housings, magnets, capacitor and targeting turret. A close-up preview shows the prospective hardware at its actual attachment point. Purchased upgrades remain on the playable vessel, not just in the shop.
+- Accompanying drone sprites now circle the player's hull in combat instead of remaining in a fixed horizontal row.
