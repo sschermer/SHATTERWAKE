@@ -57,7 +57,8 @@ public final class VoiceCombosChecks {
         assert VoiceCommandRules.maskFromSpeech("EMP",words,masks)==32;
 
         // Arbitrary direct combinations and custom word unions.
-        assert VoiceCommandRules.maskFromSpeech("Dreifach, Turbo und Plasma",words,masks)==0;
+        assert VoiceCommandRules.maskFromSpeech("Dreifach, Turbo und Plasma",words,masks)==14;
+        assert VoiceCommandRules.maskFromSpeech("Dreifach plus Rapid plus Plasma",words,masks)==14;
         assert VoiceCommandRules.maskFromSpeech("Dreifach Turbo Plasma",words,masks)==14;
         assert VoiceCommandRules.maskFromSpeech("Raketen Schockwelle",words,masks)==48;
         assert VoiceCommandRules.maskFromSpeech("Plasma Raketen Dreifach",words,masks)==28;
