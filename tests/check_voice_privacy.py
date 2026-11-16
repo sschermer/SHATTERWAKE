@@ -34,7 +34,15 @@ def check_sources():
     assert "acceptsSecondFinger(" in g
     assert "MotionEvent.ACTION_POINTER_DOWN" in g
     assert "voice_enabled" in g
-    assert "onVoiceRecognized" in g and "useAbility(which)" in g
+    assert "voice_word_" in g and "voice_mask_" in g
+    assert "drawVoiceSetup" in g and "editVoiceWord" in g
+    assert "voiceMasks[slot]^=" in g and "saveVoiceSlots()" in g
+    assert "onVoiceRecognizedMask" in g and "useAbility(which)" in g
+    assert "useSecondary(which)" in g, "Voice rockets/EMP must reuse existing gameplay"
+    assert "EXTRA_PARTIAL_RESULTS,true" in c
+    assert "onPartialResults(Bundle partialResults)" in c
+    assert "newActions(" in c
+    assert "prepareIfEnabled()" in m
     assert "voiceController.cancelListening()" in m
     assert "de.shatterwake.game" in m
     assert "android:label" in MANIFEST.read_text() and "FINAL SORTIE" in MANIFEST.read_text()
