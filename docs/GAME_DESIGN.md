@@ -1,4 +1,6 @@
-# SHATTERWAKE: playable prototype design (0.4.0-alpha)
+# FINAL SORTIE (formerly SHATTERWAKE): historical prototype design (0.4.0-alpha)
+
+**Historical documentation notice:** This page describes an early version, not the current binding mechanics. For present mechanics and design decisions see the November 16, 2026 project rulebook and current code/tests. The public-facing game was renamed FINAL SORTIE in v0.6.3-alpha; Android package, preferences and GitHub repository are intentionally unchanged.
 
 **Genre:** native Android portrait shooter with vertical scrolling and pseudo-isometric, procedurally drawn spaceships, asteroid objects and shadows. Designed for small touchscreens; no cloud services, no remote assets.
 

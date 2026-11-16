@@ -1,6 +1,11 @@
-# SHATTERWAKE
+# FINAL SORTIE
 
-**Native Android arcade space shooter — playable prototype 0.6.1-alpha (stable signing prepared).**
+Früherer Arbeitstitel: **SHATTERWAKE**. Das GitHub-Repository, die Java-Paketstruktur, die Android-App-ID `de.shatterwake.game`, der lokale Speicherschlüssel und die dauerhafte Update-Signatur bleiben aus Kompatibilitätsgründen unverändert.
+
+**Aktuelle Version: 0.6.3-alpha – Umbenennung und neues Android-App-Icon.** Das Spiel selbst, sämtliche Gameplay-Regeln und die bisher freigegebenen 3D-Assets bleiben erhalten.
+
+
+**Native Android arcade space shooter — FINAL SORTIE (0.6.3-alpha).**
 
 Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight correction cone, two selectable touch input modes, distinct enemy flight patterns, destructible segmented space worm, modular multi-stage bosses, star pickups, temporary in-run star-shop upgrades, permanent tech archive unlocks and genuine branching sector paths.
 
@@ -38,32 +43,15 @@ Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight
 
 ## Dauerhaft signierte Android-Updates
 
-Ab 0.6.1 ist eine **dauerhafte APK-Signatur** statt wechselnder
-GitHub-Actions-Debug-Schlüssel vorbereitet. Sie wird automatisch verwendet,
-**sobald** der Repository-Besitzer die beiden GitHub-Actions-Secrets
-`SHATTERWAKE_KEYSTORE_BASE64` und
-`SHATTERWAKE_KEYSTORE_PASSWORD` einrichtet. Der Schlüssel befindet
-sich aus Sicherheitsgründen **nicht** im Repository.
+Die letzte nachweislich veröffentlichte signierte Fassung vor der Umbenennung war [SHATTERWAKE v0.6.2-alpha](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.2-alpha). Das nächste signierte Update wird als [FINAL SORTIE v0.6.3-alpha](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.3-alpha) veröffentlicht, **sofern** die GitHub Actions einschließlich Signatur-Fingerprintprüfung erfolgreich abschließen.
 
-Ausführliche [Einrichtung und Updates](docs/SIGNING_AND_UPDATES.md).
-Die neue signierte APK wird nach dem ersten erfolgreichen Workflow im
-[Release v0.6.1-alpha](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.1-alpha)
-bereitgestellt. Der Build erhöht den Android-`versionCode` automatisch.
+Die vorhandenen GitHub-Actions-Secrets `SHATTERWAKE_KEYSTORE_BASE64` und `SHATTERWAKE_KEYSTORE_PASSWORD` behalten absichtlich ihre Namen. Sie sind keine sichtbaren Spielnamen und werden nicht umbenannt. Android-Paketkennung, Signaturschlüssel und der persistente Speicherschlüssel bleiben identisch. Der höhere `versionCode` ermöglicht die Update-Installation über die vorhandene signierte Version.
 
-**Achtung:** Einmaliger Wechsel von der bisherigen Debug-Version erfordert
-Deinstallation; bisherige lokale Tech- und Einstellungsdaten können verloren
-gehen. **Erst wechseln, wenn die signierte APK verfügbar ist.** Danach
-sind Sideload-Updates mit Datenübernahme möglich.
+## Installation auf Android
 
-## Install on an Android phone
-
-1. Open the latest [GitHub release](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.0-alpha) while signed into the repository-owning account (the repository is private).
-2. Download **SHATTERWAKE-v0.6.0-alpha-debug.apk**.
-3. Confirm that the SHA-256 of the APK matches `SHA256SUMS.txt` from the release.
-4. Open the APK and permit installation from the chosen file manager/browser when Android asks.
-5. This is a **debug-signed test APK**. A later build signed with a different debug key may require uninstalling the earlier version first (which deletes the local unlock history).
-
-If the release is unavailable, inspect the [Android APK GitHub Actions workflow](https://github.com/sschermer/SHATTERWAKE/actions/workflows/android.yml) and download the APK artifact from a successful run.
+1. [FINAL SORTIE Release v0.6.3-alpha öffnen](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.3-alpha) (nach erfolgreicher Veröffentlichung).
+2. `FINAL-SORTIE-v0.6.3-alpha-signed.apk` herunterladen, SHA-256 mit `SHA256SUMS.txt` vergleichen und als Update installieren.
+3. **Keine Debug-APK** als Update der signierten Fassung verwenden. Falls das neue Release noch nicht veröffentlicht wurde, bleibt [v0.6.2-alpha](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.2-alpha) die verfügbare signierte Version.
 
 ## Local build
 

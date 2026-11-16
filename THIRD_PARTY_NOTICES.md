@@ -1,6 +1,6 @@
-# SHATTERWAKE — third-party and asset notices
+# FINAL SORTIE (formerly SHATTERWAKE) — third-party and asset notices
 
-Inventory date: 2026-11-15. Version: 0.4.0-alpha.
+Inventory date: 2026-11-16. Version: 0.6.3-alpha.
 
 ## Voluntary artist credits for future CC0 artwork
 
@@ -58,7 +58,7 @@ the retired work as bundled in the current APK.
 | Game and UI code | Newly written for SHATTERWAKE | Project `LICENSE` |
 | Player fighter, shipyard, weapon and upgrade sprites | Original SHATTERWAKE Blender scene, project-authored PBR materials and transparent PNG renders | Project `LICENSE`; no external source models or textures |\n| Eight normal enemy ship types | Original SHATTERWAKE Blender geometry and baked transparent PNG renders from `art/enemies/build_enemies.py`; no imported models or textures | Project `LICENSE` |
 | Boss modules, worm segments, asteroids, HUD, stars, effects | Original project-drawn Android Canvas geometry and generated Bitmap fallback sprites | Project `LICENSE`; no imported artwork |
-| Launcher icon (`ic_launcher.xml`) | Original vector paths | Project `LICENSE`; no imported image |
+| Launcher icon (`res/drawable-nodpi/ic_launcher.webp`) | Generated for this project with OpenAI image generation, then cropped and optimized as an original FINAL SORTIE launcher asset; no third-party stock image or external source model inserted. See `docs/BRANDING.md`. | Game artwork under the project `LICENSE`, subject to applicable OpenAI terms; exclusivity and trademark clearance not guaranteed |
 | Sound effects | PCM synthesised at runtime from elementary sine waves | Original generated output; no imported samples |
 | Font | Android device's system sans-serif / sans-serif-condensed | System typeface, not redistributed as font file |
 | Text/game names | Original textual content for project | Project `LICENSE`; independent trademark clearance required |
@@ -87,4 +87,4 @@ The original Android Gradle Plugin and other build-tool license and NOTICE files
 - Confirm rights for the *specific recording*, *specific image*, *specific font*, etc. Publicly viewable or royalty-free is **not** automatically permission to sell a game that contains it.
 - Open-source components can have patent, copyleft and NOTICE obligations. Obtain a distribution-appropriate professional review before release.
 - Do not reuse online images displayed during early concept discussions; **none are in this project**.
-- Clear the `SHATTERWAKE` name and game logo for relevant markets and classes before advertising or distribution.
+- Clear the new `FINAL SORTIE` name and game logo for relevant markets and classes before advertising or distribution. The former project/repository name remains `SHATTERWAKE` for update compatibility.

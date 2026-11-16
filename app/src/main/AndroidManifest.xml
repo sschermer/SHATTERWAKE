@@ -3,7 +3,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="true" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <application
-        android:label="SHATTERWAKE"
+        android:label="FINAL SORTIE"
         android:icon="@drawable/ic_launcher"
         android:roundIcon="@drawable/ic_launcher"
         android:usesCleartextTraffic="false"

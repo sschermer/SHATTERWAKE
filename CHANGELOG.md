@@ -1,3 +1,12 @@
+## 0.6.3-alpha — FINAL SORTIE: Namenswechsel und App-Icon (2026-11-16)
+
+- **VERBINDLICH:** Der sichtbare Spielname lautet ab jetzt **FINAL SORTIE** (früher SHATTERWAKE).
+- Neues originales, für das Android-Launcherformat zugeschnittenes und optimiertes Icon mit FINAL-SORTIE-Schriftzug und Raumjäger; Quellenherkunft in `docs/BRANDING.md` dokumentiert.
+- Android-App-Label, Hauptmenü-Logo, HUD, Endbildschirm und Info-/Lizenzansicht aktualisiert; keine Änderung an Spiellogik, Raumschiff-/Bossgrafiken oder Steuerung.
+- **Updatekompatibilität:** Paket `de.shatterwake.game`, Java-Pakete, `shatterwake_save_v1`, GitHub-Repository und vorhandener Signaturschlüssel bleiben unverändert.
+- Version `0.6.3-alpha`, höherer `versionCode`, separates signiertes GitHub-Release `v0.6.3-alpha`; neue Branding-Regressionsprüfung für Quellcode und APK.
+- Debug-Build bleibt ausschließlich eine CI-Prüfung, keine veröffentlichte Update-APK.
+
 ## 0.6.2-alpha — Kettenwurm Bossgrafik und modulare Schadensstufen (2026-11-16)
 
 - Integriere die 20 vom Nutzer visuell freigegebenen originalen 1024-RGBA-Blender-Sprites für den ersten Boss: fünf Bauteiltypen und vier Schadenszustände (0 intakt, 1 verbeult, 2 stark beschädigt mit Funken, 3 Explosion).

@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Random;
 
-/** SHATTERWAKE: original, offline arcade game rendered entirely with Android Canvas.
+/** FINAL SORTIE: original, offline arcade game rendered entirely with Android Canvas.
  * 3D-rendered CC0 sprites are preferred when present; procedural fallback and generated audio remain.
  */
 public final class GameView extends View {
@@ -1908,7 +1908,7 @@ public final class GameView extends View {
     }
     private void drawHud(Canvas c){
         panel(c,7,7,406,87,0xDE0B1729,0x774DA6C6,12);
-        txt(c,"SHATTERWAKE",18,28,16,WHITE,Paint.Align.LEFT,true);
+        txt(c,"FINAL SORTIE",18,28,16,WHITE,Paint.Align.LEFT,true);
         txt(c,"S"+stage+" · "+WORLD_NAMES[world],18,46,11,MUTED,Paint.Align.LEFT,false);
         txt(c,"★ "+stars,293,29,20,GOLD,Paint.Align.LEFT,true);
         txt(c,"PUNKTE "+score,216,49,10,MUTED,Paint.Align.LEFT,false);
@@ -1977,8 +1977,8 @@ public final class GameView extends View {
         txt(c,label,px+w/2,py+h/2+6,17,active?WHITE:MUTED,Paint.Align.CENTER,true);
     }
     private void logo(Canvas c,float py,float size){
-        textCenter(c,"SHATTERWAKE",py,size,WHITE,true);
-        line(c,48,py+10,372,py+10,CYAN,2);
+        textCenter(c,"FINAL SORTIE",py,size,WHITE,true);
+        line(c,48,py+10,372,py+10,0xFFDA5363,2);
         textCenter(c,"ZERLEGE  ·  ERBEUTE  ·  ÜBERLEBE",py+29,12,GOLD,false);
     }
     private void drawMenu(Canvas c){
@@ -1992,7 +1992,7 @@ public final class GameView extends View {
         button(c,"EINSTELLUNGEN",51,524,318,54,false);
         button(c,"TECHNOLOGIE-ARCHIV",51,593,318,54,false);
         button(c,"TUTORIAL "+(tutorialComplete?"WIEDERHOLEN":"STARTEN"),51,663,318,47,false);
-        textCenter(c,"PROTOTYP 0.6 · 3D-GRAFIK · OFFLINE",754,10,MUTED,false);
+        textCenter(c,"PROTOTYP 0.6.3 · 3D-GRAFIK · OFFLINE",754,10,MUTED,false);
     }
     private void screenHeader(Canvas c,String title,String sub){
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);
@@ -2199,7 +2199,7 @@ public final class GameView extends View {
     private void drawGameOver(Canvas c,boolean victory){
         screenHeader(c,victory?"SEKTOREN GERETTET":"DURCHLAUF BEENDET",
                 victory?"DU HAST DIE LETZTE WELT BEZWUNGEN":"DER NÄCHSTE VERSUCH WIRD ANDERS");
-        textCenter(c,victory?"SIEG":"SHATTERWAKE",300,43,victory?GREEN:RED,true);
+        textCenter(c,victory?"SIEG":"FINAL SORTIE",300,43,victory?GREEN:RED,true);
         textCenter(c,"PUNKTE: "+score,369,25,WHITE,true);
         textCenter(c,"BESTWERT: "+best,415,20,GOLD,true);
         textCenter(c,"FREIGESCHALTETE TECHNOLOGIEN: "+Integer.bitCount(techMask)+" / 5",473,13,MUTED,false);
@@ -2242,8 +2242,8 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "SHATTERWAKE 0.6.0-alpha",
-                "Originaler Quellcode und Vektorgrafik.",
+                "FINAL SORTIE 0.6.3-alpha",
+                "Originaler Quellcode und 3D-Spielgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",
                 "Keine externen Runtime-Abhängigkeiten.",
