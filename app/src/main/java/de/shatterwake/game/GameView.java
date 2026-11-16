@@ -2265,7 +2265,10 @@ public final class GameView extends View {
                 40,408,340,60,voiceEnabled);
         textCenter(c,"2. FINGER IM SPIELFELD: SCHILD, TURBO, DREIFACH, PLASMA",
                 486,10,MUTED,false);
-        if(!localSpeech)
+        if(!voiceStatusText.isEmpty()
+                &&android.os.SystemClock.uptimeMillis()<voiceStatusUntil)
+            textCenter(c,voiceStatusText,502,9,GOLD,false);
+        else if(!localSpeech)
             textCenter(c,"NUR MIT LOKALER ANDROID-SPRACHERKENNUNG",502,9,GOLD,false);
         button(c,"TON: "+(soundEnabled?"EIN":"AUS"),40,511,340,44,soundEnabled);
         button(c,"VIBRATION: "+(vibrationEnabled?"EIN":"AUS"),40,562,340,44,vibrationEnabled);
@@ -2517,7 +2520,10 @@ public final class GameView extends View {
                     }
                     return !(inputMode==0&&py<650);
                 }
-                if(inside(px,py,365,51,36,31)){state=PAUSE;return true;}
+                if(inside(px,py,365,51,36,31)){
+                    if(voiceController!=null)voiceController.cancelListening();
+                    state=PAUSE;return true;
+                }
                 if(py>=716){
                     int a=(int)((px-13)/100);
                     if(a>=0&&a<4 && px>=13){useAbility(a);return true;}
