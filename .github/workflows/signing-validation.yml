@@ -1,0 +1,58 @@
+name: SHATTERWAKE - verify release-signing Gradle setup (throwaway key)
+on:
+  push:
+    branches: [feature/stable-apk-signing]
+    paths:
+      - '.github/workflows/signing-validation.yml'
+      - 'app/build.gradle'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signing-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android 16 build tools
+        run: |
+          SDK_BIN=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          yes | "$SDK_BIN" --licenses >/dev/null || true
+          "$SDK_BIN" "platforms;android-36" "build-tools;36.0.0"
+      - name: Create isolated THROWAWAY CI signing key - never for user updates
+        run: |
+          keytool -genkeypair -noprompt -alias shatterwake-updates \
+            -keyalg RSA -keysize 2048 -sigalg SHA256withRSA -validity 30 \
+            -storetype PKCS12 -keystore "$RUNNER_TEMP/disposable-ci-only.p12" \
+            -storepass ci-only-password-for-testing -keypass ci-only-password-for-testing \
+            -dname "CN=DISPOSABLE CI TEST KEY, O=DO NOT DISTRIBUTE, C=DE"
+      - name: Build debug AND release using isolated test key
+        env:
+          SHATTERWAKE_KEYSTORE_PATH: ${{ runner.temp }}/disposable-ci-only.p12
+          SHATTERWAKE_KEYSTORE_PASSWORD: ci-only-password-for-testing
+          SHATTERWAKE_BUILD_NUMBER: '10008'
+          SHATTERWAKE_VERSION_NAME: 0.6.1-ci-sign-test
+        run: gradle --no-daemon --stacktrace :app:assembleDebug :app:assembleRelease
+      - name: Check actual APK signature and android update versionCode
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | head -n 1 | tee /tmp/update-package.txt
+          grep -q "name='de.shatterwake.game'" /tmp/update-package.txt
+          grep -q "versionCode='10008'" /tmp/update-package.txt
+          grep -q "versionName='0.6.1-ci-sign-test'" /tmp/update-package.txt
+          echo "PASS: isolated test release is signed; incrementing update versionCode works."
+      - name: Remove disposable test key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/disposable-ci-only.p12"
