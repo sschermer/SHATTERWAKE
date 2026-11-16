@@ -365,7 +365,7 @@ for side in (-1,1):
    cyl("Repair / clean retention bolt",(x+xx,-1.0+yy,.70),
        .026,.025,damage_rim,n=12)
 current=damage_groups[1]
-box("Damage tier1 / burned starboard wing",-1.0 if False else (-3.6,-1.0,.66),
+box("Damage tier1 / burned port wing",(-3.6,-1.0,.66),
     (.64,.56,.07),burned,.022)
 box("Damage tier1 / wiring recess",(-3.6,-1.0,.705),(.35,.15,.025),black,.01)
 current=damage_groups[2]
@@ -429,32 +429,57 @@ for x in (-8,-4,0,4,8):
 for o in room:o.hide_render=True
 # Save complete editable source before final render – groups and cameras intact.
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(R,"hero_fighter.blend"))
-def show(base_on,ids,hangar_on):
+def show(base_on,ids,hangar_on,level=1,hits=0):
  for o in base:o.hide_render=not base_on
- for id,collection in modules.items():
-  for o in collection:o.hide_render=(id not in ids)
+ for id,items in modules.items():
+  for o in items:o.hide_render=id not in ids
+ for id,stages in levels.items():
+  for needed,items in stages.items():
+   for o in items:o.hide_render=id not in ids or needed>level
+ for needed,items in damage_groups.items():
+  for o in items:o.hide_render=needed>hits
  for o in room:o.hide_render=not hangar_on
-def render(path,camera,dimension,base_on=True,ids=(),hangar_on=False):
- show(base_on,ids,hangar_on)
+def render(name,camera,dim,base_on=True,ids=(),hangar_on=False,level=1,hits=0):
+ show(base_on,ids,hangar_on,level,hits)
  scene.camera=camera
- scene.render.resolution_x,scene.render.resolution_y=dimension
+ scene.render.resolution_x,scene.render.resolution_y=dim
  scene.render.film_transparent=not hangar_on
- scene.render.filepath=path
- print("ART-001 RENDER",path,flush=True)
+ scene.render.filepath=name
+ scene.cycles.samples=36
  bpy.ops.render.render(write_still=True)
- if not os.path.isfile(path) or os.stat(path).st_size<500:
-  raise RuntimeError("Empty/missing render: "+path)
-
-render(os.path.join(P,"werft_before.png"),werft_cam,(1000,900),hangar_on=True)
-render(os.path.join(P,"werft_weapons.png"),werft_cam,(1000,900),ids=(0,),hangar_on=True)
-render(os.path.join(P,"werft_damage.png"),werft_cam,(1000,900),ids=(1,),hangar_on=True)
-render(os.path.join(P,"werft_shield.png"),werft_cam,(1000,900),ids=(5,),hangar_on=True)
-render(os.path.join(P,"werft_drones.png"),werft_cam,(1000,900),ids=(4,),hangar_on=True)
-render(os.path.join(P,"game_nose_up.png"),game_cam,(1024,1024))
-render(os.path.join(G,"fighter_base.png"),game_cam,(1024,1024))
-for id in (0,1,4,5):
- render(os.path.join(G,"fighter_module_%s.png"%id),game_cam,(1024,1024),False,(id,))
-render(os.path.join(W,"fighter_base.png"),werft_cam,(2048,2048))
-for id in (0,1,4,5):
- render(os.path.join(W,"fighter_module_%s.png"%id),werft_cam,(2048,2048),False,(id,))
-print("ART-001: ORIGINAL MASTER + FOUR REAL MODULE VARIANTS + ALIGNED GAME/WERFT EXPORTS READY")
+ assert os.path.isfile(name) and os.stat(name).st_size>500,("missing",name)
+ print("ART-004 RENDER",name,flush=True)
+incremental=os.environ.get("SW_ART_UPDATE_ONLY","0")=="1"
+if not incremental:
+ for key,items in (("before",()),("weapons",(0,)),("damage",(1,)),("shield",(5,)),("drones",(4,))):
+  render(os.path.join(P,"werft_"+key+".png"),werft_cam,(1000,900),ids=items,hangar_on=True)
+ render(os.path.join(P,"game_nose_up.png"),game_cam,(1024,1024))
+ for cam,folder,res in ((game_cam,G,1024),(werft_cam,W,2048)):
+  render(os.path.join(folder,"fighter_base.png"),cam,(res,res))
+  for id in (0,1,4,5):
+   render(os.path.join(folder,"fighter_module_%d.png"%id),cam,(res,res),False,(id,))
+else:
+ for folder in (G,W):
+  for filename in ("fighter_base.png","fighter_module_0.png","fighter_module_1.png",
+                   "fighter_module_4.png","fighter_module_5.png"):
+   assert os.path.isfile(os.path.join(folder,filename)),("old asset missing",folder,filename)
+for key,ids,level in (("magnet",(3,),1),("magnet_max",(3,),3),
+                      ("target",(7,),1),("target_max",(7,),5),
+                      ("special",(6,),1),("repair",(2,),1)):
+ render(os.path.join(P,"werft_"+key+".png"),werft_cam,(1000,900),
+        ids=ids,hangar_on=True,level=level)
+for hits in (1,2,3):
+ render(os.path.join(P,"werft_damage_state_%d.png"%hits),werft_cam,
+        (1000,900),hangar_on=True,hits=hits)
+for cam,folder,res in ((game_cam,G,1024),(werft_cam,W,2048)):
+ for id in (2,3,6,7):
+  render(os.path.join(folder,"fighter_module_%d.png"%id),
+         cam,(res,res),False,(id,))
+ for id,stages in ((3,(2,3)),(7,(2,3,4,5))):
+  for lvl in stages:
+   render(os.path.join(folder,"fighter_module_%d_L%d.png"%(id,lvl)),
+          cam,(res,res),False,(id,),level=lvl)
+ for hits in (1,2,3):
+  render(os.path.join(folder,"fighter_hull_damage_%d.png"%hits),
+         cam,(res,res),False,(),hits=hits)
+print("ART-004 DONE: full 8-system ship, levelled magnet and targeting, 3 damage states")
