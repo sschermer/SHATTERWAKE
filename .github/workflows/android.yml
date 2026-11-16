@@ -204,7 +204,7 @@ jobs:
         run: |
           set -euo pipefail
           tag=v0.6.2-alpha
-          apk=out/signed/SHATTERWAKE-v0.6.1-alpha-signed.apk
+          apk=out/signed/SHATTERWAKE-v0.6.2-alpha-signed.apk
           sums=out/signed/SHA256SUMS.txt
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$apk" "$sums" --clobber
