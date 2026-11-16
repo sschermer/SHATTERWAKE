@@ -385,6 +385,10 @@ public final class GameView extends View {
     }
     private void startWorld(int next){
         world=next;stage=GameRules.worldTier(world);
+        // One minimum charge for each ability at the start of EVERY sector.
+        // Existing stockpiles carry forward unchanged across sector choices.
+        for(int i=0;i<abilityCharges.length;i++)
+            abilityCharges[i]=GameRules.refillSpecialForSector(abilityCharges[i]);
         enemies.clear();shots.clear();pickups.clear();particles.clear();
         boss=null;bossActive=false;bossSequence=GameRules.BOSS_NORMAL;bossSequenceTimer=0f;
         salvageElapsed=0f;salvageBurstWave=0;dockingElapsed=0f;
@@ -413,7 +417,7 @@ public final class GameView extends View {
                     kind==7?165+tier*55:25+tier*8+(kind>=3?34:0));
             e.phase=rnd(0,6.28f);
             e.flightSide=random.nextBoolean()?1f:-1f;
-            e.flightTargetX=x;
+            e.flightTargetX=xx; // fixed spawn lane; never tracks player fire or steering
             e.vy=(rnd(48,75)+tier*12)*.86f;e.fragments=kind==6?4:0;
             e.shoot=rnd(1.6f,3.1f);
             enemies.add(e);
@@ -986,13 +990,13 @@ public final class GameView extends View {
                     }
                 }else if(q.kind==5){
                     int randomSlot=random.nextInt(4);
-                    abilityCharges[randomSlot]=Math.min(3,abilityCharges[randomSlot]+1);
+                    abilityCharges[randomSlot]=GameRules.addSpecialCharge(abilityCharges[randomSlot]);
                     if(!tutorialActive && TutorialRules.canPromptAbility(seenAbilityMask,randomSlot))
                         beginGuide(TutorialRules.GUIDE_ABILITY,randomSlot);
                 }else{
                     int slot=q.kind-1;
                     if(slot>=0&&slot<4){
-                        abilityCharges[slot]=Math.min(3,abilityCharges[slot]+1);
+                        abilityCharges[slot]=GameRules.addSpecialCharge(abilityCharges[slot]);
                         if(!tutorialActive && TutorialRules.canPromptAbility(seenAbilityMask,slot))
                             beginGuide(TutorialRules.GUIDE_ABILITY,slot);
                     }
@@ -1099,7 +1103,7 @@ public final class GameView extends View {
         // All eight distinct physical ship systems are available in the Werft.
         offers.add(new Offer(4,"BEGLEITDROHNE","Autonomes Zusatzgeschütz",GameRules.nextDroneCost(droneLevel)));
         offers.add(new Offer(5,"SCHILDVERSTÄRKUNG","Absorbiert einen weiteren Treffer",GameRules.nextShieldCost(shieldLevel)));
-        offers.add(new Offer(6,"SPEZIAL-LADUNGEN","Je eine Ladung für vier Fähigkeiten",390));
+        offers.add(new Offer(6,"SPEZIALLADUNG +1","Eine von vier Fähigkeiten auswählen",GameRules.SPECIAL_CHARGE_COST));
         offers.add(new Offer(7,"ZIELKORREKTUR +3%","Bis zu 15% verbesserte Zielkorrektur",
                 GameRules.nextTargetingCost(targetingLevel)));
     }
@@ -1111,7 +1115,7 @@ public final class GameView extends View {
             case 3:return GameRules.nextMagnetCost(magnetLevel);
             case 4:return GameRules.nextDroneCost(droneLevel);
             case 5:return GameRules.nextShieldCost(shieldLevel);
-            case 6:return 390;
+            case 6:return GameRules.SPECIAL_CHARGE_COST;
             case 7:return GameRules.nextTargetingCost(targetingLevel);
             default:return o.base;
         }
@@ -1134,6 +1138,9 @@ public final class GameView extends View {
         Offer o=offers.get(index);
         int price=offerPrice(o);
         if(!offerAvailable(o)){shopMessage="AUSBAU BEREITS MAXIMAL";return;}
+        if(o.id==6&&!GameRules.validSpecialSelection(selectedSpecialAbility)){
+            shopMessage="BITTE EINE FAEHIGKEIT WAEHLEN";return;
+        }
         if(stars<price){shopMessage="NICHT GENUG STERNE";return;}
         stars-=price;
         switch(o.id){
@@ -1144,7 +1151,8 @@ public final class GameView extends View {
             case 4:droneLevel++;break;
             case 5:shieldLevel++;break;
             case 6:specialMagazinePurchases++;
-                for(int a=0;a<4;a++)abilityCharges[a]=Math.min(3,abilityCharges[a]+1);break;
+                abilityCharges[selectedSpecialAbility]=GameRules.addSpecialCharge(
+                        abilityCharges[selectedSpecialAbility]);break;
             case 7:targetingLevel++;break;
             default:break;
         }
@@ -2012,8 +2020,28 @@ public final class GameView extends View {
                 int price=offerPrice(chosen.id>=0?chosen:offers.get(0));
                 boolean available=offerAvailable(chosen),affordable=stars>=price;
                 drawWerftShip(c,chosen.id,werftZoom);
-                panel(c,17,499,386,225,0xF5122A43,0xFF7DCBE8,13);
-                if(chosen.id==2){
+                panel(c,17,chosen.id==6?488:499,386,chosen.id==6?252:225,
+                        0xF5122A43,0xFF7DCBE8,13);
+                if(chosen.id==6){
+                    textCenter(c,"SPEZIALLADUNG · +1",516,20,WHITE,true);
+                    textCenter(c,"WAEHLE GENAU EINE FAEHIGKEIT",535,12,MUTED,false);
+                    for(int a=0;a<4;a++){
+                        int left=28+(a%2)*191,top=547+(a/2)*44;
+                        boolean chosenAbility=a==selectedSpecialAbility;
+                        panel(c,left,top,180,39,
+                                chosenAbility?0xFF265E67:0xFF20364B,
+                                chosenAbility?GREEN:0xFF52758A,8);
+                        txt(c,ABILITY_NAMES[a],left+11,top+16,12,
+                                chosenAbility?WHITE:MUTED,Paint.Align.LEFT,true);
+                        txt(c,abilityCharges[a]+"  →  "+
+                                GameRules.addSpecialCharge(abilityCharges[a]),
+                                left+168,top+30,13,
+                                chosenAbility?GREEN:GOLD,Paint.Align.RIGHT,true);
+                    }
+                    textCenter(c,"PREIS: ★ "+GameRules.SPECIAL_CHARGE_COST+
+                            (selectedSpecialAbility<0?" · AUSWAHL FEHLT":" · NUR DIESE FAEHIGKEIT"),
+                            652,13,GOLD,true);
+                }else if(chosen.id==2){
                     int missing=GameRules.repairsNeeded(hp,maxHp);
                     int percent=GameRules.hullPercent(hp,maxHp);
                     textCenter(c,"RUMPFREPARATUR",529,21,WHITE,true);
@@ -2044,11 +2072,17 @@ public final class GameView extends View {
                     textCenter(c,available?"KOSTEN: ★ "+price:"MAXIMAL AUSGEBAUT",
                             612,15,available?GOLD:MUTED,true);
                 }
-                button(c,"ZURUECK",28,647,170,62,false);
+                int buttonTop=chosen.id==6?672:647;
+                int buttonHeight=chosen.id==6?57:62;
+                button(c,"ZURUECK",28,buttonTop,170,buttonHeight,false);
                 button(c,!available?(chosen.id==2?"100%":"MAX"):
                         !affordable?"STERNE FEHLEN":
+                        chosen.id==6&&!GameRules.validSpecialSelection(selectedSpecialAbility)?
+                                "ERST AUSWAEHLEN":
                         werftZoom<.995f?"BITTE ANSEHEN":"JETZT KAUFEN",
-                        222,647,170,62,available&&affordable&&werftZoom>=.995f);
+                        222,buttonTop,170,buttonHeight,
+                        available&&affordable&&werftZoom>=.995f
+                                &&(chosen.id!=6||GameRules.validSpecialSelection(selectedSpecialAbility)));
                 textCenter(c,shopMessage,750,11,GREEN,false);
                 return;
             }
@@ -2419,13 +2453,27 @@ public final class GameView extends View {
                     return true;
                 }
                 if(werftPreviewIndex>=0){
-                    if(inside(px,py,28,647,170,62)){
-                        werftPreviewIndex=-1;werftZoom=0f;return true;
+                    Offer chosen=offers.get(werftPreviewIndex);
+                    if(chosen.id==6){
+                        for(int a=0;a<4;a++){
+                            int left=28+(a%2)*191,top=547+(a/2)*44;
+                            if(inside(px,py,left,top,180,39)){
+                                selectedSpecialAbility=a;
+                                shopMessage="";
+                                sound(0);return true;
+                            }
+                        }
                     }
-                    if(inside(px,py,222,647,170,62)
+                    int buttonTop=chosen.id==6?672:647;
+                    int buttonHeight=chosen.id==6?57:62;
+                    if(inside(px,py,28,buttonTop,170,buttonHeight)){
+                        werftPreviewIndex=-1;werftZoom=0f;selectedSpecialAbility=-1;
+                        return true;
+                    }
+                    if(inside(px,py,222,buttonTop,170,buttonHeight)
                             &&GameRules.werftPurchaseEnabled(werftZoom,
-                                    offerAvailable(offers.get(werftPreviewIndex)),
-                                    stars,offerPrice(offers.get(werftPreviewIndex)))){
+                                    offerAvailable(chosen),stars,offerPrice(chosen))
+                            &&(chosen.id!=6||GameRules.validSpecialSelection(selectedSpecialAbility))){
                         buyOffer(werftPreviewIndex);
                     }
                     return true;
@@ -2434,6 +2482,7 @@ public final class GameView extends View {
                     int left=13+i%2*201,top=474+i/2*51;
                     if(inside(px,py,left,top,193,46)){
                         werftPreviewIndex=i;werftZoom=0f;shopMessage="";
+                        selectedSpecialAbility=-1;
                         sound(0);return true;
                     }
                 }
