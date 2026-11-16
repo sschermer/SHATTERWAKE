@@ -1923,7 +1923,7 @@ public final class GameView extends View {
         button(c,"EINSTELLUNGEN",51,524,318,54,false);
         button(c,"TECHNOLOGIE-ARCHIV",51,593,318,54,false);
         button(c,"TUTORIAL "+(tutorialComplete?"WIEDERHOLEN":"STARTEN"),51,663,318,47,false);
-        textCenter(c,"PROTOTYP 0.4 · OFFLINE · OHNE TRACKING",754,10,MUTED,false);
+        textCenter(c,"PROTOTYP 0.5 · 3D-GRAFIK · OFFLINE",754,10,MUTED,false);
     }
     private void screenHeader(Canvas c,String title,String sub){
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);
@@ -1934,7 +1934,7 @@ public final class GameView extends View {
         box(c,0,0,W,H,0xC7091322);
         panel(c,23,207,374,338,0xF70C253B,0xFF7BDEEB,15);
         textCenter(c,"DIE STERNENWERFT",264,28,GOLD,true);
-        textCenter(c,"DEIN SCHIFF LIEGT IM MUTTERSCHIFF",305,13,WHITE,true);
+        textCenter(c,"BAUTEILE VOR DEM KAUF BETRACHTEN",305,13,WHITE,true);
         textCenter(c,"STERNE SIND DIE WAEHRUNG",341,17,GOLD,true);
         textCenter(c,"UPGRADES ZUERST ANSEHEN",376,13,MUTED,false);
         textCenter(c,"ZOOM ZEIGT DEN BETROFFENEN SCHIFFSTEIL",406,12,MUTED,false);
@@ -2003,8 +2003,15 @@ public final class GameView extends View {
                 }else{
                     textCenter(c,chosen.title,531,22,WHITE,true);
                     textCenter(c,chosen.description,559,13,MUTED,false);
-                    textCenter(c,"BAUTEIL: "+GameRules.werftPartLabel(chosen.id),
-                            585,13,GOLD,true);
+                    String partLabel="BAUTEIL: "+GameRules.werftPartLabel(chosen.id);
+                    if(chosen.id==3){
+                        partLabel="MAGNET: STUFE "+magnetLevel+" → "+
+                                GameRules.visualUpgradeLevel(magnetLevel,3,true)+" / 3";
+                    }else if(chosen.id==7){
+                        partLabel="ZIELKORREKTUR: STUFE "+targetingLevel+" → "+
+                                GameRules.visualUpgradeLevel(targetingLevel,5,true)+" / 5";
+                    }
+                    textCenter(c,partLabel,585,13,GOLD,true);
                     textCenter(c,available?"KOSTEN: ★ "+price:"MAXIMAL AUSGEBAUT",
                             612,15,available?GOLD:MUTED,true);
                 }

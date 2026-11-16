@@ -8,7 +8,7 @@ Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight
 
 - **Boss finale and mothership dock:** A huge multistage final explosion scatters collectible bonus stars, power-ups and an actual technology chip. Existing drops persist. The safe salvage phase only ends once every collectible has been caught or left the screen. A large mothership flies in, opens a glowing hangar and the player ship automatically docks before the Werft appears.
 - **Die Sternenwerft:** A large live ship view replaces the former direct-buy list. Choose any available upgrade to animate a smooth zoom onto its affected subsystem. The price and description are shown, but purchase stays disabled until the close-up finishes. **Jetzt kaufen** is a second, explicit action. **Zurueck**, including Android Back, returns to the complete ship view without spending stars.
-- A paced **nine-step interactive tutorial** teaches steering, automatic fire, stars, shield, rapid fire, triple shot, plasma, its visible impact on a training target, and homing missiles. **Each of the four power-ups now gets a full 15 seconds of active testing** after activation, with a visible countdown and real firing/target feedback. Only then does the **WEITER** confirmation unlock the next lesson. The last screen requires explicit confirmation to start sector 1.
+- A paced **nine-step interactive tutorial** teaches steering, automatic fire, stars, shield, rapid fire, triple shot, plasma, its visible impact on a training target, and homing missiles. **Each of the four power-ups now gets 5 seconds of active testing** after activation, with a visible countdown and real firing/target feedback. Only then does the **WEITER** confirmation unlock the next lesson. The last screen requires explicit confirmation to start sector 1.
 - **Plasma is unambiguously visible:** a pulsing violet aura and reactor on the fighter, thick luminous violet bolts with long trails, and purple impact particles on targets. Its charged HUD tile remains highlighted while active.
 - Guided missiles now fire with **one tap**, instead of a hard-to-understand select-then-release sequence, in both control layouts. They must actually destroy a practice target before the tutorial completes.
 - Each special ability is first introduced with a paused hint highlighting its real HUD button. Training is safe and does not consume a normal run.
@@ -65,9 +65,13 @@ All ships, enemies, HUD, backgrounds and sound effects are newly drawn/programma
 - The Werft and gameplay share the **same permanent modular hardware**: distinct barrel assemblies, armored plates, drone docking cradles, glowing shield emitter housings, magnets, capacitor and targeting turret. A close-up preview shows the prospective hardware at its actual attachment point. Purchased upgrades remain on the playable vessel, not just in the shop.
 - Accompanying drone sprites now circle the player's hull in combat instead of remaining in a fixed horizontal row.
 
-## First actual 3D asset integration
+## Earlier 3D experiment (superseded)
 
-The game now loads transparent baked 3D ship imagery from `app/src/main/assets/rendered/` when present. The artwork comes from a high-detail **CC0 spaceship by Grab3D** rendered in Blender, plus eight distinct physically modeled project-created upgrade components. Each module is rendered in the *same camera position* as the base hull, enabling actual body changes during play and in the zooming Werft instead of bright hand-drawn marks. The initial Android CI run builds and commits the PNGs; subsequent runs use the committed PNG files without needing Blender or another network download. Procedural graphics remain a fallback when the 3D pipeline has not yet run. Model license and voluntary source credit: `THIRD_PARTY_NOTICES.md`.
+The initial CC0 Grab3D model was technically integrated but visually rejected.
+It has since been replaced by the approved, **original SHATTERWAKE Blender
+Hero Fighter** described below. The active Android build no longer downloads
+the earlier model and contains no Grab3D-derived fighter sprites. Historical
+voluntary credit remains in `THIRD_PARTY_NOTICES.md`.
 
 ## Sternenwerft: repair transparency
 
