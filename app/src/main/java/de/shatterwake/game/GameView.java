@@ -1168,7 +1168,12 @@ public final class GameView extends View {
             if(state==PAUSE)drawPause(c);
         }else{
             if(state==MENU)drawMenu(c);
-            else if(state==SHOP){drawShop(c);if(shopIntroShowing)drawShopIntro(c);}
+            else if(state==SHOP){
+                drawShop(c);
+                // Always above the fighter render, in complete and zoom views.
+                drawWerftBalance(c);
+                if(shopIntroShowing)drawShopIntro(c);
+            }
             else if(state==ROUTE)drawRoute(c);
             else if(state==DEAD)drawDead(c);
             else if(state==GAME_OVER)drawGameOver(c,false);
@@ -1970,12 +1975,21 @@ public final class GameView extends View {
                     Paint.Align.CENTER,true);
         }
     }
+    /** In screen coordinates, drawn after the entire Werft ship scene.
+     * Never render inside drawWerftShip because that canvas zooms/clips.
+     */
+    private void drawWerftBalance(Canvas c){
+        panel(c,21,127,177,48,0xF20B1B2C,0xB9B4A078,9);
+        txt(c,"VERFUEGBARE STERNE",33,143,10,MUTED,Paint.Align.LEFT,true);
+        txt(c,GameRules.werftBalanceLabel(stars),
+                33,168,22,GOLD,Paint.Align.LEFT,true);
+        panel(c,271,134,126,33,0xEA0B1B2C,0x7777A4BD,8);
+        txt(c,"SEKTOR "+stage,389,155,12,WHITE,Paint.Align.RIGHT,true);
+    }
     private void drawShop(Canvas c){
         screenHeader(c,werftPreviewIndex<0?"STERNENWERFT":"WERFT · DETAILANSICHT",
                 werftPreviewIndex<0?"UPGRADE ANTIPPEN · BAUTEIL ANSEHEN":
                         "ZOOM AUF DAS BETROFFENE SCHIFFSTEIL");
-        txt(c,"★ "+stars,26,144,23,GOLD,Paint.Align.LEFT,true);
-        txt(c,"SEKTOR "+stage+" ABSOLVIERT",394,142,11,WHITE,Paint.Align.RIGHT,true);
         if(werftPreviewIndex>=0){
             if(werftPreviewIndex>=offers.size())werftPreviewIndex=-1;
             if(werftPreviewIndex>=0){

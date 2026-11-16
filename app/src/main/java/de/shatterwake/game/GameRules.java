@@ -4,6 +4,9 @@ package de.shatterwake.game;
 public final class GameRules {
     private GameRules() { }
     public static final float AIM_RADIANS = (float) Math.toRadians(15.0);
+    public static String werftBalanceLabel(int stars){
+        return "★ "+Math.max(0,stars);
+    }
     public static float aimCorrectionFraction(int level){return Math.min(5,Math.max(0,level))*.03f;}
     public static int nextTargetingCost(int level){return 220+Math.max(0,level)*145;}
     public static final int MAX_CONTINUES = 2;

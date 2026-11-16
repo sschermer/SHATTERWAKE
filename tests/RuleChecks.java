@@ -31,6 +31,9 @@ public final class RuleChecks {
         assert GameRules.visualUpgradeLevel(3,3,true)==3;
         assert GameRules.visualUpgradeLevel(4,5,true)==5;
         assert GameRules.visualUpgradeLevel(0,5,false)==0;
+        assert GameRules.werftBalanceLabel(225).equals("★ 225");
+        assert GameRules.werftBalanceLabel(65).equals("★ 65");
+        assert GameRules.werftBalanceLabel(0).equals("★ 0");
         assert GameRules.MAX_CONTINUES==2;
         assert GameRules.routesAfter(1)[0]!=GameRules.routesAfter(1)[1];
         assert GameRules.routesAfter(2)[0]==3;
