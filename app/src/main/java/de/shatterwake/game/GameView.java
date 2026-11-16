@@ -1669,18 +1669,10 @@ public final class GameView extends View {
             c.rotate(e.vy>0f?e.heading:0f);
             int core=e.kind==5?0xFFA4A2FF:e.kind==3?0xFFFFC080:0xFFFF839C;
             glow(c,0,17,e.radius+17,0x2A000000,0x00000000);
-            if(e.kind==6){
-                for(int j=0;j<4;j++){
-                    float xx=(float)Math.sin(e.t*4+j*.8f)*10;
-                    float yy=j*13;
-                    glow(c,xx,yy,16,0x6049A4E2,0x0049A4E2);
-                    c.save();c.translate(xx,yy);
-                    atlas.drawModule(c,2,16f);
-                    c.restore();
-                }
-            }else {
-                atlas.drawEnemy(c,atlas.enemies[Math.min(6,Math.max(0,e.kind))],0,0,e.radius);
-            }
+            // Render the actual metallic ship silhouette for all eight kinds.
+            // The rare gold hunter is its own original model; detached module
+            // kind 6 is a compact mechanical fragment, not four HUD icons.
+            atlas.drawEnemy(c,e.kind,0,0,e.radius);
             if(e.hp<e.maxHp){
                 box(c,-17,-35,34,3,0xDD111B30);
                 box(c,-17,-35,34*clamp((float)e.hp/e.maxHp,0,1),3,GOLD);

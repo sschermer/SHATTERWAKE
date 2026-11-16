@@ -397,10 +397,20 @@ final class SpriteAtlas {
         }else if(fighter!=null)paintBitmap(c,fighter,
                 new RectF(x-44,y-47,x+44,y+46));
     }
-    void drawEnemy(Canvas c,Bitmap b,float x,float y,float radius){
+    /** Original Blender enemy fleet. Sprite 7 is the unique rare gold hunter,
+     * not the old procedural fragment placeholder. All types have the exact
+     * same transparent camera so the aircraft does not change silhouette
+     * as the fixed flight-path bank rotates it.
+     */
+    void drawEnemy(Canvas c,int kind,float x,float y,float radius){
+        int id=Math.max(0,Math.min(7,kind));
+        Bitmap sprite=bitmapFor(false,"enemies/enemy_"+id+".png");
+        if(sprite==null)sprite=enemies[Math.min(6,id)];
         p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);
-        float width=radius*2.15f,height=radius*2.3f;
-        c.drawBitmap(b,null,new RectF(x-width/2,y-height/2,x+width/2,y+height/2),p);
+        p.setColorFilter(null);p.setStyle(Paint.Style.FILL);
+        float width=radius*2.38f,height=radius*2.50f;
+        c.drawBitmap(sprite,null,new RectF(x-width/2,y-height/2,
+                x+width/2,y+height/2),p);
     }
     void drawModule(Canvas c,int type,float radius){
         Bitmap b=modules[Math.max(0,Math.min(modules.length-1,type))];
