@@ -28,6 +28,27 @@ was made by a general Poly Haven staff member. Preserve license evidence and
 any license files shipped with source packs. The above list is voluntary
 recognition, not a statement that artwork has already been imported.
 
+## 3D asset pipeline and voluntary artist credit
+
+The new optional graphics pipeline uses the high-detail **Spaceship** model,
+published under **CC0 1.0** by **Grab3D**. Voluntary provider/artist credit:
+**Grab3D — Spaceship**. If an individual original artist is named in the
+asset manifest, add that specific artist before a commercial release.
+
+- Original model page: https://grab3d.com/models/sci-fi/spaceship/
+- Official model metadata: https://grab3d.com/api/v1/models/spaceship.json
+- CC0 license: https://creativecommons.org/publicdomain/zero/1.0/
+- Technical import: original GLB is acquired by GitHub Actions; Blender
+  produces nine aligned transparent PNG passes (fighter hull and eight
+  mechanical upgrade layers). The GLB is **not** shipped in the APK.
+- Added armaments, shield emitters, sensor and docking hardware are
+  project-created 3D geometry, not externally purchased models.
+
+This is the source attribution for a **conditional build step**: only builds
+with `app/src/main/assets/rendered/fighter_base.png` actually contain the
+pre-rendered art. Builds lacking the asset fall back to project-drawn shapes.
+No attribution is claimed for artists whose asset is not actually present.
+
 ## Assets included in the APK
 
 | Category | Origin | Rights / licensing position |

@@ -25,7 +25,7 @@ import java.util.Locale;
 import java.util.Random;
 
 /** SHATTERWAKE: original, offline arcade game rendered entirely with Android Canvas.
- * All artwork is procedural vector geometry; sounds are generated from mathematical waveforms.
+ * 3D-rendered CC0 sprites are preferred when present; procedural fallback and generated audio remain.
  */
 public final class GameView extends View {
     private static final float W=420f, H=780f, FIELD_BOTTOM=643f;
@@ -41,7 +41,7 @@ public final class GameView extends View {
     private static final String[] ABILITY_NAMES={"SCHILD","RAPID","DREIFACH","PLASMA"};
     private static final String[] SECONDARY_NAMES={"RAKETEN","EMP"};
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final SpriteAtlas atlas=new SpriteAtlas();
+    private final SpriteAtlas atlas;
     private final Random random=new Random();
     private final SharedPreferences prefs;
     private final ArrayList<Enemy> enemies=new ArrayList<>();
@@ -148,6 +148,7 @@ public final class GameView extends View {
 
     public GameView(Context context) {
         super(context);
+        atlas=new SpriteAtlas(context);
         setLayerType(View.LAYER_TYPE_SOFTWARE,null);
         prefs=context.getSharedPreferences("shatterwake_save_v1",Context.MODE_PRIVATE);
         best=prefs.getInt("best",0);
@@ -1406,6 +1407,19 @@ public final class GameView extends View {
         p.setColor(WHITE);p.setStyle(Paint.Style.FILL);
         c.drawCircle(gx,gy,radius,p);p.setShader(null);
     }
+    /** The real Blender render layers replace procedural overlays when present. */
+    private void drawEquipment(Canvas c,int preview){
+        if(atlas.hasRenderedFighter()){
+            if(fireLevel>0||preview==0)atlas.drawHardware(c,0);
+            if(damageLevel>0||preview==1)atlas.drawHardware(c,1);
+            if(hp==maxHp||preview==2)atlas.drawHardware(c,2);
+            if(magnetLevel>0||preview==3)atlas.drawHardware(c,3);
+            if(droneLevel>0||preview==4)atlas.drawHardware(c,4);
+            if(shieldLevel>0||preview==5)atlas.drawHardware(c,5);
+            if(abilityCharges[3]>1||preview==6)atlas.drawHardware(c,6);
+            if(targetingLevel>0||preview==7)atlas.drawHardware(c,7);
+        }else drawShipHardware(c,preview);
+    }
     /** Metal hardware is part of the ship, not a highlight or HUD marker.
      * Preview modules are fitted as transparent holographic blueprints and the
      * actual purchased part remains visible in the next sector.
@@ -1574,7 +1588,7 @@ public final class GameView extends View {
         // Detailed 192px transparent sprite, with independently animated thrusters
         // and protective shield painted at runtime.
         atlas.drawPlayer(c,0,-2);
-        drawShipHardware(c,-1);
+        drawEquipment(c,-1);
         if(rapidTime>0){
             for(int side=-1;side<=1;side+=2){
                 glow(c,side*13f,-32f,12f,0x99FFB059,0x00FFB059);
@@ -1923,7 +1937,7 @@ public final class GameView extends View {
         c.translate(centerX,centerY);c.scale(scale,scale);
         // Render actual ship hardpoints in the same positions as during combat.
         atlas.drawPlayer(c,0,-2);
-        drawShipHardware(c,highlightedId);
+        drawEquipment(c,highlightedId);
         if(droneLevel>0)drawOrbitingDrones(c);
         c.restore();
         if(highlightedId>=0 && ease>.65f){

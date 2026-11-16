@@ -1,6 +1,9 @@
 package de.shatterwake.game;
 
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import java.io.InputStream;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -18,14 +21,31 @@ import android.graphics.Shader;
 final class SpriteAtlas {
     private static final int S=384;
     final Bitmap fighter;
+    final Bitmap renderedFighter;
+    final Bitmap[] renderedModules=new Bitmap[8];
     final Bitmap[] enemies=new Bitmap[7];
     final Bitmap[] modules=new Bitmap[5];
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
 
-    SpriteAtlas(){
-        fighter=makeFighter();
+    SpriteAtlas(Context context){
+        renderedFighter=load(context,"rendered/fighter_base.png");
+        for(int i=0;i<renderedModules.length;i++)
+            renderedModules[i]=load(context,"rendered/fighter_module_"+i+".png");
+        fighter=renderedFighter==null?makeFighter():null;
         for(int i=0;i<enemies.length;i++)enemies[i]=makeEnemy(i);
         for(int i=0;i<modules.length;i++)modules[i]=makeModule(i);
+    }
+    private Bitmap load(Context ctx,String name){
+        try(InputStream in=ctx.getAssets().open(name)){
+            return BitmapFactory.decodeStream(in);
+        }catch(Exception ignored){return null;}
+    }
+    boolean hasRenderedFighter(){return renderedFighter!=null;}
+    void drawHardware(Canvas c,int index){
+        if(index<0||index>=renderedModules.length)return;
+        Bitmap b=renderedModules[index];if(b==null)return;
+        p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);
+        c.drawBitmap(b,null,new RectF(-50,-47,50,47),p);
     }
     private Canvas bitmap(Canvas[] out){
         Bitmap b=Bitmap.createBitmap(S,S,Bitmap.Config.ARGB_8888);
@@ -244,7 +264,9 @@ final class SpriteAtlas {
     }
     void drawPlayer(Canvas c,float x,float y){
         p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);
-        c.drawBitmap(fighter,null,new RectF(x-44,y-47,x+44,y+46),p);
+        if(renderedFighter!=null)
+            c.drawBitmap(renderedFighter,null,new RectF(x-50,y-47,x+50,y+47),p);
+        else c.drawBitmap(fighter,null,new RectF(x-44,y-47,x+44,y+46),p);
     }
     void drawEnemy(Canvas c,Bitmap b,float x,float y,float radius){
         p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);

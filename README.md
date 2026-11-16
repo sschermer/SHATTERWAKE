@@ -64,3 +64,7 @@ All ships, enemies, HUD, backgrounds and sound effects are newly drawn/programma
 - Player and hostile ships now use 384px in-memory procedural renders instead of 192px, with more faceted metal armor, recessed vents and bolts. An entirely separate rare gold star hunter design is generated.
 - The Werft and gameplay share the **same permanent modular hardware**: distinct barrel assemblies, armored plates, drone docking cradles, glowing shield emitter housings, magnets, capacitor and targeting turret. A close-up preview shows the prospective hardware at its actual attachment point. Purchased upgrades remain on the playable vessel, not just in the shop.
 - Accompanying drone sprites now circle the player's hull in combat instead of remaining in a fixed horizontal row.
+
+## First actual 3D asset integration
+
+The game now loads transparent baked 3D ship imagery from `app/src/main/assets/rendered/` when present. The artwork comes from a high-detail **CC0 spaceship by Grab3D** rendered in Blender, plus eight distinct physically modeled project-created upgrade components. Each module is rendered in the *same camera position* as the base hull, enabling actual body changes during play and in the zooming Werft instead of bright hand-drawn marks. The initial Android CI run builds and commits the PNGs; subsequent runs use the committed PNG files without needing Blender or another network download. Procedural graphics remain a fallback when the 3D pipeline has not yet run. Model license and voluntary source credit: `THIRD_PARTY_NOTICES.md`.
