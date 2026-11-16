@@ -81,23 +81,28 @@ public final class VoiceCombosChecks {
         masks[3]=0;
         assert VoiceCommandRules.maskFromSpeech("Angriff",words,masks)==0;
 
-        // Partial recognition is stable after two updates, and old actions
-        // NEVER fire a second time even if final recognition repeats them.
-        int sent=0,previous=0;
+        // Dispatch the FIRST valid partial immediately; later hypotheses
+        // add only new actions. Final callbacks must not double-spend.
+        int sent=0;
         int[] hypotheses={4,6,14,14};
-        int[] expectedNew={0,4,2,8};
+        int[] expectedNew={4,2,8,0};
         for(int i=0;i<hypotheses.length;i++){
-            int stable=hypotheses[i]&previous;
-            int fresh=VoiceCommandRules.newActions(stable,sent);
+            int fresh=VoiceCommandRules.newActions(hypotheses[i],sent);
             assert fresh==expectedNew[i] : "unexpected partial step "+i;
             sent|=fresh;
-            previous=hypotheses[i];
         }
         assert sent==14;
         assert VoiceCommandRules.newActions(14,sent)==0;
         assert VoiceCommandRules.newActions(31,sent)==17;
         assert VoiceCommandRules.newActions(63,63)==0;
         assert VoiceCommandRules.newActions(63,-1)==0;
+        // Invalid or negated partial results must remain inert.
+        assert VoiceCommandRules.newActions(
+                VoiceCommandRules.maskFromSpeech("nicht Plasma",words,masks),0)==0;
+        // One valid result must be enough; repeat in the final is ignored.
+        int first=VoiceCommandRules.maskFromSpeech("Overdrive",words,masks);
+        assert VoiceCommandRules.newActions(first,0)==15;
+        assert VoiceCommandRules.newActions(first,first)==0;
 
         // Empty charges are skipped independently by GameView. This mask
         // contract does not make combinations atomic or reset timers.

@@ -17,8 +17,8 @@ android {
         targetSdk 36
         // Actions adds its monotonically increasing run number. Local builds
         // default to 7; there is never an automatic downgrade of signed APKs.
-        versionCode ((System.getenv('SHATTERWAKE_BUILD_NUMBER') ?: '10').toInteger())
-        versionName (System.getenv('SHATTERWAKE_VERSION_NAME') ?: '0.6.5-alpha')
+        versionCode ((System.getenv('SHATTERWAKE_BUILD_NUMBER') ?: '11').toInteger())
+        versionName (System.getenv('SHATTERWAKE_VERSION_NAME') ?: '0.6.6-alpha')
     }
     signingConfigs {
         if (signingConfigured) {

@@ -41,6 +41,9 @@ def check_sources():
     assert "useSecondary(which)" in g, "Voice rockets/EMP must reuse existing gameplay"
     assert "EXTRA_PARTIAL_RESULTS,true" in c
     assert "onPartialResults(Bundle partialResults)" in c
+    assert "dispatch(session,parsed);" in c, "First valid partial must dispatch immediately"
+    assert "previousPartialMask" not in c, "No two-partial confirmation delay"
+    assert "recognizer.stopListening()" in c, "Retain existing 3.3s cap"
     assert "newActions(" in c
     assert "prepareIfEnabled()" in m
     assert "voiceController.cancelListening()" in m

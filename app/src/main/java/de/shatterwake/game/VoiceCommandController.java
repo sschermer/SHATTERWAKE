@@ -16,7 +16,7 @@ import java.util.ArrayList;
 
 /**
  * Offline, optional push-to-talk. Reuses a prepared local recognizer;
- * tentative speech is acted on only after two matching partials. Actions
+ * the first valid partial result can activate an action immediately. Actions
  * are deduplicated per utterance, including between partial and final results.
  */
 final class VoiceCommandController {
@@ -30,7 +30,6 @@ final class VoiceCommandController {
     private SpeechRecognizer recognizer;
     private boolean listening=false;
     private int generation=0;
-    private int previousPartialMask=0;
     private int dispatchedMask=0;
 
     VoiceCommandController(Activity activity,GameView game){
@@ -97,7 +96,6 @@ final class VoiceCommandController {
         }
         final int session=++generation;
         listening=true;
-        previousPartialMask=0;
         dispatchedMask=0;
         game.onVoiceStatus("JETZT SPRECHEN",true);
         try{
@@ -113,12 +111,10 @@ final class VoiceCommandController {
                 @Override public void onPartialResults(Bundle partialResults){
                     if(!isCurrent(session))return;
                     int parsed=firstRecognizedMask(partialResults);
-                    // One unstable hypothesis never spends a charge. Once the
-                    // same action survives two successive partial updates,
-                    // it may fire before the remaining utterance is finished.
-                    int stable=parsed&previousPartialMask;
-                    previousPartialMask=parsed;
-                    dispatch(session,stable);
+                    // First grammatically valid partial fires immediately.
+                    // Each action is deduplicated across all partials and
+                    // the final recognition by dispatch()/newActions().
+                    dispatch(session,parsed);
                 }
                 @Override public void onResults(Bundle results){
                     if(!isCurrent(session))return;

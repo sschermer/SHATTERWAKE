@@ -1,3 +1,11 @@
+## 0.6.6-alpha — Sofortreaktion auf das erste gültige Sprach-Zwischenergebnis (16.11.2026)
+
+- **Methode B:** Die erste grammatisch gültige Teilerkennung der lokalen Android-Spracherkennung aktiviert die zugehörigen Aktionen unmittelbar. Eine zweite gleichlautende Teilerkennung ist nicht mehr erforderlich.
+- Das bestehende Aufnahmefenster von maximal **3,3 Sekunden**, die Geste mit dem zweiten Finger und das unveränderte Verhalten beim Loslassen bleiben erhalten.
+- Mehrere Teilergebnisse und das endgültige Ergebnis können jede Aktion innerhalb einer Äußerung höchstens einmal auslösen. Neue Aktionen werden unabhängig ergänzt; nicht erkannte oder negierte Formulierungen werden weiterhin durch die bestehende Grammatik verworfen.
+- Unverändert bleiben Spezialladungen, Kombinationen, Spielmechanik, Tutorial, Grafik, Spielstände, Paketkennung `de.shatterwake.game`, privater Signaturschlüssel sowie lokale Offline-Verarbeitung ohne INTERNET-Berechtigung.
+- Java-Regressionstests für Erst-Dispatch, Kombinationen und Wiederholungen sowie aktualisierte Offline-/Datenschutz-Prüfung. Signiertes Android-Release über bestehende CI-Pipeline.
+
 ## 0.6.5-alpha — konfigurierbare Sprachkombinationen und beschleunigte Erkennung (16.11.2026)
 
 - Vier frei benennbare Auslösewörter mit direkt im Canvas antippbaren sechs Aktionsschaltern und dauerhafter lokaler Speicherung; Vorbelegung: Overdrive (vier Spezialfähigkeiten), Inferno (Turbo/Dreifach/Plasma/Raketen), Notfall (Schild/EMP), Angriff (Turbo/Raketen).
