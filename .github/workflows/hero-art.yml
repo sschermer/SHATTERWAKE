@@ -92,11 +92,18 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Preserve ONLY rendered files, not the old checked-out source code
+          # nor the separately generated/stored fighter_layout.json.
+          tar -cf /tmp/shatterwake-art.tar -C art/hero_fighter \
+            hero_fighter.blend previews staging/game staging/werft render_report.json
+          # A concurrent layout job / old renderer may have updated this branch.
+          # Always install artifacts on top of the current HEAD to prevent
+          # Git binary-file merge/rebase conflicts and stale source overwrites.
+          git fetch origin art/hero-fighter-v1
+          git reset --hard FETCH_HEAD
+          tar -xf /tmp/shatterwake-art.tar -C art/hero_fighter
           git add -f art/hero_fighter/hero_fighter.blend \
-            art/hero_fighter/previews art/hero_fighter/staging \
-            art/hero_fighter/render_report.json
-          git commit -m 'Render hero fighter visual previews, editable master and sprite exports [skip ci]' || true
-          # Layout export can commit independently while Blender renders; avoid
-          # rejecting a valid long render merely because the branch advanced.
-          git pull --rebase origin art/hero-fighter-v1
+            art/hero_fighter/previews art/hero_fighter/staging/game \
+            art/hero_fighter/staging/werft art/hero_fighter/render_report.json
+          git commit -m 'Render complete eight-system Hero Fighter sprites [skip ci]' || true
           git push origin HEAD:art/hero-fighter-v1
