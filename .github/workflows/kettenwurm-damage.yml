@@ -86,4 +86,8 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -f art/bosses/kettenwurm/damage_output/
           git commit -m 'art: archive original 5x4 boss damage Blender sprites [skip ci]' || true
+          # The user may add documentation while Cycles renders. Never force-push:
+          # rebase the generated-art commit onto the latest review branch.
+          git fetch origin art/kettenwurm-blender-master
+          git rebase origin/art/kettenwurm-blender-master
           git push origin HEAD:art/kettenwurm-blender-master
