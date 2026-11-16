@@ -16,14 +16,14 @@ assert 'android:label="FINAL SORTIE"' in manifest
 assert 'android:icon="@drawable/ic_launcher"' in manifest
 assert 'android:roundIcon="@drawable/ic_launcher"' in manifest
 assert view.count('"FINAL SORTIE"') >= 3
-assert 'FINAL SORTIE 0.6.4-alpha' in view
+assert 'FINAL SORTIE 0.6.5-alpha' in view
 assert '"SHATTERWAKE"' not in view, "Old display name survives in runtime"
 assert 'getSharedPreferences("shatterwake_save_v1"' in view, "Existing progress must survive rename"
 assert "applicationId 'de.shatterwake.game'" in gradle
 assert "namespace 'de.shatterwake.game'" in gradle
-assert "?: '9'" in gradle and "?: '0.6.4-alpha'" in gradle
-assert "SHATTERWAKE_VERSION_NAME=0.6.4-alpha.$GITHUB_RUN_NUMBER" in workflow
-assert 'tag=v0.6.4-alpha' in workflow
+assert "?: '10'" in gradle and "?: '0.6.5-alpha'" in gradle
+assert "SHATTERWAKE_VERSION_NAME=0.6.5-alpha.$GITHUB_RUN_NUMBER" in workflow
+assert 'tag=v0.6.5-alpha' in workflow
 assert 'expected="12fc96a90b8ca79d7e01f8e1a420f97e872ec71dc32ebe2b10ba59919776fc06"' in workflow
 
 icon = root / "app/src/main/res/drawable-nodpi/ic_launcher.webp"

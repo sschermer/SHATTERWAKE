@@ -1,4 +1,4 @@
-# FINAL SORTIE — Datenschutz / Offline-Sprachbefehle (v0.6.4-alpha)
+# FINAL SORTIE — Datenschutz / Offline-Sprachbefehle (v0.6.5-alpha)
 
 ## Bestehende App-Daten
 FINAL SORTIE arbeitet ohne INTERNET-Berechtigung, Werbung, Analyse,
@@ -48,3 +48,15 @@ Datenschutzerklärung inklusive ihrer tatsächlichen Kontaktangaben,
 regionaler Pflichten sowie einer Prüfung des jeweiligen Android-
 Sprachdienstes bereitstellen. Das Manifest und die gepackte APK
 werden unter \`tests/check_voice_privacy.py\` getestet.
+
+
+## Vordefinierte und nutzerdefinierte Sprachkombinationen (v0.6.5)
+Vier optionale, vom Nutzer änderbare lokale Auslösewörter und je ein Bitmuster
+für sechs Aktionen werden unter `voice_word_0..3` und
+`voice_mask_0..3` in den bestehenden SharedPreferences gespeichert.
+Die Wörter dienen ausschließlich zur Abgleichung mit lokalen Android-
+Erkennungsergebnissen. Sie werden nicht an FINAL-SORTIE-Server übertragen
+(keine Internetberechtigung). Die App speichert keine Mikrofonaufnahmen,
+Transkripte oder Sprachverläufe. Zum Löschen/Zurücksetzen sind die Wörter
+im Menü editierbar; ein vollständiges Zurücksetzen erfolgt mit dem Löschen
+der lokalen App-Daten.

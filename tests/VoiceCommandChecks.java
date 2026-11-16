@@ -23,7 +23,8 @@ public final class VoiceCommandChecks {
         assert VoiceCommandRules.commandFromSpeech("EMP")==-1;
         assert VoiceCommandRules.commandFromSpeech("Zwei Schilde")==-1;
         assert VoiceCommandRules.commandFromSpeech("Schild Plasma")==-1;
-        assert VoiceCommandRules.commandFromSpeech("Schild Schild")==-1;
+        // New contract: repeated command in one utterance fires exactly once.
+        assert VoiceCommandRules.commandFromSpeech("Schild Schild")==0;
         assert VoiceCommandRules.commandFromSpeech("Nicht Plasma")==-1;
         assert VoiceCommandRules.commandFromSpeech("Ich möchte doch kein Plasma")==-1;
         assert VoiceCommandRules.commandFromSpeech("Bitte starte den Turbo im Schiff")==-1;
