@@ -83,6 +83,7 @@ public final class GameView extends View {
     private float dockingElapsed=0f, dockingStartX=210f, dockingStartY=565f;
     private int salvageBurstWave=0;
     private int werftPreviewIndex=-1;
+    private int selectedSpecialAbility=-1;
     private float werftZoom=0f;
     private int touchPointer=-1;
     private float touchOffsetX=0, touchOffsetY=0;
@@ -295,16 +296,12 @@ public final class GameView extends View {
             int id=TutorialRules.abilityForStep(tutorialStep);
             abilityCharges[id]=Math.max(1,abilityCharges[id]);
             // Shield practice includes an actual stationary enemy attacker.
+            // Plasma is learned and visibly practiced in this ONE step.
             Enemy target=new Enemy(id==0?1:3,id==0?210f:(x>W/2?100:320),
-                    id==0?212f:267f,20000);
+                    id==0?212f:267f,id==3?120:20000);
             target.vy=0;target.shoot=9999;target.value=0;
             enemies.add(target);
             beginGuide(TutorialRules.GUIDE_ABILITY,id);
-        }else if(tutorialStep==TutorialRules.PLASMA_TARGET){
-            plasmaTime=Math.max(plasmaTime,7f);
-            Enemy target=new Enemy(3,x>W/2?100:320,265,112);
-            target.vy=0;target.shoot=9999;target.value=0;
-            enemies.add(target);
         }else if(tutorialStep==TutorialRules.FIRE_SECONDARY){
             plasmaTime=0f;
             secCharges[0]=Math.max(1,secCharges[0]);
@@ -328,7 +325,8 @@ public final class GameView extends View {
     }
     private void finishTutorial(){
         tutorialComplete=true;tutorialActive=false;dismissGuide();save();
-        startRun();
+        // Optional training returns to its main-menu entry point.
+        state=MENU;
     }
     private void updateTutorial(float dt){
         if(tutorialCheckpoint)return;
@@ -354,8 +352,7 @@ public final class GameView extends View {
         }
         // Fire normally during every practice window, including the rapid-fire
         // rate boost and the extra barrels of the triple-shot upgrade.
-        if(testingPowerup||tutorialStep==TutorialRules.TARGET
-                ||tutorialStep==TutorialRules.PLASMA_TARGET){
+        if(testingPowerup||tutorialStep==TutorialRules.TARGET){
             shootTimer-=dt;
             if(shootTimer<=0){
                 firePrimary();
@@ -378,7 +375,6 @@ public final class GameView extends View {
         }
         if(testingPowerup||tutorialStep==TutorialRules.TARGET
                 ||tutorialStep==TutorialRules.COLLECT_STAR
-                ||tutorialStep==TutorialRules.PLASMA_TARGET
                 ||tutorialStep==TutorialRules.FIRE_SECONDARY){
             updateShots(dt);
             updatePickups(dt);
@@ -485,13 +481,10 @@ public final class GameView extends View {
         explode(e.x,e.y,e.kind==5?0xFFC391FF:RED,e.kind>=3?19:9);
         addScore(e.kind>=3?110:40);
         if(tutorialActive && (tutorialStep==TutorialRules.TARGET
-                || tutorialStep==TutorialRules.PLASMA_TARGET
                 || tutorialStep==TutorialRules.FIRE_SECONDARY)){
             enemies.remove(i);
             if(tutorialStep==TutorialRules.TARGET)
                 tutorialAction(TutorialRules.ACTION_TARGET_KILLED);
-            else if(tutorialStep==TutorialRules.PLASMA_TARGET)
-                tutorialAction(TutorialRules.ACTION_PLASMA_TARGET_KILLED);
             else if(tutorialRocketFired)
                 tutorialAction(TutorialRules.ACTION_SECONDARY_TARGET_KILLED);
             return;
@@ -2194,7 +2187,7 @@ public final class GameView extends View {
     }
     private String tutorialStepName(int step){
         String[] names={"STEUERN","ZIELEN","STERNE","SCHILD","SCHNELLFEUER",
-                "DREIFACH","PLASMA AKTIVIEREN","PLASMA TESTEN","RAKETEN","ABSCHLUSS"};
+                "DREIFACH","PLASMA","RAKETEN","ABSCHLUSS"};
         return names[Math.max(0,Math.min(step,names.length-1))];
     }
     private void drawTutorialOverlay(Canvas c){
@@ -2258,11 +2251,10 @@ public final class GameView extends View {
                     "DU BEHERRSCHST DIE SCHIFFSSTEUERUNG",
                     "DIE HAUPTWAFFE SCHIESST AUTOMATISCH",
                     "STERNE SIND DIE SHOP-WAEHRUNG",
-                    "SCHILD 15 SEKUNDEN ERPROBT",
-                    "SCHNELLFEUER 15 SEKUNDEN GETESTET",
-                    "DREIFACHSCHUSS 15 SEKUNDEN GETESTET",
-                    "PLASMA 15 SEKUNDEN GETESTET",
-                    "PLASMA TRIFFT MIT VIOLETTEN IMPULSEN",
+                    "SCHILD 5 SEKUNDEN ERPROBT",
+                    "SCHNELLFEUER 5 SEKUNDEN GETESTET",
+                    "DREIFACHSCHUSS 5 SEKUNDEN GETESTET",
+                    "PLASMA 5 SEKUNDEN AM ZIEL GETESTET",
                     "DIE RAKETEN FINDEN IHR ZIEL SELBST"
                 };
                 textCenter(c,feedback[Math.min(tutorialStep,feedback.length-1)],315,13,WHITE,false);
@@ -2276,11 +2268,10 @@ public final class GameView extends View {
                 textCenter(c,"ALLE "+TutorialRules.TOTAL_STEPS+" AUFGABEN GESCHAFFT",
                         321,15,WHITE,true);
                 textCenter(c,"SCHIFF · WAFFEN · STERNE · PLASMA",362,13,GOLD,true);
-                textCenter(c,"BEREIT FUER DEN ERSTEN SEKTOR?",396,13,WHITE,false);
-                button(c,"SEKTOR 1 STARTEN",58,419,304,57,true);
+                textCenter(c,"DU KANNST JEDERZEIT SPIELEN ODER ERNEUT UEBEN",396,12,WHITE,false);
+                button(c,"ZUM HAUPTMENUE",58,419,304,57,true);
             }else{
                 if(tutorialStep==TutorialRules.TARGET
-                        ||tutorialStep==TutorialRules.PLASMA_TARGET
                         ||tutorialStep==TutorialRules.FIRE_SECONDARY){
                     p.setShader(null);p.setStyle(Paint.Style.STROKE);
                     p.setColor(0xFFDFC27B);p.setStrokeWidth(2.3f);
@@ -2305,8 +2296,6 @@ public final class GameView extends View {
                         detail="DREIFACH: DREI SCHUESSE PRO SALVE";break;
                     case TutorialRules.ACTIVATE_PLASMA:
                         detail="PLASMA: VIOLETTE TREFFER AM ZIEL";break;
-                    case TutorialRules.PLASMA_TARGET:
-                        detail="ZUM ZIEL FLIEGEN · VIOLETTE TREFFER BEOBACHTEN";break;
                     case TutorialRules.FIRE_SECONDARY:
                         detail=tutorialRocketFired?"RAKETEN UNTERWEGS · WARTE AUF DEN TREFFER":
                                 "RAKETE UNTEN RECHTS ANTIPPEN";break;
@@ -2370,8 +2359,8 @@ public final class GameView extends View {
         switch(state){
             case MENU:
                 if(inside(px,py,51,450,318,58)){
-                    if(!tutorialComplete)startTutorial();else startRun();
-                    return true;
+                    // Never automatically start a tutorial, including first run.
+                    startRun();return true;
                 }
                 if(inside(px,py,51,524,318,54)){state=SETTINGS;return true;}
                 if(inside(px,py,51,593,318,54)){state=ARCHIVE;return true;}
