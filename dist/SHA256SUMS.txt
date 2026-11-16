@@ -1,1 +1,1 @@
-21fa474253daac11bcac08ab79cdf09b8ac5ac70d8404b6e5645619bc2c5a91c  SHATTERWAKE-v0.5.0-alpha-debug.apk
+5463446c577aadd44d1d4f99ee4f59327c76eaacf02d60cb42b038e278e706fb  SHATTERWAKE-v0.5.0-alpha-debug.apk
