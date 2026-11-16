@@ -47,6 +47,18 @@ public final class RuleChecks {
                 -GameRules.FIGHTER_ART_SCALE*(20*Math.cos(r7)+30*Math.sin(r7)))<.0001f;
         assert Math.abs(GameRules.fighterAnchorY(20f,-30f,7f)
                 -GameRules.FIGHTER_ART_SCALE*(20*Math.sin(r7)-30*Math.cos(r7)))<.0001f;
+        assert GameRules.SPECIAL_CHARGE_COST==100;
+        assert GameRules.validSpecialSelection(0)&&GameRules.validSpecialSelection(3);
+        assert !GameRules.validSpecialSelection(-1)&&!GameRules.validSpecialSelection(4);
+        assert GameRules.addSpecialCharge(0)==1;
+        assert GameRules.addSpecialCharge(1)==2;
+        assert GameRules.addSpecialCharge(3)==4;
+        assert GameRules.addSpecialCharge(99)==100;
+        assert GameRules.addSpecialCharge(Integer.MAX_VALUE)==Integer.MAX_VALUE;
+        assert GameRules.refillSpecialForSector(0)==1;
+        assert GameRules.refillSpecialForSector(1)==1;
+        assert GameRules.refillSpecialForSector(4)==4;
+        assert GameRules.refillSpecialForSector(100)==100;
         assert GameRules.MAX_CONTINUES==2;
         assert GameRules.routesAfter(1)[0]!=GameRules.routesAfter(1)[1];
         assert GameRules.routesAfter(2)[0]==3;

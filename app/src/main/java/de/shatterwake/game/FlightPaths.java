@@ -1,47 +1,65 @@
 package de.shatterwake.game;
 
-/** Deterministic trajectory curves: actual attack lines, banking turns and a rare loop. */
+/**
+ * Non-reactive attack paths. Once spawned, an enemy follows a fixed,
+ * smooth curve. There is no reading of the player's current position,
+ * firing direction or shot locations: no targeted evasive behavior.
+ *
+ * targetX is intentionally ignored for compatibility with earlier callers.
+ */
 public final class FlightPaths {
     private FlightPaths(){}
     private static float clamp(float v,float lo,float hi){
         return Math.max(lo,Math.min(hi,v));
     }
     private static float smooth(float v){
-        v=clamp(v,0f,1f);return v*v*(3f-2f*v);
+        v=clamp(v,0f,1f);
+        return v*v*(3f-2f*v);
     }
     public static void position(int kind,float startX,float startY,float speed,
                                 float side,float targetX,float seconds,float[] out){
-        float t=Math.max(0f,seconds),y=startY+speed*t,x=startX;
+        final float t=Math.max(0f,seconds);
+        float x=startX,y=startY+speed*t;
         switch(kind){
-            case 0:x+=side*118f*smooth(t/4.5f);break;
-            case 1:x+=side*126f*(float)Math.sin(Math.PI*clamp(t/6f,0f,1f));break;
-            case 2:
-                x+=(targetX-startX)*smooth(t/5.5f);
-                x+=side*36f*(float)Math.sin(Math.PI*clamp(t/5.5f,0f,1f));
-                y+=38f*smooth(t/3.6f);break;
-            case 3:x+=side*140f*(1f-(float)Math.cos(
-                    Math.PI*clamp(t/7f,0f,1f)))*.5f;break;
-            case 4:x+=side*138f*(float)Math.sin(
-                    2f*Math.PI*clamp(t/10f,0f,1f));break;
-            case 5:x+=side*144f*(float)Math.sin(
-                    .5f*Math.PI*clamp(t/5.1f,0f,1f));break;
-            case 6:x+=side*(24f*t+23f*(float)Math.sin(t*.85f));break;
-            case 7:
-                // A golden high-value target flies in, draws 1.5 circular
-                // revolutions around the arena, then breaks toward the bottom.
-                float cx=clamp(startX,101f,319f),cy=252f,r=77f;
+            case 0: // Interceptor: gentle steady diagonal sweep.
+                x+=side*68f*smooth(t/6.5f);
+                break;
+            case 1: // Raider: one large predictable attack arc.
+                x+=side*78f*(float)Math.sin(Math.PI*clamp(t/9f,0f,1f));
+                break;
+            case 2: // Recon: shallow S, never homes in on the player.
+                x+=side*(48f*smooth(t/7f)+19f*(float)Math.sin(
+                        2f*Math.PI*clamp(t/9f,0f,1f)));
+                y+=28f*smooth(t/6f);
+                break;
+            case 3: // Carrier: heavy, easy-to-track pass.
+                x+=side*36f*smooth(t/8f);
+                break;
+            case 4: // Bomber: one measured sine-wave arc.
+                x+=side*69f*(float)Math.sin(
+                        2f*Math.PI*clamp(t/11f,0f,1f));
+                break;
+            case 5: // Enforcer: slow flanking sweep.
+                x+=side*56f*(float)Math.sin(
+                        .5f*Math.PI*clamp(t/8f,0f,1f));
+                break;
+            case 6: // Detached module: drifting debris.
+                x+=side*(10f*t+12f*(float)Math.sin(t*.8f));
+                break;
+            case 7: // Very rare star hunter: ONE readable full loop.
+                final float cx=clamp(startX,105f,315f),cy=247f,r=65f;
                 if(t<2f){
                     float a=smooth(t/2f);
                     x=startX+(cx+r-startX)*a;
                     y=startY+(cy-startY)*a;
-                }else if(t<9.3f){
-                    float a=(t-2f)*(float)(3f*Math.PI/7.3f);
+                }else if(t<8.4f){
+                    float a=(t-2f)*(float)(2f*Math.PI/6.4f);
                     x=cx+r*(float)Math.cos(a);
                     y=cy+r*(float)Math.sin(a);
                 }else{
-                    float dt=t-9.3f;
-                    x=cx-r+side*dt*32f;
-                    y=cy+dt*145f;
+                    float dt=t-8.4f;
+                    x=cx+r+side*dt*22f;
+                    y=cy+dt*132f;
                 }
                 break;
             default:break;

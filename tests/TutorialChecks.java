@@ -10,7 +10,6 @@ public final class TutorialChecks {
             TutorialRules.ACTION_RAPID_USED,
             TutorialRules.ACTION_TRIPLE_USED,
             TutorialRules.ACTION_PLASMA_USED,
-            TutorialRules.ACTION_PLASMA_TARGET_KILLED,
             TutorialRules.ACTION_SECONDARY_TARGET_KILLED
         };
         int step=TutorialRules.MOVE;
@@ -23,6 +22,8 @@ public final class TutorialChecks {
         }
         assert step==TutorialRules.COMPLETE;
         assert TutorialRules.nextStep(step,TutorialRules.ACTION_MOVE)==TutorialRules.COMPLETE;
+        assert TutorialRules.nextStep(TutorialRules.ACTIVATE_PLASMA,
+                TutorialRules.ACTION_PLASMA_USED)==TutorialRules.FIRE_SECONDARY;
         assert TutorialRules.nextStep(TutorialRules.FIRE_SECONDARY,
                 TutorialRules.ACTION_PLASMA_USED)==TutorialRules.FIRE_SECONDARY;
 
@@ -52,7 +53,7 @@ public final class TutorialChecks {
             assert TutorialRules.actionForStep(powerupStep)==TutorialRules.ACTION_SHIELD_USED+i;
             assert TutorialRules.nextStep(powerupStep,TutorialRules.ACTION_MOVE)==powerupStep;
         }
-        assert !TutorialRules.isPowerupStep(TutorialRules.PLASMA_TARGET);
+        assert TutorialRules.isPowerupStep(TutorialRules.ACTIVATE_PLASMA);
         assert TutorialRules.abilityForStep(TutorialRules.FIRE_SECONDARY)==-1;
         assert TutorialRules.actionForStep(TutorialRules.MOVE)==-1;
         float trial=TutorialRules.POWERUP_TRIAL_SECONDS;
@@ -62,6 +63,6 @@ public final class TutorialChecks {
         trial=TutorialRules.remainingTrialTime(trial,1f);
         assert trial==0f : "The lesson completes only at 5 seconds";
         assert TutorialRules.remainingTrialTime(0f,1f)==0f;
-        System.out.println("PASS: nine deliberate lessons and four full 5-second power-up trials");
+        System.out.println("PASS: eight deliberate lessons and four full 5-second power-up trials");
     }
 }

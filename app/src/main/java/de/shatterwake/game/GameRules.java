@@ -20,6 +20,18 @@ public final class GameRules {
         double a=Math.toRadians(bankDegrees);
         return FIGHTER_ART_SCALE*(float)(localX*Math.sin(a)+localY*Math.cos(a));
     }
+    public static final int SPECIAL_CHARGE_COST=100;
+    /** One charge in exactly one selected ability, never a hard three-charge cap. */
+    public static int addSpecialCharge(int current){
+        return current>=Integer.MAX_VALUE?Integer.MAX_VALUE:Math.max(0,current)+1;
+    }
+    /** At the NEXT sector start only empty slots refill to one. */
+    public static int refillSpecialForSector(int current){
+        return Math.max(1,current);
+    }
+    public static boolean validSpecialSelection(int slot){
+        return slot>=0 && slot<4;
+    }
     public static String werftBalanceLabel(int stars){
         return "★ "+Math.max(0,stars);
     }
