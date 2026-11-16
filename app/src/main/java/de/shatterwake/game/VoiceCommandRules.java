@@ -39,7 +39,7 @@ final class VoiceCommandRules {
 
     static String normalize(String value){
         if(value==null)return "";
-        return Normalizer.normalize(value.toLowerCase(Locale.GERMAN),
+        return Normalizer.normalize(value.toLowerCase(Locale.GERMAN).replace("ß","ss"),
                 Normalizer.Form.NFD).replaceAll("\\p{M}+","")
                 .replaceAll("[^a-z0-9]+"," ").trim();
     }
