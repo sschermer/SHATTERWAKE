@@ -1,0 +1,21 @@
+{
+  "version": "boss-kettenwurm-mk1-review",
+  "source": "original Blender procedural geometry",
+  "node_count": 12,
+  "node_types": [
+    0,
+    1,
+    1,
+    4,
+    2,
+    3,
+    4,
+    1,
+    2,
+    4,
+    3,
+    1
+  ],
+  "camera_game": "orthographic nose +Y",
+  "approval": "3D review pending, no APK integration"
+}
