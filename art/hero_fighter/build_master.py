@@ -289,7 +289,7 @@ def cam(name,where,lookat,size):
  return o
 game_cam=cam("ART-001 GAME / nose is +Y, rendered UP",(0,0,29),(0,0,0),14.9)
 werft_cam=cam("ART-001 WERFT / cinematic 3-quarter",
-              (9,16,19),(0,0,.15),16.2
+              (9,16,19),(0,0,.15),16.2)
 scene.camera=werft_cam
 scene.world.use_nodes=True
 bg=scene.world.node_tree.nodes.get("Background")

@@ -21,11 +21,29 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy python3-pil
+      - name: Validate script and remove old generated files
+        run: |
+          python3 -m py_compile art/hero_fighter/build_master.py
+          # No pre-existing renders may satisfy the artifact validator.
+          rm -f art/hero_fighter/hero_fighter.blend
+          rm -f art/hero_fighter/previews/*.png art/hero_fighter/previews/*.jpg
+          rm -f art/hero_fighter/staging/game/*.png art/hero_fighter/staging/werft/*.png
       - name: Build editable 3D master and image previews, without touching Android
         run: |
           blender -b -t 4 --python art/hero_fighter/build_master.py -- art/hero_fighter
           test -s art/hero_fighter/previews/werft_before.png
           test -s art/hero_fighter/hero_fighter.blend
+          test -s art/hero_fighter/previews/werft_weapons.png
+          test -s art/hero_fighter/previews/werft_shield.png
+          test -s art/hero_fighter/previews/werft_drones.png
+          # Never pass with an old committed render while Blender failed.
+          /usr/bin/python3 - <<'PY'
+          from pathlib import Path
+          import time
+          images=Path("art/hero_fighter/previews")
+          for path in images.glob("*.png"):
+              assert time.time()-path.stat().st_mtime < 3600,("stale render",path)
+          PY
           /usr/bin/python3 - <<'PY'
           from PIL import Image
           from pathlib import Path
