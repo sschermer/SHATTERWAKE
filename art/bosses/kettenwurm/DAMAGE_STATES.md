@@ -45,3 +45,11 @@ Bei der späteren Android-Integration sollen die Grafiken je `Node.type` und Ver
 **Abnahme:** Erst nach visueller Genehmigung werden die PNG-Dateien in `app/src/main/assets/` integriert, der Java-Renderer angepasst, Regression und Leistung gemessen sowie eine kompatibel signierte Update-APK erstellt. Bis dahin keine Gameplay-/APK-Änderung.
 
 **Lizenzen:** Original-Blender-Geometrie, selbst geschriebene Scripts und prozedurale Materialien; keine fremden Modelle, Texturen oder Medien.
+
+## Aktueller Render- und Testnachweis – 16.11.2026
+
+- **GETESTET:** GitHub Actions Lauf [43891624496](https://github.com/sschermer/SHATTERWAKE/actions/runs/43891624496) erfolgreich abgeschlossen.
+- 20 Game-PNGs (Typ 0–4 × Zustand 0–3) sowie vier zusätzliche 3D-Detail-PNGs: jeweils 1024² RGBA mit transparenten Ecken, sichtbaren Pixelunterschieden zwischen benachbarten Schadensstufen.
+- Blendermaster `damage_output/kettenwurm_damage_master.blend` erzeugt, Prüfsummen in `damage_output/SHA256SUMS.txt` dokumentiert.
+- Gemeinsame Vorschau: `damage_output/damage_review_matrix.jpg`.
+- **OFFEN:** Visuelle Nutzerabnahme; die statische Explosion ist noch keine zeitlich animierte Android-Explosion. Keine Änderung an Android, Signatur oder Spielständen.
