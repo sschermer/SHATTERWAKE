@@ -99,6 +99,27 @@ jobs:
           java -ea -cp /tmp/sw-test de.shatterwake.game.TutorialChecks
       - name: Build installable debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Verify approved 3D fighter assets are inside the actual APK
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          with zipfile.ZipFile(apk) as archive:
+              contents=set(archive.namelist())
+          required={"assets/rendered/fighter_base.png",
+                    "assets/rendered/fighter_layout.json",
+                    "assets/rendered/werft/fighter_base.png",
+                    "assets/rendered/werft/hangar_background.png"}
+          for view in ("","werft/"):
+              prefix="assets/rendered/"+view
+              required.update(prefix+"fighter_module_%d.png"%i for i in range(8))
+              required.update(prefix+"fighter_module_3_L%d.png"%i for i in (2,3))
+              required.update(prefix+"fighter_module_7_L%d.png"%i for i in (2,3,4,5))
+              required.update(prefix+"fighter_hull_damage_%d.png"%i for i in (1,2,3))
+          missing=required-contents
+          assert not missing,("Missing approved art in APK",sorted(missing))
+          print("PASS: 38 original 3D art files and layout packaged")
+          PY
       - name: Prepare artifact + checksum
         run: |
           mkdir -p out
