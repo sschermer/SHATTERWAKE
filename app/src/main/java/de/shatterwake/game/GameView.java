@@ -126,7 +126,7 @@ public final class GameView extends View {
         }
     }
     private static final class Node {
-        float x,y,hp,maxHp; int type,id;boolean burst=false;
+        float x,y,hp,maxHp,explosionVisualTimer; int type,id;boolean burst=false;
         Node(int id,int type,float hp){this.id=id;this.type=type;this.hp=hp;maxHp=hp;}
     }
     private static final class Boss {
@@ -763,6 +763,11 @@ public final class GameView extends View {
             }
         } else if(boss!=null){
             boss.time+=dt;
+            // Visual node explosions are temporary; collisions and rewards remain
+            // controlled solely by the existing hp/burst combat logic.
+            if(boss.type==0)for(Node n:boss.nodes)
+                if(n.explosionVisualTimer>0f)
+                    n.explosionVisualTimer=Math.max(0f,n.explosionVisualTimer-dt);
             if(bossSequence==GameRules.BOSS_ENTERING){
                 bossSequenceTimer-=dt;
                 positionBossNodes();
@@ -939,6 +944,8 @@ public final class GameView extends View {
     private void nodeDamage(Node n){
         if(n.hp>0||n.burst)return;
         n.burst=true;
+        if(boss!=null&&boss.type==0)
+            n.explosionVisualTimer=GameRules.WORM_NODE_EXPLOSION_SECONDS;
         explode(n.x,n.y,n.type==3?GOLD:CYAN,20);
         addScore(70);
         if(n.type==2){
@@ -1690,6 +1697,10 @@ public final class GameView extends View {
                 line(c,prev.x,prev.y,n.x,n.y,0xAA7BC3CF,2);
             }
         }
+        if(boss.type==0){
+            drawKettenwurm(c);
+            return;
+        }
         for(Node n:boss.nodes){
             if(n.hp<=0)continue;
             c.save();c.translate(n.x,n.y);
@@ -1715,6 +1726,44 @@ public final class GameView extends View {
             }
             c.restore();
             if(n.hp<n.maxHp && n.hp>0) {
+                box(c,n.x-17,n.y+23,34,3,0xAA0E1626);
+                box(c,n.x-17,n.y+23,34*n.hp/n.maxHp,3,GOLD);
+            }
+        }
+    }
+    /** Original Blender models, individually rotated along the fixed sine path.
+     * This method never modifies node positions, hitboxes, HP or split logic.
+     */
+    private void drawKettenwurm(Canvas c){
+        for(Node n:boss.nodes){
+            final int damage=GameRules.bossNodeDamageState(n.hp,n.maxHp);
+            if(damage==3&&n.explosionVisualTimer<=0f)continue;
+            Node adjacent=n.id==0?boss.nodes.get(1):boss.nodes.get(n.id-1);
+            float heading=n.id==0
+                    ?GameRules.wormHeadingDegrees(n.x,n.y,adjacent.x,adjacent.y)
+                    :GameRules.wormHeadingDegrees(adjacent.x,adjacent.y,n.x,n.y);
+            c.save();c.translate(n.x,n.y);c.rotate(heading);
+            float drawSize=n.id==0?94f:88f;
+            float opacity=damage==3
+                    ?Math.min(1f,n.explosionVisualTimer/GameRules.WORM_NODE_EXPLOSION_SECONDS)
+                    :1f;
+            atlas.drawWormBossNode(c,n.type,damage,drawSize,opacity);
+            if(damage==2){
+                // Controlled time-based electrical arcing, small enough not to
+                // distract from aiming at independently destructible modules.
+                float beat=(float)Math.sin(boss.time*19f+n.id*2.4f);
+                if(beat>-.15f){
+                    float sx=4f+beat*5f;
+                    line(c,sx,-6,sx+5f,-11,WHITE,1.4f);
+                    line(c,sx+5f,-11,sx+2f,-15,n.type==4?CYAN:GOLD,1.3f);
+                }
+                if(n.type==3){
+                    int puff=(int)(42+25*(1+Math.sin(boss.time*5f+n.id)));
+                    circle(c,4f,-13f,3.2f,(puff<<24)|0x006D7379);
+                }
+            }
+            c.restore();
+            if(n.hp>0f&&n.hp<n.maxHp){
                 box(c,n.x-17,n.y+23,34,3,0xAA0E1626);
                 box(c,n.x-17,n.y+23,34*n.hp/n.maxHp,3,GOLD);
             }

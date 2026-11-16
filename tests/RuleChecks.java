@@ -21,6 +21,23 @@ public final class RuleChecks {
         assert GameRules.hullDamageTier(4,6)==2;
         assert GameRules.hullDamageTier(2,6)==3;
         assert GameRules.hullDamageTier(0,6)==3;
+        // Kettenwurm visual states are defined per module: two-thirds,
+        // one-third and zero HP, with exact inclusive boundary behavior.
+        assert GameRules.bossNodeDamageState(39f,39f)==0;
+        assert GameRules.bossNodeDamageState(27f,39f)==0;
+        assert GameRules.bossNodeDamageState(26f,39f)==1;
+        assert GameRules.bossNodeDamageState(13f,39f)==2;
+        assert GameRules.bossNodeDamageState(13.1f,39f)==1;
+        assert GameRules.bossNodeDamageState(1f,39f)==2;
+        assert GameRules.bossNodeDamageState(0f,39f)==3;
+        assert GameRules.bossNodeDamageState(-12f,39f)==3;
+        assert GameRules.bossNodeDamageState(90f,135f)==1;
+        assert GameRules.bossNodeDamageState(45f,135f)==2;
+        assert GameRules.bossNodeDamageState(135f,135f)==0;
+        assert GameRules.wormHeadingDegrees(0f,-10f,0f,0f)==0f;
+        assert GameRules.wormHeadingDegrees(10f,0f,0f,0f)==90f;
+        assert GameRules.wormHeadingDegrees(-10f,0f,0f,0f)==-90f;
+        assert GameRules.WORM_NODE_EXPLOSION_SECONDS>0.25f;
         assert GameRules.visibleWeaponModule(0,0,-1)==-1;
         assert GameRules.visibleWeaponModule(1,0,-1)==0;
         assert GameRules.visibleWeaponModule(0,1,-1)==1;
