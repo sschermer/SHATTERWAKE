@@ -34,7 +34,8 @@ world={
     "cockpit_center":(0,1.0,1.31)
 }
 anchors={
-    "0":(-2.89,1.4,.94),   # weapon hardpoint focus
+    "0":(-2.89,1.4,.94),   # normal weapon hardpoint focus
+    "1":(-2.89,1.4,.94),   # dark damage gun at same hardpoint
     "4":(-3.45,-1.95,1.13),# drone dock focus
     "5":(-3.25,-.04,.98)  # shield emitter focus
 }
@@ -70,7 +71,7 @@ for view_name,view in views.items():
     for name,pixel in view["projected_anchors"].items():
         assert 0<=pixel[0]<=width and 0<=pixel[1]<=height,(
             view_name,name,"projected outside image:",pixel)
-assert len(views["game"]["module_focus_pixels"])==3
+assert len(views["game"]["module_focus_pixels"])==4
 out={
     "schema":"SHATTERWAKE.ART-001.real-render-anchors.v1",
     "status":"visual-prototype-not-approved",
@@ -82,7 +83,7 @@ out={
         "game_canvas_android_logical_rect":[-50,-47,50,47],
         "pixel_values_derived_from":"bpy_extras.object_utils.world_to_camera_view",
     },
-    "modules_available":[0,4,5],
+    "modules_available":[0,1,4,5],
     "android_loader_status":"existing Android main still uses prior graphics; adapter is intentionally deferred",
     "views":views,
     "world_anchor_units":world

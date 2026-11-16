@@ -14,13 +14,22 @@ Beurteilung vor einem Merge.
 ## 2. Schnellfeuer: vollständig montiertes Zwillingsgeschütz
 ![Fighter mit Waffenmodul](previews/werft_weapons.jpg)
 
-## 3. Schild: zweifacher physischer Schildgenerator
+## 3. Erhöhter Schaden: dunkle Kanonen (neue Variante)
+
+![Kanonen mit erhöhtem Schaden in dunklem Anthrazit](previews/werft_damage.jpg)
+
+Die Kanonen haben dieselbe Form und dieselben Befestigungspunkte wie bei
+Schnellfeuer, aber eine dunkle, glatte Gunmetal-Oberfläche. Bei der späteren
+Integration wird je nach Upgrade-Zustand entweder das helle Geschütz (ID 0)
+oder das dunkle Geschütz (ID 1) ausgewählt – beide niemals gleichzeitig.
+
+## 4. Schild: zweifacher physischer Schildgenerator
 ![Fighter mit Schild](previews/werft_shield.jpg)
 
-## 4. Drohnen: montierte Start- und Ladedocks
+## 5. Drohnen: montierte Start- und Ladedocks
 ![Fighter mit Drohnendocks](previews/werft_drones.jpg)
 
-## 5. Tatsächliche Gameplay-Ausrichtung
+## 6. Tatsächliche Gameplay-Ausrichtung
 ![Fighter GAME – Nase oben](previews/game_nose_up.png)
 
 ## Bearbeitbare Quelle / Integration

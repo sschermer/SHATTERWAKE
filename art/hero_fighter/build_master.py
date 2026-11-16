@@ -20,7 +20,7 @@ scene.render.image_settings.color_depth="8"
 scene.render.image_settings.compression=28
 scene.render.film_transparent=True
 scene.view_settings.view_transform="AgX";scene.view_settings.look="AgX - Medium High Contrast"
-base=[];modules={0:[],4:[],5:[]};room=[];extras=[]
+base=[];modules={0:[],1:[],4:[],5:[]};room=[];extras=[]
 current=base
 
 def mat(name,color,metal=.7,rough=.4,wear=.15,emission=None):
@@ -47,6 +47,9 @@ ochre=mat("F / precise military hazard paint",(.33,.16,.075),.45,.5,.2)
 glass=mat("G / smoked cockpit",(.018,.049,.072),.35,.17,.08)
 blue=mat("H / restrained ion blue",(.06,.18,.25),.22,.26,.06,(.04,.26,.49))
 warm=mat("I / amber worklight",(.2,.15,.07),.22,.27,.12,(.5,.24,.05))
+damage_case=mat("J / heavy damage black titanium",(.046,.056,.069),.9,.28,0)
+damage_barrel=mat("K / damage hardening blacksteel",(.065,.080,.097),.93,.22,0)
+damage_rim=mat("L / machined anthracite",(.11,.135,.160),.88,.25,0)
 
 def add(o,m=None,b=.0):
  if m is not None:o.data.materials.append(m)
@@ -216,24 +219,36 @@ for s in (-1,1):
   box("Aft finned navigation strips",(s*(1.16+j*.21),-3.91,.38),
       (.145,.05,.026),blue,.005)
 
-# Three physically modeled, separately hideable upgrades.
-current=modules[0]
-for s in (-1,1):
- u=s*2.89
- box("Rapidfire / gun pivot hardpoint",(u,.5,.68),(.7,1.42,.42),black,.08)
- box("Rapidfire / armored twin cannon casing",(u,1.26,.86),(.7,.58,.38),charcoal,.075)
- for dx in (-.15,.15):
-  cyl("Rapidfire / fully bored twin heavy barrel",(u+dx,2.37,.94),
-      .118,2.4,brushed,"Y",24)
-  cyl("Rapidfire / dark rifled muzzle",(u+dx,3.61,.94),
-      .077,.16,black,"Y",24)
-  ring("Rapidfire / lathe-turned barrel ring",
-       (u+dx,3.34,.94),.119,.028,slate,"Y")
- for j in range(6):
-  box("Rapidfire / functional heat exchanger",(u,1.12-j*.19,1.09),
-      (.55,.085,.064),brushed,.009)
- for j in range(4):
-  cyl("Rapidfire / mount bolt",(u+s*.3,.15+j*.3,1.07),.033,.035,ochre)
+# Two precisely aligned, mutually exclusive material variations of the
+# same modeled guns. ID 0 is standard Schnellfeuer in brighter steel;
+# ID 1 is increased Waffenschaden in dark gunmetal. Select ONE weapon layer
+# on integration (damageLevel>0 selects ID 1, else fireLevel>0 selects ID 0).
+# These layers are not additive: avoid double-barrel outlines or z-fighting.
+for weapon_id in (0,1):
+ current=modules[weapon_id]
+ dark_guns=weapon_id==1
+ gun_case=damage_case if dark_guns else charcoal
+ gun_barrel=damage_barrel if dark_guns else brushed
+ gun_fittings=damage_rim if dark_guns else slate
+ prefix="Damage" if dark_guns else "Rapidfire"
+ for s in (-1,1):
+  u=s*2.89
+  box(prefix+" / gun pivot hardpoint",(u,.5,.68),(.7,1.42,.42),black,.08)
+  box(prefix+" / armored twin cannon casing",(u,1.26,.86),
+      (.7,.58,.38),gun_case,.075)
+  for dx in (-.15,.15):
+   cyl(prefix+" / machined twin cannon barrel",(u+dx,2.37,.94),
+       .118,2.4,gun_barrel,"Y",24)
+   cyl(prefix+" / rifled muzzle",(u+dx,3.61,.94),
+       .077,.16,black,"Y",24)
+   ring(prefix+" / machined barrel collar",
+        (u+dx,3.34,.94),.119,.028,gun_fittings,"Y")
+  for j in range(6):
+   box(prefix+" / functional cooling exchanger",
+       (u,1.12-j*.19,1.09),(.55,.085,.064),gun_barrel,.009)
+  for j in range(4):
+   cyl(prefix+" / mount bolt",(u+s*.3,.15+j*.3,1.07),.033,.035,
+       gun_fittings if dark_guns else ochre)
 
 current=modules[5]
 for s in (-1,1):
@@ -335,13 +350,14 @@ def render(path,camera,dimension,base_on=True,ids=(),hangar_on=False):
 
 render(os.path.join(P,"werft_before.png"),werft_cam,(1000,900),hangar_on=True)
 render(os.path.join(P,"werft_weapons.png"),werft_cam,(1000,900),ids=(0,),hangar_on=True)
+render(os.path.join(P,"werft_damage.png"),werft_cam,(1000,900),ids=(1,),hangar_on=True)
 render(os.path.join(P,"werft_shield.png"),werft_cam,(1000,900),ids=(5,),hangar_on=True)
 render(os.path.join(P,"werft_drones.png"),werft_cam,(1000,900),ids=(4,),hangar_on=True)
 render(os.path.join(P,"game_nose_up.png"),game_cam,(1024,1024))
 render(os.path.join(G,"fighter_base.png"),game_cam,(1024,1024))
-for id in (0,4,5):
+for id in (0,1,4,5):
  render(os.path.join(G,"fighter_module_%s.png"%id),game_cam,(1024,1024),False,(id,))
 render(os.path.join(W,"fighter_base.png"),werft_cam,(2048,2048))
-for id in (0,4,5):
+for id in (0,1,4,5):
  render(os.path.join(W,"fighter_module_%s.png"%id),werft_cam,(2048,2048),False,(id,))
-print("ART-001: ORIGINAL MASTER + THREE REAL MODULES + ALIGNED GAME/WERFT EXPORTS READY")
+print("ART-001: ORIGINAL MASTER + FOUR REAL MODULE VARIANTS + ALIGNED GAME/WERFT EXPORTS READY")

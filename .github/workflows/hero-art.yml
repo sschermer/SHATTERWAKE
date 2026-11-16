@@ -34,6 +34,7 @@ jobs:
           test -s art/hero_fighter/previews/werft_before.png
           test -s art/hero_fighter/hero_fighter.blend
           test -s art/hero_fighter/previews/werft_weapons.png
+          test -s art/hero_fighter/previews/werft_damage.png
           test -s art/hero_fighter/previews/werft_shield.png
           test -s art/hero_fighter/previews/werft_drones.png
           # Never pass with an old committed render while Blender failed.
@@ -48,7 +49,7 @@ jobs:
           from PIL import Image
           from pathlib import Path
           root=Path("art/hero_fighter/previews")
-          for key in ["werft_before","werft_weapons","werft_shield","werft_drones"]:
+          for key in ["werft_before","werft_weapons","werft_damage","werft_shield","werft_drones"]:
               img=Image.open(root/(key+".png")).convert("RGB")
               img.save(root/(key+".jpg"),quality=90,subsampling=0,optimize=True)
           PY
@@ -60,12 +61,13 @@ jobs:
           dimensions={
             "previews/werft_before.png":(1000,900),
             "previews/werft_weapons.png":(1000,900),
+            "previews/werft_damage.png":(1000,900),
             "previews/werft_shield.png":(1000,900),
             "previews/werft_drones.png":(1000,900),
             "previews/game_nose_up.png":(1024,1024)}
           for view,res in [("game",1024),("werft",2048)]:
               for name in ["fighter_base.png","fighter_module_0.png",
-                           "fighter_module_4.png","fighter_module_5.png"]:
+                           "fighter_module_1.png","fighter_module_4.png","fighter_module_5.png"]:
                   dimensions["staging/"+view+"/"+name]=(res,res)
           for name,expected in dimensions.items():
               path=os.path.join(root,name)

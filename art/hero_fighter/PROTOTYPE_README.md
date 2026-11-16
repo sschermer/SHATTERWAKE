@@ -22,3 +22,7 @@ Android code and the latest APK on `main` are unchanged by this workflow.
 ## ART-002 – Glatte Metalloberflächen (16.11.2026)
 
 Der Nutzer wünscht ausdrücklich **keine Körnung**. Das Master-Skript erzeugt deshalb jetzt **keine Noise-Texturen, keine prozedurale Base-Color-/Roughness-Marmorierung und kein Noise-Bump-Mapping**. Auch die mikrofeinen Scratch-Geometrien wurden entfernt. Die Werkstoffwirkung entsteht über glatte Metallschichten, Metall/Rauheit pro Bauteil, Schatten, Kanten und echte Fugen/Schrauben. Cycles rendert mit 64 Samples und Denoising, um auch verbleibendes Samplingrauschen zu reduzieren. Für den Handybildschirm haben saubere, ruhige Flächen Vorrang.
+
+## ART-003: Erhöhter Waffenschaden
+
+Der Waffenschaden (ID 1) bekommt genau die gleiche Kanonengeometrie wie Schnellfeuer (ID 0), nur in glattem dunklem Gunmetal. Beide Perspektiven exportieren `fighter_module_1.png` im identischen Koordinatensystem. Die Varianten ersetzen einander optisch und dürfen nicht übereinandergelegt werden. **Darstellungspriorität:** `damageLevel>0 → ID 1`, sonst `fireLevel>0 → ID 0`. Ihre Spielwerte bleiben unabhängig. Vorschau: `previews/werft_damage.jpg`.

@@ -199,6 +199,7 @@
     "modules_follow_hull_orientation": true,
     "require_three_visual_before_after": [
       "rapid_fire",
+      "weapon_damage",
       "shield_emitter",
       "drone_dock"
     ],
@@ -211,6 +212,7 @@
   "integration_note": "Do not regenerate models based on PNGs. Adapt Java asset loader once; current runtime does not consume this manifest.",
   "prototyped_module_ids": [
     0,
+    1,
     4,
     5
   ],
@@ -228,5 +230,11 @@
     "Android Werft camera adapter",
     "Remaining module meshes (1,2,3,6,7)",
     "Additional level geometry"
-  ]
+  ],
+  "weapon_appearance_policy": {
+    "state_selection": "when damageLevel>0 use fighter_module_1.png, else if fireLevel>0 use fighter_module_0.png, else no cannon overlay",
+    "shape": "identical 3D cannon geometry; anthracite metal variant for higher damage",
+    "compositing": "mutually exclusive replacement layers, never drawn simultaneously",
+    "unaffected_gameplay": "rapid-fire and damage stats remain independent"
+  }
 }
