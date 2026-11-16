@@ -1,0 +1,59 @@
+{
+  "status": "rendered_not_approved",
+  "author": "original SHATTERWAKE Blender construction",
+  "no_external_assets": true,
+  "outputs": {
+    "previews/werft_before.png": [
+      1000,
+      900
+    ],
+    "previews/werft_weapons.png": [
+      1000,
+      900
+    ],
+    "previews/werft_shield.png": [
+      1000,
+      900
+    ],
+    "previews/werft_drones.png": [
+      1000,
+      900
+    ],
+    "previews/game_nose_up.png": [
+      1024,
+      1024
+    ],
+    "staging/game/fighter_base.png": [
+      1024,
+      1024
+    ],
+    "staging/game/fighter_module_0.png": [
+      1024,
+      1024
+    ],
+    "staging/game/fighter_module_4.png": [
+      1024,
+      1024
+    ],
+    "staging/game/fighter_module_5.png": [
+      1024,
+      1024
+    ],
+    "staging/werft/fighter_base.png": [
+      2048,
+      2048
+    ],
+    "staging/werft/fighter_module_0.png": [
+      2048,
+      2048
+    ],
+    "staging/werft/fighter_module_4.png": [
+      2048,
+      2048
+    ],
+    "staging/werft/fighter_module_5.png": [
+      2048,
+      2048
+    ]
+  }
+}
