@@ -44,6 +44,12 @@ def xy(cam,p,size):
 views={}
 for key,cam in cameras.items():
     sz=sizes[key]
+    # world_to_camera_view uses scene.render aspect; the saved master had a
+    # 16:9 look-dev viewport. Match the square production exports explicitly.
+    scene.render.resolution_x=sz[0]
+    scene.render.resolution_y=sz[1]
+    scene.render.resolution_percentage=100
+    bpy.context.view_layer.update()
     views[key]={
         "camera":cam.name,
         "resolution":sz,
@@ -57,6 +63,13 @@ n=views["game"]["projected_anchors"]["nose"]
 t=views["game"]["projected_anchors"]["tail"]
 assert n[1]<t[1],f"GAME fighter faces wrong way: nose {n}, tail {t}"
 assert abs(n[0]-t[0])<15,"GAME must not be banked ninety degrees"
+assert 0<=n[0]<=1024 and 0<=n[1]<=1024,"Nose outside GAME canvas"
+assert 0<=t[0]<=1024 and 0<=t[1]<=1024,"Tail outside GAME canvas"
+for view_name,view in views.items():
+    width,height=sizes[view_name]
+    for name,pixel in view["projected_anchors"].items():
+        assert 0<=pixel[0]<=width and 0<=pixel[1]<=height,(
+            view_name,name,"projected outside image:",pixel)
 assert len(views["game"]["module_focus_pixels"])==3
 out={
     "schema":"SHATTERWAKE.ART-001.real-render-anchors.v1",
