@@ -4,6 +4,22 @@ package de.shatterwake.game;
 public final class GameRules {
     private GameRules() { }
     public static final float AIM_RADIANS = (float) Math.toRadians(15.0);
+    /** A modest visual scale-up; collision sizes and gameplay remain unchanged. */
+    public static final float FIGHTER_ART_SCALE=1.12f;
+    /** Keep the 3D wings on screen when steering to either edge. */
+    public static final float FIGHTER_SAFE_MARGIN=48f;
+    public static float fighterBankDegrees(float targetX,float playerX){
+        return Math.max(-7f,Math.min(7f,(targetX-playerX)*.12f));
+    }
+    /** Apply the precise drawing transform to missile and bullet anchors. */
+    public static float fighterAnchorX(float localX,float localY,float bankDegrees){
+        double a=Math.toRadians(bankDegrees);
+        return FIGHTER_ART_SCALE*(float)(localX*Math.cos(a)-localY*Math.sin(a));
+    }
+    public static float fighterAnchorY(float localX,float localY,float bankDegrees){
+        double a=Math.toRadians(bankDegrees);
+        return FIGHTER_ART_SCALE*(float)(localX*Math.sin(a)+localY*Math.cos(a));
+    }
     public static String werftBalanceLabel(int stars){
         return "★ "+Math.max(0,stars);
     }

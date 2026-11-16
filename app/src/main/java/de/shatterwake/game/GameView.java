@@ -334,7 +334,7 @@ public final class GameView extends View {
         if(tutorialCheckpoint)return;
         x+=(targetX-x)*Math.min(1,dt*16f);
         y+=(targetY-y)*Math.min(1,dt*16f);
-        x=clamp(x,24,W-24);y=clamp(y,120,FIELD_BOTTOM-22);
+        x=clamp(x,GameRules.FIGHTER_SAFE_MARGIN,W-GameRules.FIGHTER_SAFE_MARGIN);y=clamp(y,120,FIELD_BOTTOM-22);
         boolean testingPowerup=tutorialPowerupTrialStarted
                 && TutorialRules.isPowerupStep(tutorialStep);
         if(testingPowerup){
@@ -510,15 +510,30 @@ public final class GameView extends View {
         float damage=(13+damageLevel*2.7f)*(plasmaTime>0?1.55f:1f);
         float angle=findAimAngle();
         int kind=plasmaTime>0?3:0;
-        // A single shot alternates between the *actual* left and right
-        // muzzles of the approved 3D gun model; damage per shot is unchanged.
+        // A larger, banking fighter must still fire from its real 3D muzzles.
+        // The same scale/rotation as the ship is applied to every launch point.
+        float bank=GameRules.fighterBankDegrees(targetX,x);
         if(fireLevel>0||damageLevel>0){
             nextGunRight=!nextGunRight;
             int side=nextGunRight?1:0;
-            spawnFriendly(x+atlas.muzzleX(side),y+atlas.muzzleY(side),angle,damage,kind);
-        }else spawnFriendly(x,y-25,angle,damage,kind);
-        if(tripleTime>0){spawnFriendly(x-13,y-14,angle-.17f,damage*.67f,kind);
-            spawnFriendly(x+13,y-14,angle+.17f,damage*.67f,kind);}
+            float mx=atlas.muzzleX(side),my=atlas.muzzleY(side);
+            spawnFriendly(x+GameRules.fighterAnchorX(mx,my,bank),
+                    y+GameRules.fighterAnchorY(mx,my,bank),angle,damage,kind);
+        }else{
+            float nx=atlas.noseX(),ny=atlas.noseY();
+            spawnFriendly(x+GameRules.fighterAnchorX(nx,ny,bank),
+                    y+GameRules.fighterAnchorY(nx,ny,bank),angle,damage,kind);
+        }
+        if(tripleTime>0){
+            // Wing-mounted extra shots are inside the physical fighter outline.
+            for(int side=0;side<2;side++){
+                float lx=side==0?-19f:19f,ly=-14f;
+                float spread=side==0?-.17f:.17f;
+                spawnFriendly(x+GameRules.fighterAnchorX(lx,ly,bank),
+                        y+GameRules.fighterAnchorY(lx,ly,bank),
+                        angle+spread,damage*.67f,kind);
+            }
+        }
         if(random.nextInt(3)==0)sound(0);
     }
     private void spawnFriendly(float sx,float sy,float angle,float damage,int kind){
@@ -708,7 +723,7 @@ public final class GameView extends View {
         stageTime+=dt;
         x+=(targetX-x)*Math.min(1,dt*16);
         y+=(targetY-y)*Math.min(1,dt*16);
-        x=clamp(x,24,W-24);y=clamp(y,120,FIELD_BOTTOM-22);
+        x=clamp(x,GameRules.FIGHTER_SAFE_MARGIN,W-GameRules.FIGHTER_SAFE_MARGIN);y=clamp(y,120,FIELD_BOTTOM-22);
         if(invulnerable>0)invulnerable-=dt;
         if(shieldTime>0)shieldTime-=dt;
         if(rapidTime>0)rapidTime-=dt;
@@ -1049,7 +1064,7 @@ public final class GameView extends View {
         salvageElapsed+=dt;
         x+=(targetX-x)*Math.min(1f,dt*16f);
         y+=(targetY-y)*Math.min(1f,dt*16f);
-        x=clamp(x,24f,W-24f);y=clamp(y,120f,FIELD_BOTTOM-22f);
+        x=clamp(x,GameRules.FIGHTER_SAFE_MARGIN,W-GameRules.FIGHTER_SAFE_MARGIN);y=clamp(y,120f,FIELD_BOTTOM-22f);
         while(salvageBurstWave<3 && salvageElapsed>=(salvageBurstWave+1)*.43f){
             explode(clamp(bossExplosionX+rnd(-79f,79f),28f,W-28f),
                     clamp(bossExplosionY+rnd(-65f,65f),115f,FIELD_BOTTOM-60f),
@@ -1586,8 +1601,10 @@ public final class GameView extends View {
     }
     private void drawPlayer(Canvas c){
         c.save();c.translate(x,y);
-        float lateral=clamp((targetX-x)*.12f,-7,7);
+        float lateral=GameRules.fighterBankDegrees(targetX,x);
         c.rotate(lateral);
+        // Uniformly scale the detailed hull, upgrades, exhaust and effects.
+        c.scale(GameRules.FIGHTER_ART_SCALE,GameRules.FIGHTER_ART_SCALE);
         float inv=invulnerable>0?(.5f+.5f*(float)Math.sin(idleTime*7)):0;
         glow(c,0,24,46,0x40000000,0x00000000);
         if(plasmaTime>0){
@@ -1611,25 +1628,30 @@ public final class GameView extends View {
         float flame=15+7*(float)Math.sin(idleTime*23);
         float ex0=atlas.engineX(0),ex1=atlas.engineX(1);
         float ey0=atlas.engineY(0),ey1=atlas.engineY(1);
-        glow(c,ex0,ey0,24,0x6648C8FF,0x0048C8FF);
-        glow(c,ex1,ey1,24,0x66FFB55F,0x00FFB55F);
-        triangle(c,ex0-5,ey0-1,ex0+5,ey0-1,ex0,ey0+flame,0xFF2F92D4);
-        triangle(c,ex1-5,ey1-1,ex1+5,ey1-1,ex1,ey1+flame,0xFFFAB367);
-        triangle(c,ex0-2,ey0,ex0+2,ey0,ex0,ey0+flame*.75f,WHITE);
-        triangle(c,ex1-2,ey1,ex1+2,ey1,ex1,ey1+flame*.75f,WHITE);
+        // A restrained blue-white ion plume for both physical exhausts.
+        glow(c,ex0,ey0,16,0x665C9FC5,0x005C9FC5);
+        glow(c,ex1,ey1,16,0x665C9FC5,0x005C9FC5);
+        triangle(c,ex0-4,ey0-1,ex0+4,ey0-1,ex0,ey0+flame,0xFF35779A);
+        triangle(c,ex1-4,ey1-1,ex1+4,ey1-1,ex1,ey1+flame,0xFF35779A);
+        triangle(c,ex0-2,ey0,ex0+2,ey0,ex0,ey0+flame*.68f,0xFFD2EDF5);
+        triangle(c,ex1-2,ey1,ex1+2,ey1,ex1,ey1+flame*.68f,0xFFD2EDF5);
         atlas.drawPlayer(c,0,0);
         drawEquipment(c,-1,false);
         if(rapidTime>0){
-            for(int side=-1;side<=1;side+=2){
-                glow(c,side*13f,-32f,12f,0x99FFB059,0x00FFB059);
-            }
+            // Glow belongs to installed muzzle hardware, never free space.
+            if(fireLevel>0||damageLevel>0){
+                for(int side=0;side<2;side++)
+                    glow(c,atlas.muzzleX(side),atlas.muzzleY(side),7f,
+                            0x77D4AE7B,0x00D4AE7B);
+            }else glow(c,atlas.noseX(),atlas.noseY(),7f,
+                    0x77D4AE7B,0x00D4AE7B);
         }
         if(tripleTime>0){
             // No cheap add-on polygon wings on the approved metal hull.
             // The temporary triple-shot is indicated at the real muzzles.
             for(int side=0;side<2;side++){
-                glow(c,atlas.muzzleX(side),atlas.muzzleY(side),9f,
-                        0x9962E5AF,0x0062E5AF);
+                glow(c,side==0?-19f:19f,-14f,8f,
+                        0x6674BFAF,0x0074BFAF);
             }
         }
         if(plasmaTime>0){
@@ -2484,7 +2506,7 @@ public final class GameView extends View {
             if(state==PLAY && touchPointer==-1 && py<650){
                 touchPointer=ev.getPointerId(idx);
                 touchOffsetX=x-px;touchOffsetY=y-py;
-                targetX=clamp(px+touchOffsetX,22,W-22);
+                targetX=clamp(px+touchOffsetX,GameRules.FIGHTER_SAFE_MARGIN,W-GameRules.FIGHTER_SAFE_MARGIN);
                 targetY=clamp(py+touchOffsetY,121,FIELD_BOTTOM-22);
                 downWasButton=false;
             }
@@ -2494,7 +2516,7 @@ public final class GameView extends View {
             if(state==PLAY && touchPointer>=0){
                 int at=ev.findPointerIndex(touchPointer);
                 if(at>=0){
-                    targetX=clamp(ev.getX(at)*sx+touchOffsetX,24,W-24);
+                    targetX=clamp(ev.getX(at)*sx+touchOffsetX,GameRules.FIGHTER_SAFE_MARGIN,W-GameRules.FIGHTER_SAFE_MARGIN);
                     targetY=clamp(ev.getY(at)*sy+touchOffsetY,120,FIELD_BOTTOM-22);
                 }
             }

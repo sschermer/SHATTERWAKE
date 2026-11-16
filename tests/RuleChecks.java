@@ -34,6 +34,19 @@ public final class RuleChecks {
         assert GameRules.werftBalanceLabel(225).equals("★ 225");
         assert GameRules.werftBalanceLabel(65).equals("★ 65");
         assert GameRules.werftBalanceLabel(0).equals("★ 0");
+        assert GameRules.FIGHTER_ART_SCALE>1f
+                &&GameRules.FIGHTER_ART_SCALE<1.2f;
+        assert GameRules.FIGHTER_SAFE_MARGIN>=GameRules.FIGHTER_ART_SCALE*40f;
+        assert GameRules.fighterBankDegrees(100f,100f)==0f;
+        assert GameRules.fighterBankDegrees(300f,0f)==7f;
+        assert GameRules.fighterBankDegrees(0f,300f)==-7f;
+        assert Math.abs(GameRules.fighterAnchorX(20f,-30f,0f)-22.4f)<.001f;
+        assert Math.abs(GameRules.fighterAnchorY(20f,-30f,0f)+33.6f)<.001f;
+        double r7=Math.toRadians(7);
+        assert Math.abs(GameRules.fighterAnchorX(20f,-30f,7f)
+                -GameRules.FIGHTER_ART_SCALE*(20*Math.cos(r7)+30*Math.sin(r7)))<.0001f;
+        assert Math.abs(GameRules.fighterAnchorY(20f,-30f,7f)
+                -GameRules.FIGHTER_ART_SCALE*(20*Math.sin(r7)-30*Math.cos(r7)))<.0001f;
         assert GameRules.MAX_CONTINUES==2;
         assert GameRules.routesAfter(1)[0]!=GameRules.routesAfter(1)[1];
         assert GameRules.routesAfter(2)[0]==3;
