@@ -2,6 +2,32 @@
 
 Inventory date: 2026-11-15. Version: 0.4.0-alpha.
 
+## Voluntary artist credits for future CC0 artwork
+
+**SHATTERWAKE credits creators voluntarily even when CC0-1.0 does not require
+attribution.** Once any external 3D model, PBR texture, HDRI, rendered image or
+other asset is actually integrated, record its *specific* original filename or
+asset ID, the individual artist (if named), source URL, license and any changes.
+Keep credits with this repository and with distribution documentation. The
+SHATTERWAKE proprietary project license does not supersede the original CC0
+dedication of those assets.
+
+The following are **evaluated candidate creators / source libraries**, not
+yet bundled in the APK (do not misrepresent them as used assets):
+
+| Creator / artist credit | Candidate asset collection | License | Source |
+|---|---|---|---|
+| **Quaternius** | Ultimate Spaceships Pack (2021) | CC0 1.0 | https://quaternius.com/packs/ultimatespaceships.html |
+| **Kenney** | Space Kit | CC0 1.0 | https://kenney.nl/assets/space-kit |
+| **Individual artists credited on each Poly Haven asset page** (and **Poly Haven**) | Metallic PBR materials and HDRI lighting; specific textures not yet selected | CC0 1.0 | https://polyhaven.com/ and https://polyhaven.com/license |
+
+**Before release:** Move every actually adopted asset into an itemized *included
+artwork* inventory with its original creator credit and source link. For Poly
+Haven, credit the asset-level author rather than assuming that every texture
+was made by a general Poly Haven staff member. Preserve license evidence and
+any license files shipped with source packs. The above list is voluntary
+recognition, not a statement that artwork has already been imported.
+
 ## Assets included in the APK
 
 | Category | Origin | Rights / licensing position |
