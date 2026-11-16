@@ -12,6 +12,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
@@ -30,6 +32,7 @@ final class SpriteAtlas {
     final Bitmap[] enemies=new Bitmap[7];
     final Bitmap[] modules=new Bitmap[5];
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
+    private final Paint shadowPaint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
     // BitmapFactory downsampling preserves realistic 3D surfaces while
     // avoiding hundreds of MiB of resident 2048px Werft sprite variants.
     private final LruCache<String,Bitmap> gameCache=new LruCache<String,Bitmap>(26*1024*1024){
@@ -41,10 +44,14 @@ final class SpriteAtlas {
     private final float[] focusX=new float[8],focusY=new float[8];
     private final float[] muzzleX=new float[]{-18,18},muzzleY=new float[]{-25,-25};
     private final float[] engineX=new float[]{-11,11},engineY=new float[]{26,26};
+    private float noseX=0f,noseY=-36f;
     private boolean approvedAnchors=false;
 
     SpriteAtlas(Context ctx){
         context=ctx.getApplicationContext();
+        shadowPaint.setColorFilter(new PorterDuffColorFilter(
+                Color.rgb(6,12,19),PorterDuff.Mode.SRC_IN));
+        shadowPaint.setAlpha(80);
         for(int i=0;i<8;i++){
             focusX[i]=GameRules.werftFocusX(i);
             focusY[i]=GameRules.werftFocusY(i);
@@ -69,6 +76,13 @@ final class SpriteAtlas {
             opt.inPreferredConfig=Bitmap.Config.ARGB_8888;
             opt.inSampleSize=2; // GAME 512px, WERFT 1024px
             result=BitmapFactory.decodeStream(in,null,opt);
+            if(result!=null&&!werft){
+                // Smooth handset-sized render LOD; prevents tiny PBR details
+                // becoming noisy when 1024px source shrinks to ~112px on screen.
+                Bitmap preview=Bitmap.createScaledBitmap(result,256,256,true);
+                if(preview!=result)result.recycle();
+                result=preview;
+            }
             if(result!=null)cache.put(full,result);
             return result;
         }catch(Exception ignored){return null;}
@@ -77,7 +91,7 @@ final class SpriteAtlas {
     boolean hasWerftArt(){return bitmapFor(true,"fighter_base.png")!=null;}
     private void paintBitmap(Canvas c,Bitmap bitmap,RectF rect){
         p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);
-        p.setStyle(Paint.Style.FILL);
+        p.setColorFilter(null);p.setStyle(Paint.Style.FILL);
         c.drawBitmap(bitmap,null,rect,p);
     }
     void drawHardware(Canvas c,int id,int level,boolean werft){
@@ -104,6 +118,8 @@ final class SpriteAtlas {
     float muzzleY(int side){return muzzleY[side<=0?0:1];}
     float engineX(int side){return engineX[side<=0?0:1];}
     float engineY(int side){return engineY[side<=0?0:1];}
+    float noseX(){return noseX;}
+    float noseY(){return noseY;}
     private static float xCoord(JSONArray point,float width){
         return ((float)point.optDouble(0)/width-.5f)*100f;
     }
@@ -137,6 +153,7 @@ final class SpriteAtlas {
             }
             // Verify pose is nose-up in gameplay, not the earlier sideways import.
             JSONArray nose=gamePoints.getJSONArray("nose"),tail=gamePoints.getJSONArray("tail");
+            noseX=xCoord(nose,gx);noseY=yCoord(nose,gy);
             approvedAnchors=nose.getDouble(1)<tail.getDouble(1)
                     && Math.abs(nose.getDouble(0)-tail.getDouble(0))<25;
         }catch(Exception ignored){approvedAnchors=false;}
@@ -149,6 +166,7 @@ final class SpriteAtlas {
             muzzleY[0]=muzzleY[1]=-25;
             engineX[0]=-11;engineX[1]=11;
             engineY[0]=engineY[1]=26;
+            noseX=0f;noseY=-36f;
         }
     }
     private Canvas bitmap(Canvas[] out){
@@ -369,8 +387,15 @@ final class SpriteAtlas {
     void drawPlayer(Canvas c,float x,float y){drawPlayer(c,x,y,false);}
     void drawPlayer(Canvas c,float x,float y,boolean werft){
         Bitmap body=werft?bitmapFor(true,"fighter_base.png"):renderedFighter;
-        if(body!=null)paintBitmap(c,body,new RectF(x-50,y-47,x+50,y+47));
-        else if(fighter!=null)paintBitmap(c,fighter,new RectF(x-44,y-47,x+44,y+46));
+        if(body!=null){
+            if(!werft){
+                // Quiet dark edge separation, not a bright cartoon outline.
+                c.drawBitmap(body,null,
+                        new RectF(x-51,y-44,x+51,y+50),shadowPaint);
+            }
+            paintBitmap(c,body,new RectF(x-50,y-47,x+50,y+47));
+        }else if(fighter!=null)paintBitmap(c,fighter,
+                new RectF(x-44,y-47,x+44,y+46));
     }
     void drawEnemy(Canvas c,Bitmap b,float x,float y,float radius){
         p.setColor(Color.WHITE);p.setAlpha(255);p.setShader(null);
