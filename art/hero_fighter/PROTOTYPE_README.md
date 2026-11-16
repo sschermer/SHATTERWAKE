@@ -18,3 +18,7 @@ The actual Blender source is `hero_fighter.blend`.
 
 All imagery on this isolated branch is a **visual prototype, not yet approved**.
 Android code and the latest APK on `main` are unchanged by this workflow.
+
+## ART-002 – Glatte Metalloberflächen (16.11.2026)
+
+Der Nutzer wünscht ausdrücklich **keine Körnung**. Das Master-Skript erzeugt deshalb jetzt **keine Noise-Texturen, keine prozedurale Base-Color-/Roughness-Marmorierung und kein Noise-Bump-Mapping**. Auch die mikrofeinen Scratch-Geometrien wurden entfernt. Die Werkstoffwirkung entsteht über glatte Metallschichten, Metall/Rauheit pro Bauteil, Schatten, Kanten und echte Fugen/Schrauben. Cycles rendert mit 64 Samples und Denoising, um auch verbleibendes Samplingrauschen zu reduzieren. Für den Handybildschirm haben saubere, ruhige Flächen Vorrang.

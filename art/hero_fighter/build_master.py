@@ -10,7 +10,8 @@ for d in (P,G,W):os.makedirs(d,exist_ok=True)
 random.seed(119)
 bpy.ops.object.select_all(action="SELECT");bpy.ops.object.delete(use_global=False)
 scene=bpy.context.scene;scene.render.engine="CYCLES"
-scene.cycles.samples=28;scene.cycles.use_denoising=True
+# 64 samples + built-in denoising tame sampling speckles without texture grain.
+scene.cycles.samples=64;scene.cycles.use_denoising=True
 bpy.context.view_layer.cycles.use_denoising=True
 scene.render.threads_mode="FIXED";scene.render.threads=4
 scene.render.image_settings.file_format="PNG"
@@ -23,46 +24,26 @@ base=[];modules={0:[],4:[],5:[]};room=[];extras=[]
 current=base
 
 def mat(name,color,metal=.7,rough=.4,wear=.15,emission=None):
+ # ART-002: deliberately smooth, uniformly finished metal. Grain previously
+ # came from NoiseTexture->BaseColor/Roughness and a high-frequency Bump shader.
+ # No texture, bump or irregular noise of any kind is used in this material.
+ # Slightly different *physical parts* keep distinct color, metal and roughness.
  m=bpy.data.materials.new(name);m.diffuse_color=(*color,1);m.use_nodes=True
- nodes=m.node_tree.nodes;links=m.node_tree.links
- p=nodes.get("Principled BSDF")
+ p=m.node_tree.nodes.get("Principled BSDF")
  p.inputs["Metallic"].default_value=metal
  p.inputs["Roughness"].default_value=rough
  p.inputs["Base Color"].default_value=(*color,1)
- uv=nodes.new("ShaderNodeTexCoord")
- noise=nodes.new("ShaderNodeTexNoise");noise.inputs["Scale"].default_value=9
- noise.inputs["Detail"].default_value=3.5
- links.new(uv.outputs["Generated"],noise.inputs["Vector"])
- ramp=nodes.new("ShaderNodeValToRGB")
- ramp.color_ramp.elements[0].color=(rough*.75,)*3+(1,)
- ramp.color_ramp.elements[1].color=(min(.95,rough+wear),)*3+(1,)
- links.new(noise.outputs["Fac"],ramp.inputs["Fac"])
- links.new(ramp.outputs["Color"],p.inputs["Roughness"])
- c_ramp=nodes.new("ShaderNodeValToRGB")
- c_ramp.color_ramp.elements[0].position=.15
- c_ramp.color_ramp.elements[0].color=tuple(max(.003,c*.48) for c in color)+(1,)
- c_ramp.color_ramp.elements[1].position=.82
- c_ramp.color_ramp.elements[1].color=tuple(min(.83,c*1.24+.009) for c in color)+(1,)
- links.new(noise.outputs["Fac"],c_ramp.inputs["Fac"])
- links.new(c_ramp.outputs["Color"],p.inputs["Base Color"])
- fine=nodes.new("ShaderNodeTexNoise");fine.inputs["Scale"].default_value=325
- links.new(uv.outputs["Generated"],fine.inputs["Vector"])
- bump=nodes.new("ShaderNodeBump")
- bump.inputs["Strength"].default_value=.045
- bump.inputs["Distance"].default_value=.004
- links.new(fine.outputs["Fac"],bump.inputs["Height"])
- links.new(bump.outputs["Normal"],p.inputs["Normal"])
  if emission:
   p.inputs["Emission Color"].default_value=(*emission,1)
   p.inputs["Emission Strength"].default_value=2.1
  return m
 
-charcoal=mat("A / scratched oxidized titanium",(.064,.078,.092),.84,.34,.19)
-light=mat("B / cold machined alloy",(.23,.25,.275),.84,.32,.21)
-slate=mat("C / desaturated ceramic armor",(.13,.15,.18),.57,.45,.19)
+charcoal=mat("A / smooth oxidized titanium",(.064,.078,.092),.84,.34,.19)
+light=mat("B / smooth cold machined alloy",(.23,.25,.275),.84,.32,.21)
+slate=mat("C / smooth ceramic armor",(.13,.15,.18),.57,.45,.19)
 black=mat("D / carbon recessed mechanics",(.018,.026,.035),.21,.63,.1)
-brushed=mat("E / polished bevel edge",(.32,.355,.39),.85,.27,.17)
-ochre=mat("F / worn military hazard paint",(.33,.16,.075),.45,.5,.2)
+brushed=mat("E / clean polished bevel edge",(.32,.355,.39),.85,.27,.17)
+ochre=mat("F / precise military hazard paint",(.33,.16,.075),.45,.5,.2)
 glass=mat("G / smoked cockpit",(.018,.049,.072),.35,.17,.08)
 blue=mat("H / restrained ion blue",(.06,.18,.25),.22,.26,.06,(.04,.26,.49))
 warm=mat("I / amber worklight",(.2,.15,.07),.22,.27,.12,(.5,.24,.05))
@@ -170,14 +151,7 @@ for s in (-1,1):
   box("Cassette service groove",(s*xx,yy,.602),(.13,.047,.016),black,.004)
   for k in (-1,1):
    cyl("Captive cassette bolt",(s*(xx+k*.11),yy,.597),.015,.011,brushed,n=10)
- for j in range(32):
-  xx=2.35+random.random()*2.4
-  yy=-.72+random.random()*.85-(xx-2.35)*.18
-  zz=.58+random.random()*.012
-  length=.05+random.random()*.10
-  tube("Metal wear scratch %d"%j,(s*xx,yy,zz),
-       (s*(xx+length),yy-.01,zz+.001),.003,
-       brushed if j%5==0 else black)
+ # No micro-scratch rods: large armor surfaces remain perfectly smooth.
  for j in range(11):
   y=3.3-j*.62
   x=s*(.73+.08*math.sin(j*.5))

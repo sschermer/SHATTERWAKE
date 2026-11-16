@@ -1,6 +1,6 @@
 # SHATTERWAKE – Hero Fighter / Abnahmegalerie
 
-**Status:** Vorschau, nicht freigegeben. Keine Android-Integration.
+**Status:** Vorschau, nicht freigegeben. **ART-002:** Glatte, vollständig körnungsfreie Metallshader; neue Renderbilder werden mit derselben Blender-Masterszene erstellt. Keine Android-Integration.
 
 **Stilziel:** das vom Nutzer bestätigte, realistische, schwer gepanzerte
 Sci-Fi-Schiff im Industriehangar. Diese erste bearbeitbare 3D-Konstruktion hat
