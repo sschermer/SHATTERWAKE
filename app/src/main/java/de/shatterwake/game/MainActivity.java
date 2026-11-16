@@ -20,6 +20,7 @@ public final class MainActivity extends Activity {
         gameView=new GameView(this);
         voiceController=new VoiceCommandController(this,gameView);
         gameView.setVoiceController(voiceController);
+        voiceController.prepareIfEnabled();
         setContentView(gameView);
     }
 
