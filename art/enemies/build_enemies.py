@@ -167,7 +167,7 @@ def guns(x=1.3,y=1.9,barrel=1.13):
         xx=side*x
         block("Shielded rail-gun mount",(xx,y-.45,.43),(.29,.88,.24),carbon,.04)
         cyl("Recessed main cannon",(xx,y+.08,.44),.105,barrel,gunmetal,"Y",24)
-        cyl("Cannon muzzle",(xx,y+.barrel/2,.44),.13,.09,dark,"Y")
+        cyl("Cannon muzzle",(xx,y+barrel/2,.44),.13,.09,dark,"Y")
 
 def details(count=3):
     for side in (-1,1):
