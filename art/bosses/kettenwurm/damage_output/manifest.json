@@ -1,0 +1,49 @@
+{
+  "production": "SHATTERWAKE boss Kettenwurm four damage stages",
+  "states": {
+    "0": "intact",
+    "1": "lightly dented",
+    "2": "severely buckled, sparks",
+    "3": "transient explosion/debris; node removed by runtime"
+  },
+  "thresholds": {
+    "0": "hp > 2/3 maxHp",
+    "1": "1/3 maxHp < hp <= 2/3 maxHp",
+    "2": "0 < hp <= 1/3 maxHp",
+    "3": "hp <= 0"
+  },
+  "node_types": {
+    "0": "head",
+    "1": "weapon",
+    "2": "coupling/split",
+    "3": "volatile reactor",
+    "4": "energy capacitor"
+  },
+  "node_type_by_id": [
+    0,
+    1,
+    1,
+    4,
+    2,
+    3,
+    4,
+    1,
+    2,
+    4,
+    3,
+    1
+  ],
+  "export": {
+    "format": "PNG",
+    "channels": "RGBA",
+    "size": [
+      1024,
+      1024
+    ],
+    "projection": "identical orthographic GAME camera, nose +Y"
+  },
+  "commercial_rights": "original procedural Blender geometry; no external assets",
+  "source": "art/bosses/kettenwurm/build_damage_states.py + build_mk2.py",
+  "visual_approval": "PENDING",
+  "android_integration": false
+}

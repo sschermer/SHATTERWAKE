@@ -16,6 +16,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 
@@ -33,6 +34,11 @@ final class SpriteAtlas {
     final Bitmap[] modules=new Bitmap[5];
     private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
     private final Paint shadowPaint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
+    // All 20 original 1024-pixel renders share the same camera and center.
+    // Source crop keeps the small modeled part legible at phone resolution
+    // WITHOUT changing collision dimensions. At 256px game-cache LOD this
+    // extracts the middle 128px (middle 512px of the Blender 1024px image).
+    private static final Rect WORM_SOURCE_CROP=new Rect(64,64,192,192);
     // BitmapFactory downsampling preserves realistic 3D surfaces while
     // avoiding hundreds of MiB of resident 2048px Werft sprite variants.
     private final LruCache<String,Bitmap> gameCache=new LruCache<String,Bitmap>(26*1024*1024){
@@ -411,6 +417,26 @@ final class SpriteAtlas {
         float width=radius*2.38f,height=radius*2.50f;
         c.drawBitmap(sprite,null,new RectF(x-width/2,y-height/2,
                 x+width/2,y+height/2),p);
+    }
+    /** Approved 5x4 Blender visual-only damage states of the Sector 1 boss.
+     * The existing LRU cache bounds all twenty 256x256 decoded variants.
+     */
+    void drawWormBossNode(Canvas c,int type,int damage,float size,float fade){
+        if(type<0||type>4||damage<0||damage>3)return;
+        Bitmap image=bitmapFor(false,
+                "boss/boss_type_"+type+"_damage_"+damage+".png");
+        if(image==null){
+            if(damage!=3)drawModule(c,type,size*.32f);
+            return;
+        }
+        p.setShader(null);p.setColorFilter(null);p.setColor(Color.WHITE);
+        p.setStyle(Paint.Style.FILL);
+        p.setAlpha(Math.max(0,Math.min(255,Math.round(fade*255f))));
+        Rect src=image.getWidth()==256&&image.getHeight()==256
+                ?WORM_SOURCE_CROP:new Rect(image.getWidth()/4,image.getHeight()/4,
+                        3*image.getWidth()/4,3*image.getHeight()/4);
+        c.drawBitmap(image,src,new RectF(-size/2f,-size/2f,size/2f,size/2f),p);
+        p.setAlpha(255);
     }
     void drawModule(Canvas c,int type,float radius){
         Bitmap b=modules[Math.max(0,Math.min(modules.length-1,type))];

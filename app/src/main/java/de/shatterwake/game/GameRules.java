@@ -20,6 +20,22 @@ public final class GameRules {
         double a=Math.toRadians(bankDegrees);
         return FIGHTER_ART_SCALE*(float)(localX*Math.sin(a)+localY*Math.cos(a));
     }
+    /** Only Sector 1's Kettenwurm uses these four visual states. */
+    public static final float WORM_NODE_EXPLOSION_SECONDS=.34f;
+    /** HP thresholds are per node, not the boss health bar. */
+    public static int bossNodeDamageState(float hp,float maxHp){
+        if(hp<=0f)return 3;
+        if(maxHp<=0f)return 0;
+        if(hp*3f<=maxHp)return 2;
+        if(hp*3f<=maxHp*2f)return 1;
+        return 0;
+    }
+    /** An angle of 0 degrees points towards the top of the Android canvas. */
+    public static float wormHeadingDegrees(float toX,float toY,float fromX,float fromY){
+        float dx=toX-fromX,dy=toY-fromY;
+        if(dx*dx+dy*dy<.0001f)return 0f;
+        return (float)Math.toDegrees(Math.atan2(dx,-dy));
+    }
     public static final int SPECIAL_CHARGE_COST=100;
     /** One charge in exactly one selected ability, never a hard three-charge cap. */
     public static int addSpecialCharge(int current){
