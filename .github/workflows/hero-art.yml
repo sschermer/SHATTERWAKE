@@ -22,7 +22,10 @@ jobs:
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
       - name: Build editable 3D master and image previews, without touching Android
-        run: blender -b -t 4 --python art/hero_fighter/build_master.py -- art/hero_fighter
+        run: |
+          blender -b -t 4 --python art/hero_fighter/build_master.py -- art/hero_fighter
+          test -s art/hero_fighter/previews/werft_before.png
+          test -s art/hero_fighter/hero_fighter.blend
       - name: Validate outputs
         run: |
           python3 - <<'PY'

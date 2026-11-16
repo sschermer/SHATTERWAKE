@@ -17,7 +17,7 @@ scene.render.image_settings.color_mode="RGBA"
 scene.render.image_settings.color_depth="8"
 scene.render.image_settings.compression=28
 scene.render.film_transparent=True
-scene.view_settings.view_transform="AgX";scene.view_settings.look="Medium High Contrast"
+scene.view_settings.view_transform="AgX";scene.view_settings.look="AgX - Medium High Contrast"
 base=[];modules={0:[],4:[],5:[]};room=[];extras=[]
 current=base
 
