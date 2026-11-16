@@ -44,7 +44,7 @@ Werft- und Gameplay-Kamera dürfen sich unterscheiden. Entscheidend ist **Konsis
 
 Die im Spiel bereits vorhandene Ladekonvention hat Vorrang. Deshalb **keine neuen frei erfundenen Dateinamen für die GAME-Basisebenen**.
 
-\`\`\`text
+```text
 art/hero_fighter/
     hero_fighter.blend                 # einziges editierbares 3D-Master
     source_assets/                     # urspruengliche freie Modelle/Texturen
@@ -72,22 +72,22 @@ app/src/main/assets/rendered/
         fighter_module_<id>_L<level>.png
         hangar_background.png          # eigener gerenderter Hangar
     fighter_layout.json                # projizierte Anker und Zoompositionen
-\`\`\`
+```
 
-Die unter \`rendered/\` genannten Dateien sind **Exportprodukte**, nicht die bearbeitbare Quelle. **Nicht** versuchen, aus einer Abnahme-PNG die 3D-Konstruktion oder Modulpositionen zurückzubauen. Export kann später reproduzierbar aus \`hero_fighter.blend\` erzeugt werden.
+Die unter `rendered/` genannten Dateien sind **Exportprodukte**, nicht die bearbeitbare Quelle. **Nicht** versuchen, aus einer Abnahme-PNG die 3D-Konstruktion oder Modulpositionen zurückzubauen. Export kann später reproduzierbar aus `hero_fighter.blend` erzeugt werden.
 
 **Ist-Stand des Android-Codes (am 16.11.2026):**
-- \`SpriteAtlas.java\` lädt \`rendered/fighter_base.png\` sowie \`rendered/fighter_module_0.png\` bis \`_7.png\`.
-- \`GameView.java\` zeichnet die Spielansicht in einer logischen Welt von **420 × 780**, das Schiff in etwa **100 × 94** Weltpixeln.
+- `SpriteAtlas.java` lädt `rendered/fighter_base.png` sowie `rendered/fighter_module_0.png` bis `_7.png`.
+- `GameView.java` zeichnet die Spielansicht in einer logischen Welt von **420 × 780**, das Schiff in etwa **100 × 94** Weltpixeln.
 - Die aktuelle Werft vergrößert dieselbe GAME-Grafik; **separate WERFT-Dateien und Stufenvarianten sind noch nicht implementiert**.
-- \`GameRules.java\` enthält **fest codierte** Werft-Fokuspunkte, die bei der ersten freigegebenen Integration durch aus Blender exportierte Punkte ersetzt werden müssen.
-- \`tools/render_cc0_fighter.py\` ist der derzeitige Generator, **nicht** die künftige Qualitätsreferenz. Er muss nach Freigabe an die Masterszene angebunden bzw. ersetzt werden.
+- `GameRules.java` enthält **fest codierte** Werft-Fokuspunkte, die bei der ersten freigegebenen Integration durch aus Blender exportierte Punkte ersetzt werden müssen.
+- `tools/render_cc0_fighter.py` ist der derzeitige Generator, **nicht** die künftige Qualitätsreferenz. Er muss nach Freigabe an die Masterszene angebunden bzw. ersetzt werden.
 
 **Integrationsaufwand einmalig:** Die zusätzliche WERFT-Ansicht, Variantenauswahl und das Metadatenladen benötigen einen einmaligen Adapter im Code. Die **Grafikproduktion selbst** muss dadurch **nicht** wiederholt werden. „Copy/paste“ bedeutet: freigegebene Assets unverändert in diese Ordner übernehmen und den Adapter mit dem unveränderten Vertrag verwenden; nicht, dass die aktuelle APK bereits beide Ansichten unterstützt.
 
 ## 4. Module und Spielzustände
 
-IDs, Werte und Bedeutung bleiben kompatibel mit \`GameRules\` / \`GameView\`.
+IDs, Werte und Bedeutung bleiben kompatibel mit `GameRules` / `GameView`.
 
 | ID | Modul | Level-/Zustandslogik | Optisch tatsächliche Änderung |
 |---:|---|---|---|
@@ -106,7 +106,7 @@ Für Reparaturen müssen **HP/MaxHP und Anzahl fehlender Reparaturkäufe** korre
 
 ## 5. Asset-Manifest und Anker
 
-\`art/hero_fighter/production_manifest.json\` ist die **strukturierte, versionierte Quelle für den Dateivertrag**. Ein erfolgreicher Render exportiert ergänzend \`fighter_layout.json\` mit den **tatsächlich projizierten** Werten:
+`art/hero_fighter/production_manifest.json` ist die **strukturierte, versionierte Quelle für den Dateivertrag**. Ein erfolgreicher Render exportiert ergänzend `fighter_layout.json` mit den **tatsächlich projizierten** Werten:
 
 - Pivot der Basisgrafik (beide Ansichten)
 - Mündungen links/rechts und ggf. Zusatzwaffen
@@ -137,7 +137,7 @@ Für Reparaturen müssen **HP/MaxHP und Anzahl fehlender Reparaturkäufe** korre
 
 **Gate D – Varianten:** Mindestens drei Vorher-/Nachher-Paare mit **realen** Umbauten: Waffen, Schild, Drohnen. Kein Upgrade nur als Linie oder HUD-Markierung.
 
-**Gate E – Einbau:** Erst nach Freigabe: vorhandene \`rendered/\`-GAME-PNGs ersetzen, WERFT-Loader und Level-Auswahl ergänzen, projizierte Anker übernehmen. Bestehende Logik, Treffer-/Schusskollision, Werft-Vorschau und Kaufbestätigung erhalten.
+**Gate E – Einbau:** Erst nach Freigabe: vorhandene `rendered/`-GAME-PNGs ersetzen, WERFT-Loader und Level-Auswahl ergänzen, projizierte Anker übernehmen. Bestehende Logik, Treffer-/Schusskollision, Werft-Vorschau und Kaufbestätigung erhalten.
 
 **Gate F – APK:** Android Build + Java-Regeltests + praktischer Sichttest in Menü, Spiel, Werft-Zoom und allen freigegebenen Modulen. Erst danach darf die neue Grafik als fertig bezeichnet werden.
 
