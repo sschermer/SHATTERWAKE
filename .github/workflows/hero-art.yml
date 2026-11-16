@@ -91,4 +91,7 @@ jobs:
             art/hero_fighter/previews art/hero_fighter/staging \
             art/hero_fighter/render_report.json
           git commit -m 'Render hero fighter visual previews, editable master and sprite exports [skip ci]' || true
+          # Layout export can commit independently while Blender renders; avoid
+          # rejecting a valid long render merely because the branch advanced.
+          git pull --rebase origin art/hero-fighter-v1
           git push origin HEAD:art/hero-fighter-v1
