@@ -20,7 +20,9 @@ scene.render.image_settings.color_depth="8"
 scene.render.image_settings.compression=28
 scene.render.film_transparent=True
 scene.view_settings.view_transform="AgX";scene.view_settings.look="AgX - Medium High Contrast"
-base=[];modules={0:[],1:[],4:[],5:[]};room=[];extras=[]
+base=[];modules={i:[] for i in range(8)};room=[];extras=[]
+levels={3:{2:[],3:[]},7:{2:[],3:[],4:[],5:[]}}
+damage_groups={1:[],2:[],3:[]}
 current=base
 
 def mat(name,color,metal=.7,rough=.4,wear=.15,emission=None):
@@ -50,6 +52,11 @@ warm=mat("I / amber worklight",(.2,.15,.07),.22,.27,.12,(.5,.24,.05))
 damage_case=mat("J / heavy damage black titanium",(.046,.056,.069),.9,.28,0)
 damage_barrel=mat("K / damage hardening blacksteel",(.065,.080,.097),.93,.22,0)
 damage_rim=mat("L / machined anthracite",(.11,.135,.160),.88,.25,0)
+mag_blue=mat("M / magnetic projector blue",(.04,.14,.19),.42,.26,0,(.04,.22,.35))
+optic=mat("N / precision sensor glass",(.035,.095,.14),.4,.19,0,(.02,.13,.18))
+ordnance=mat("O / missile magazine graphite",(.095,.11,.13),.82,.31,0)
+burned=mat("P / scorched matte-metal plate",(.025,.027,.034),.5,.66,0)
+heat=mat("Q / hot damaged wiring",(.19,.065,.035),.14,.45,0,(.3,.07,.02))
 
 def add(o,m=None,b=.0):
  if m is not None:o.data.materials.append(m)
@@ -282,6 +289,96 @@ for s in (-1,1):
   panel("Drones / articulated folded winglet",[
    (u+t*.13,-1.72),(u+t*.33,-1.56),
    (u+t*.36,-1.98),(u+t*.13,-2.08)],1.18,.045,brushed,.013)
+
+
+# Magnet system: compact paired physical collectors behind the main guns.
+current=modules[3]
+for side in (-1,1):
+ x=side*1.34;y=-1.38
+ box("Magnet / armored hardpoint",(x,y,1.39),(.60,.78,.22),charcoal,.05)
+ cyl("Magnet / field aperture",(x,y+.1,1.55),.24,.13,brushed,n=24)
+ ring("Magnet / restrained blue conductive ring",(x,y+.1,1.63),.19,.032,mag_blue)
+ cyl("Magnet / glass emitter",(x,y+.1,1.65),.14,.046,mag_blue,n=24)
+ for k in (-1,1):
+  tube("Magnet / covered cable",(x+k*.23,y-.32,1.46),
+       (x+k*.26,y-.58,1.36),.04,black)
+current=levels[3][2]
+for side in (-1,1):
+ x=side*1.34;y=-1.28
+ ring("Magnet L2 / outer inductive coil",(x,y,1.70),.28,.032,brushed)
+current=levels[3][3]
+for side in (-1,1):
+ x=side*1.34;y=-1.28
+ ring("Magnet L3 / powered exterior ring",(x,y,1.75),.34,.026,mag_blue)
+ for k in (-1,1):
+  box("Magnet L3 / reinforced coil mount",(x+k*.3,y-.16,1.55),
+      (.08,.24,.09),light,.015)
+
+# Target correction: front sensor package, five distinguishable upgrade steps.
+current=modules[7]
+box("Target / primary stabilized avionics",(0,3.35,1.05),
+    (.57,.71,.18),charcoal,.04)
+cyl("Target / optical azimuth pedestal",(0,3.55,1.19),.24,.15,brushed,n=30)
+cyl("Target / sapphire optical tracker",(0,3.55,1.28),.16,.065,optic,n=30)
+ring("Target / lens reinforcement",(0,3.55,1.31),.19,.025,damage_rim)
+current=levels[7][2]
+for side in (-1,1):
+ cyl("Target L2 / stereo ranging aperture",(side*.32,3.6,1.16),
+     .10,.085,optic,n=18)
+current=levels[7][3]
+box("Target L3 / hardened onboard range computer",(0,3.17,1.18),
+    (.49,.19,.11),light,.02)
+current=levels[7][4]
+for side in (-1,1):
+ box("Target L4 / secondary range sensor",(side*.41,3.5,1.32),
+     (.12,.31,.105),charcoal,.016)
+current=levels[7][5]
+cyl("Target L5 / final precision optic",(0,3.85,1.35),
+    .09,.11,optic,n=22)
+ring("Target L5 / machined optic rim",(0,3.85,1.41),.105,.023,brushed)
+
+# Special ammunition: bolted modular rocket/battery magazines, not drawn lines.
+current=modules[6]
+for side in (-1,1):
+ x=side*4.52;y=.12
+ box("Special / armored projectile rack",(x,y,.61),
+     (.65,.94,.21),charcoal,.046)
+ box("Special / hatch",(x,y+.05,.73),(.55,.82,.07),ordnance,.028)
+ for k in (-1,1):
+  cyl("Special / enclosed capsule",(x+k*.15,y+.07,.8),
+      .08,.65,black,"Y",18)
+  cyl("Special / muzzle guard",(x+k*.15,y+.43,.8),
+      .06,.08,brushed,"Y",18)
+ for k in range(3):
+  box("Special / magazine heat exchanger",(x,y-.29+k*.13,.84),
+      (.5,.045,.025),brushed,.006)
+
+# Hull repair: clean protective cover as preview, plus independently
+# renderable cumulative scorch/plate-damage overlays by missing hull HP.
+current=modules[2]
+for side in (-1,1):
+ x=side*3.6
+ box("Repair / restored armored cassette",(x,-1.0,.65),
+     (.59,.52,.07),light,.03)
+ for xx in (-.18,.18):
+  for yy in (-.15,.15):
+   cyl("Repair / clean retention bolt",(x+xx,-1.0+yy,.70),
+       .026,.025,damage_rim,n=12)
+current=damage_groups[1]
+box("Damage tier1 / burned starboard wing",-1.0 if False else (-3.6,-1.0,.66),
+    (.64,.56,.07),burned,.022)
+box("Damage tier1 / wiring recess",(-3.6,-1.0,.705),(.35,.15,.025),black,.01)
+current=damage_groups[2]
+box("Damage tier2 / cracked port armor",(3.6,-1.0,.66),
+    (.64,.56,.07),burned,.022)
+for k in range(4):
+ box("Damage tier2 / exposed airless radiator",
+     (3.42+k*.11,-1.01,.71),(.032,.19,.022),damage_case,.004)
+current=damage_groups[3]
+box("Damage tier3 / central armor breach",(-.73,-2.23,1.37),
+    (.45,.6,.11),burned,.025)
+box("Damage tier3 / glowing damaged power conduit",(-.73,-2.2,1.435),
+    (.16,.24,.022),heat,.01)
 
 # Cinematic look-dev lights. All shots share these exact lights/materials.
 current=extras
