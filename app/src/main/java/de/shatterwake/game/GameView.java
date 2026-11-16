@@ -1,5 +1,6 @@
 package de.shatterwake.game;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
@@ -16,6 +17,9 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.EditText;
+import android.text.InputFilter;
+import android.text.InputType;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
@@ -30,7 +34,8 @@ import java.util.Random;
 public final class GameView extends View {
     private static final float W=420f, H=780f, FIELD_BOTTOM=643f;
     private static final int MENU=0, PLAY=1, SHOP=2, ROUTE=3, DEAD=4,
-            GAME_OVER=5, SETTINGS=6, ARCHIVE=7, WIN=8, PAUSE=9;
+            GAME_OVER=5, SETTINGS=6, ARCHIVE=7, WIN=8, PAUSE=9,
+            VOICE_SETUP=11;
     private static final int WHITE=0xFFF4FBFF, MUTED=0xFF9BB8CB, CYAN=0xFF52DCF7,
             GOLD=0xFFFFC963, RED=0xFFFF6679, DEEP=0xFF081125, GREEN=0xFF63E4AB;
     private static final String[] WORLD_NAMES={"SCHROTTGÜRTEL", "MASCHINENKOLONIE", "NEBELGRABEN",
@@ -57,6 +62,8 @@ public final class GameView extends View {
     private int[] sounds=new int[5];
     private boolean soundEnabled=true, vibrationEnabled=true, voiceEnabled=false;
     private VoiceCommandController voiceController;
+    private final String[] voiceWords=new String[VoiceCommandRules.SLOT_COUNT];
+    private final int[] voiceMasks=new int[VoiceCommandRules.SLOT_COUNT];
     private boolean voiceListening=false;
     private String voiceStatusText="";
     private long voiceStatusUntil=0L;
@@ -163,6 +170,12 @@ public final class GameView extends View {
         techMask=prefs.getInt("tech",0);
         inputMode=prefs.getInt("control",0);
         voiceEnabled=prefs.getBoolean("voice_enabled",false);
+        for(int slot=0;slot<VoiceCommandRules.SLOT_COUNT;slot++){
+            voiceWords[slot]=prefs.getString("voice_word_"+slot,
+                    VoiceCommandRules.defaultWord(slot));
+            voiceMasks[slot]=prefs.getInt("voice_mask_"+slot,
+                    VoiceCommandRules.defaultMask(slot))&VoiceCommandRules.ALL_ACTIONS;
+        }
         soundEnabled=prefs.getBoolean("sound",true);
         vibrationEnabled=prefs.getBoolean("vibration",true);
         tutorialComplete=prefs.getBoolean("tutorial_complete",false);
@@ -177,7 +190,8 @@ public final class GameView extends View {
     public void suspend(){if(state==PLAY){state=PAUSE;}lastFrame=0;}
     void setVoiceController(VoiceCommandController controller){voiceController=controller;}
     boolean voiceEnabled(){return voiceEnabled;}
-    boolean isPlaying(){return state==PLAY&&!tutorialActive;}
+    boolean isPlaying(){return state==PLAY&&!tutorialActive
+            &&bossSequence!=GameRules.BOSS_DOCKING;}
     void onVoicePermissionDenied(){
         voiceEnabled=false;
         save();
@@ -189,16 +203,71 @@ public final class GameView extends View {
         voiceStatusUntil=android.os.SystemClock.uptimeMillis()+2100L;
         invalidate();
     }
-    void onVoiceRecognized(int which){
+    /** A single speech utterance can contain six independent actions.
+     * Empty charges are skipped; other available effects still activate.
+     */
+    int voiceMaskForPhrase(String phrase){
+        return VoiceCommandRules.maskFromSpeech(phrase,voiceWords,voiceMasks);
+    }
+    void onVoiceRecognizedMask(int actionMask){
         if(!voiceEnabled||state!=PLAY||tutorialActive
-                ||guideKind!=TutorialRules.GUIDE_NONE||which<0||which>=4)return;
-        if(abilityCharges[which]<=0){
-            onVoiceStatus("KEINE "+ABILITY_NAMES[which]+"-LADUNG",false);
-            return;
+                ||bossSequence==GameRules.BOSS_DOCKING
+                ||guideKind!=TutorialRules.GUIDE_NONE)return;
+        int triggered=0;
+        for(int which=0;which<4;which++){
+            if((actionMask&(1<<which))!=0&&abilityCharges[which]>0){
+                useAbility(which);
+                triggered++;
+            }
         }
-        // Exactly the same charge, tutorial protection and effect as a button tap.
-        useAbility(which);
-        onVoiceStatus(ABILITY_NAMES[which]+" AKTIVIERT",false);
+        // Rockets and EMP remain immediate actions, never timed power-ups.
+        for(int which=0;which<2;which++){
+            if((actionMask&(1<<(which+4)))!=0 &&secCharges[which]>0
+                    &&useSecondary(which))triggered++;
+        }
+        if(triggered>1){
+            banner="KOMBO · "+triggered+" SYSTEME AKTIV";
+            bannerTime=1.2f;
+        }
+        onVoiceStatus(triggered>0?triggered+" AKTIV":"KEINE LADUNG",
+                voiceController!=null&&voiceController.isListening());
+    }
+    private void saveVoiceSlots(){
+        SharedPreferences.Editor editor=prefs.edit();
+        for(int slot=0;slot<VoiceCommandRules.SLOT_COUNT;slot++){
+            editor.putString("voice_word_"+slot,voiceWords[slot]);
+            editor.putInt("voice_mask_"+slot,voiceMasks[slot]);
+        }
+        editor.apply();
+    }
+    private void editVoiceWord(int slot){
+        if(slot<0||slot>=VoiceCommandRules.SLOT_COUNT)return;
+        EditText edit=new EditText(getContext());
+        edit.setSingleLine(true);
+        edit.setText(voiceWords[slot]);
+        edit.selectAll();
+        edit.setFilters(new InputFilter[]{new InputFilter.LengthFilter(24)});
+        edit.setInputType(InputType.TYPE_CLASS_TEXT
+                |InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        AlertDialog dialog=new AlertDialog.Builder(getContext())
+                .setTitle("Auslösewort "+(slot+1))
+                .setMessage("Ein Wort (3–20 Buchstaben). Keine vorhandenen Befehle verwenden.")
+                .setView(edit)
+                .setNegativeButton("ABBRECHEN",(d,w)->{})
+                .setPositiveButton("SPEICHERN",null).create();
+        dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v->{
+                    String word=edit.getText().toString().trim();
+                    if(!VoiceCommandRules.validCustomWord(word,voiceWords,slot)){
+                        edit.setError("Ungültig, doppelt oder bereits als Einzelbefehl belegt");
+                        return;
+                    }
+                    voiceWords[slot]=word;
+                    saveVoiceSlots();
+                    dialog.dismiss();
+                    invalidate();
+                }));
+        dialog.show();
     }
     public void resumeClock(){lastFrame=0;invalidate();}
     public boolean handleBack(){
@@ -208,6 +277,7 @@ public final class GameView extends View {
             if(werftPreviewIndex>=0){werftPreviewIndex=-1;werftZoom=0f;}
             return true;
         }
+        if(state==VOICE_SETUP){state=SETTINGS;return true;}
         if(state==MENU)return false;
         state=MENU;return true;
     }
@@ -1234,6 +1304,7 @@ public final class GameView extends View {
             else if(state==GAME_OVER)drawGameOver(c,false);
             else if(state==WIN)drawGameOver(c,true);
             else if(state==SETTINGS)drawSettings(c);
+            else if(state==VOICE_SETUP)drawVoiceSetup(c);
             else if(state==ARCHIVE)drawArchive(c);
             else if(state==10)drawLicenses(c);
         }
@@ -2262,18 +2333,42 @@ public final class GameView extends View {
         textCenter(c,"Auch beim Steuern per zweitem Finger abfeuern",390,11,MUTED,false);
         boolean localSpeech=voiceController!=null&&voiceController.isLocalAvailable();
         button(c,"SPRACHBEFEHLE: "+(voiceEnabled?"EIN":localSpeech?"AUS":"NICHT VERFÜGBAR"),
-                40,408,340,60,voiceEnabled);
-        textCenter(c,"2. FINGER IM SPIELFELD: SCHILD, TURBO, DREIFACH, PLASMA",
-                486,10,MUTED,false);
+                40,408,340,55,voiceEnabled);
+        button(c,"VIER SPRACHKOMBINATIONEN",40,482,340,48,false);
         if(!voiceStatusText.isEmpty()
                 &&android.os.SystemClock.uptimeMillis()<voiceStatusUntil)
-            textCenter(c,voiceStatusText,502,9,GOLD,false);
+            textCenter(c,voiceStatusText,475,9,GOLD,false);
         else if(!localSpeech)
-            textCenter(c,"NUR MIT LOKALER ANDROID-SPRACHERKENNUNG",502,9,GOLD,false);
-        button(c,"TON: "+(soundEnabled?"EIN":"AUS"),40,511,340,44,soundEnabled);
-        button(c,"VIBRATION: "+(vibrationEnabled?"EIN":"AUS"),40,562,340,44,vibrationEnabled);
-        button(c,"LIZENZEN & DATENSCHUTZ",40,622,340,45,false);
-        button(c,"ZURÜCK",90,696,240,48,true);
+            textCenter(c,"NUR MIT LOKALER ANDROID-SPRACHERKENNUNG",475,9,GOLD,false);
+        button(c,"TON: "+(soundEnabled?"EIN":"AUS"),40,543,340,42,soundEnabled);
+        button(c,"VIBRATION: "+(vibrationEnabled?"EIN":"AUS"),40,595,340,42,vibrationEnabled);
+        button(c,"LIZENZEN & DATENSCHUTZ",40,651,340,41,false);
+        button(c,"ZURÜCK",90,710,240,44,true);
+    }
+
+    private void drawVoiceSetup(Canvas c){
+        screenHeader(c,"SPRACHKOMBINATIONEN","VIER EIGENE AUSLÖSEWÖRTER · LOKAL GESPEICHERT");
+        textCenter(c,"WORT ANTIPPEN · AKTIONEN AN-/ABWÄHLEN",141,12,GOLD,false);
+        for(int slot=0;slot<VoiceCommandRules.SLOT_COUNT;slot++){
+            int top=153+slot*127;
+            panel(c,13,top,394,118,0xEA11283D,0xFF507C9D,11);
+            txt(c,(slot+1)+"/4",25,top+29,17,GOLD,Paint.Align.LEFT,true);
+            panel(c,78,top+8,312,35,0xFF244B61,CYAN,8);
+            txt(c,voiceWords[slot].toUpperCase(Locale.GERMAN)+"  ✎",
+                    234,top+31,17,WHITE,Paint.Align.CENTER,true);
+            for(int action=0;action<VoiceCommandRules.ACTION_COUNT;action++){
+                int xx=20+(action%3)*130;
+                int yy=top+48+(action/3)*32;
+                boolean enabled=(voiceMasks[slot]&(1<<action))!=0;
+                panel(c,xx,yy,124,29,enabled?0xFF245B55:0xFF192D40,
+                        enabled?GREEN:0xFF52667A,7);
+                txt(c,(enabled?"✓ ":"")+VoiceCommandRules.ACTION_LABELS[action],
+                        xx+62,yy+19,11,enabled?WHITE:MUTED,Paint.Align.CENTER,true);
+            }
+        }
+        textCenter(c,"LEERE LADUNGEN WERDEN ÜBERSPRUNGEN",690,11,MUTED,false);
+        button(c,"ZURÜCK",90,708,240,47,true);
+        textCenter(c,"EINZELBEFEHLE BLEIBEN IMMER AKTIV",772,9,MUTED,false);
     }
     private void drawArchive(Canvas c){
         screenHeader(c,"TECHNOLOGIE-ARCHIV","DAUERHAFTE FREISCHALTUNGEN STATT STAT-BOOSTS");
@@ -2293,7 +2388,7 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "FINAL SORTIE 0.6.4-alpha",
+                "FINAL SORTIE 0.6.5-alpha",
                 "Originaler Quellcode und 3D-Spielgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",
@@ -2616,10 +2711,10 @@ public final class GameView extends View {
             case SETTINGS:
                 if(inside(px,py,28,211,364,58)){inputMode=0;save();return true;}
                 if(inside(px,py,28,311,364,58)){inputMode=1;save();return true;}
-                if(inside(px,py,40,408,340,60)){
+                if(inside(px,py,40,408,340,55)){
                     if(voiceEnabled){
                         voiceEnabled=false;
-                        if(voiceController!=null)voiceController.cancelListening();
+                        if(voiceController!=null)voiceController.releaseRecognizer();
                     }else if(voiceController!=null&&voiceController.isLocalAvailable()){
                         voiceEnabled=true;
                         voiceController.requestMicrophonePermission();
@@ -2628,10 +2723,29 @@ public final class GameView extends View {
                     }
                     save();return true;
                 }
-                if(inside(px,py,40,511,340,44)){soundEnabled=!soundEnabled;save();return true;}
-                if(inside(px,py,40,562,340,44)){vibrationEnabled=!vibrationEnabled;save();return true;}
-                if(inside(px,py,40,622,340,45)){state=10;return true;}
-                if(inside(px,py,90,696,240,48)){state=MENU;return true;}
+                if(inside(px,py,40,482,340,48)){state=VOICE_SETUP;return true;}
+                if(inside(px,py,40,543,340,42)){soundEnabled=!soundEnabled;save();return true;}
+                if(inside(px,py,40,595,340,42)){vibrationEnabled=!vibrationEnabled;save();return true;}
+                if(inside(px,py,40,651,340,41)){state=10;return true;}
+                if(inside(px,py,90,710,240,44)){state=MENU;return true;}
+                return true;
+            case VOICE_SETUP:
+                for(int slot=0;slot<VoiceCommandRules.SLOT_COUNT;slot++){
+                    int top=153+slot*127;
+                    if(inside(px,py,78,top+8,312,35)){
+                        editVoiceWord(slot);return true;
+                    }
+                    for(int action=0;action<VoiceCommandRules.ACTION_COUNT;action++){
+                        int xx=20+(action%3)*130;
+                        int yy=top+48+(action/3)*32;
+                        if(inside(px,py,xx,yy,124,29)){
+                            voiceMasks[slot]^=(1<<action);
+                            saveVoiceSlots();
+                            return true;
+                        }
+                    }
+                }
+                if(inside(px,py,90,708,240,47)){state=SETTINGS;return true;}
                 return true;
             case ARCHIVE:
                 if(inside(px,py,90,688,240,55))state=MENU;
