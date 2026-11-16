@@ -1,0 +1,72 @@
+name: SHATTERWAKE - v0.6 graphics and gameplay integration CI
+on:
+  push:
+    branches: [feature/enemy-art-trajectory-v06]
+    paths:
+      - '.github/workflows/enemy-integration-ci.yml'
+      - 'app/**'
+      - 'tests/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android build tools
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
+          SDK_BIN=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools" -name sdkmanager -type f | head -n 1)
+          echo "SDKMANAGER=$SDK_BIN" >> "$GITHUB_ENV"
+          yes | "$SDK_BIN" --licenses >/dev/null || true
+          "$SDK_BIN" "platforms;android-36" "build-tools;36.0.0"
+      - name: Test fair paths, eight tutorial steps, and special charging
+        run: |
+          mkdir -p /tmp/sw-test
+          javac -d /tmp/sw-test \
+            app/src/main/java/de/shatterwake/game/GameRules.java \
+            app/src/main/java/de/shatterwake/game/TutorialRules.java \
+            app/src/main/java/de/shatterwake/game/FlightPaths.java \
+            tests/RuleChecks.java tests/TutorialChecks.java tests/FlightPathChecks.java
+          java -ea -cp /tmp/sw-test de.shatterwake.game.RuleChecks
+          java -ea -cp /tmp/sw-test de.shatterwake.game.TutorialChecks
+          java -ea -cp /tmp/sw-test de.shatterwake.game.FlightPathChecks
+      - name: Validate original Blender enemy fleet
+        run: |
+          python3 - <<'PY'
+          import os,struct
+          for i in range(8):
+              path="app/src/main/assets/rendered/enemies/enemy_%d.png"%i
+              with open(path,"rb") as f:h=f.read(26)
+              assert h[:8]==b'\x89PNG\r\n\x1a\n',path
+              assert struct.unpack(">II",h[16:24])==(640,640),path
+              assert h[25]==6,path
+          print("PASS: 8 metallic RGBA original sprites",flush=True)
+          PY
+      - name: Build v0.6 installable Android APK
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Check APK content and package version
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          with zipfile.ZipFile(apk) as z:
+              names=set(z.namelist())
+              for i in range(8):
+                  assert "assets/rendered/enemies/enemy_%d.png"%i in names,i
+              assert "assets/rendered/werft/hangar_background.png" in names
+          with open("app/build.gradle") as f:txt=f.read()
+          assert "versionCode 6" in txt and "0.6.0-alpha" in txt
+          print("PASS: original 3D enemy fleet inside native 0.6 APK",flush=True)
+          PY
