@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature android:name="android.hardware.touchscreen" android:required="true" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Permission requested only after the user opts in to on-device speech. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Android 11+ package visibility: discover only local recognition services. -->
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+    </queries>
     <application
         android:label="FINAL SORTIE"
         android:icon="@drawable/ic_launcher"

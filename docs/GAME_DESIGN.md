@@ -76,3 +76,11 @@
 - Shading, inset panels, engine nacelles, cockpit windows and rim light give a more detailed appearance than the former directly drawn low-poly shapes.
 - Real photorealistic 2.5D models, individual animated sprite sheets and art-direction review remain future development work.
 - Does not add any imported stock media, external fonts, music or runtime dependencies.
+
+
+## Optionale Offline-Sprachsteuerung (v0.6.4-alpha)
+- Unter Einstellungen `SPRACHBEFEHLE: EIN/AUS`, standardmäßig deaktiviert.
+- Erster Finger steuert. Ein Zweitfingertipp im Spielfeld (nicht auf Waffen-/Power-up-/Pause-Buttons) öffnet einmalig das Android-Mikrofon.
+- Deutsche Kommandos: Schild, Turbo/Schnellfeuer, Dreifach, Plasma. Die vorhandene Ladungs- und Aktivierungslogik bleibt identisch zur Touch-Bedienung.
+- Kein Mikrofon während Tutorials, Menüs, Werft oder Pause; kurzer Timeout, kein Dauerlauschen.
+- Ausschließlich auf dem Gerät vorhandener SpeechRecognizer (Android 12/API 31+); keine Internet-Berechtigung, keine Cloud-Ausweichmöglichkeit. Gewohnte Touchsteuerung bleibt jederzeit verfügbar.

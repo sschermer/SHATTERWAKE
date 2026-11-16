@@ -1,13 +1,50 @@
-# SHATTERWAKE — privacy information (0.1.0-alpha)
+# FINAL SORTIE — Datenschutz / Offline-Sprachbefehle (v0.6.4-alpha)
 
-## Current technical behavior
+## Bestehende App-Daten
+FINAL SORTIE arbeitet ohne INTERNET-Berechtigung, Werbung, Analyse,
+Tracking, Online-Konten, Cloud-Spielstände, Einkäufe und fremde Medien.
+Die bestehende lokale Einstellungsspeicherung \`shatterwake_save_v1\`
+bleibt erhalten: Bestwert, dauerhaft geborgene Technologien,
+Steuerungsmodus, Ton, Vibration, Tutorialstand und weitere Spielfortschrittsdaten.
+Android-Sicherungen der App sind deaktiviert.
 
-SHATTERWAKE works offline and does not request the INTERNET permission. The application does not contain advertisements, analytics/telemetry SDKs, account registration, cloud sync, leaderboards, purchases or tracking.
+## Optionale Mikrofonverwendung
+Sprachbefehle sind **standardmäßig deaktiviert**. Nur wer sie unter
+**Einstellungen → Sprachbefehle: EIN** ausdrücklich aktiviert, wird
+gegebenenfalls um die Android-Mikrofonberechtigung \`RECORD_AUDIO\` gebeten.
+Das Mikrofon öffnet sich nicht beim normalen App- oder Spielstart.
 
-Locally on the device, Android SharedPreferences stores: best score, permanently unlocked technologies, preferred control mode, sound setting, vibration setting. These values are not sent anywhere by the app. During gameplay the app processes touch coordinates to steer the ship and attack; it does not permanently log those touches. The application's `allowBackup` flag is disabled for this prototype.
+Bei aktiviertem Sprachmodus startet ein **zweiter Fingertipp** während
+des Steuerns im Spielfeld, außerhalb der Touch-Buttons, eine einzelne,
+zeitlich begrenzte Spracherkennung. Es werden nur vier Kommandos für
+bestehende Spezialfähigkeiten akzeptiert: Schild, Turbo/Schnellfeuer,
+Dreifach und Plasma. Die Sitzung endet nach einem Ergebnis bzw.
+automatisch nach kurzer Zeit. Im Menü, Tutorial, der Werft und während
+einer Pause wird kein Sprachbefehl gestartet.
 
-A vibration permission is requested only to supply optional haptic hit feedback. Sound effects are synthesised locally; there are no microphone or recording permissions. No personal profile, email or precise device location is collected.
+FINAL SORTIE verwendet ausschließlich die Android-Schnittstelle
+\`SpeechRecognizer.createOnDeviceSpeechRecognizer\` (Android 12/API 31+
+mit installiertem lokalem Erkennungsdienst), Sprache \`de-DE\`.
+Es gibt **keinen Online-/Cloud-Fallback**. Fehlt der lokale Dienst oder
+das deutsche Offline-Sprachmodell, bleibt die Touch-Bedienung nutzbar.
+Ein Herunterladen von Sprachmodellen wird von der App nicht ausgelöst.
 
-## Before commercial publication
+Die App erstellt oder speichert keine Audiodateien, Gesprächsmitschnitte,
+Transkripte oder Analysedaten und überträgt selbst keine Spracherkennungsdaten
+über das Netzwerk. Die Verarbeitung erfolgt im lokal bereitgestellten
+Android-Systemdienst. Die App besitzt weiterhin keine
+\`android.permission.INTERNET\`-Berechtigung. Für Bereitstellung
+und Updates von Sprachpaketen können zusätzliche Hersteller-/Android-
+Systembedingungen gelten; diese sind nicht Teil des Spiels.
 
-The distributor must provide their real legal entity, suitable contact details, final privacy notice in the languages/regions of distribution and required store disclosures. Recheck the actual packaged application and network behavior, store developer-account services, crash reporting, payment services, support channels and law applicable in sales territories. A build or store listing may process customer information **outside** this game; those data practices are not represented by this prototype's notice.
+Die Option kann jederzeit wieder deaktiviert werden. Darüber hinaus
+lässt sich die Mikrofonberechtigung in den Android-App-Einstellungen
+widerrufen. Beim Verlassen der App oder im Hintergrund wird eine
+laufende Spracherkennung beendet.
+
+## Vor kommerzieller Veröffentlichung
+Die verantwortliche veröffentlichende Person muss eine vollständige
+Datenschutzerklärung inklusive ihrer tatsächlichen Kontaktangaben,
+regionaler Pflichten sowie einer Prüfung des jeweiligen Android-
+Sprachdienstes bereitstellen. Das Manifest und die gepackte APK
+werden unter \`tests/check_voice_privacy.py\` getestet.

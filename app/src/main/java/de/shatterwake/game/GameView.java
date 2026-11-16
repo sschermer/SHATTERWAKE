@@ -55,7 +55,11 @@ public final class GameView extends View {
     private final int[] unlockLevels=new int[5];
     private SoundPool soundPool;
     private int[] sounds=new int[5];
-    private boolean soundEnabled=true, vibrationEnabled=true;
+    private boolean soundEnabled=true, vibrationEnabled=true, voiceEnabled=false;
+    private VoiceCommandController voiceController;
+    private boolean voiceListening=false;
+    private String voiceStatusText="";
+    private long voiceStatusUntil=0L;
     private int state=MENU, previousState=MENU, inputMode=0, world=0, stage=1;
     private boolean tutorialActive=false, tutorialComplete=false, secondarySeen=false,
             shopIntroSeen=false, shopIntroShowing=false;
@@ -158,6 +162,7 @@ public final class GameView extends View {
         best=prefs.getInt("best",0);
         techMask=prefs.getInt("tech",0);
         inputMode=prefs.getInt("control",0);
+        voiceEnabled=prefs.getBoolean("voice_enabled",false);
         soundEnabled=prefs.getBoolean("sound",true);
         vibrationEnabled=prefs.getBoolean("vibration",true);
         tutorialComplete=prefs.getBoolean("tutorial_complete",false);
@@ -170,6 +175,31 @@ public final class GameView extends View {
     }
 
     public void suspend(){if(state==PLAY){state=PAUSE;}lastFrame=0;}
+    void setVoiceController(VoiceCommandController controller){voiceController=controller;}
+    boolean voiceEnabled(){return voiceEnabled;}
+    boolean isPlaying(){return state==PLAY&&!tutorialActive;}
+    void onVoicePermissionDenied(){
+        voiceEnabled=false;
+        save();
+        onVoiceStatus("MIKROFON NICHT ERLAUBT",false);
+    }
+    void onVoiceStatus(String message,boolean listening){
+        voiceListening=listening;
+        voiceStatusText=message==null?"":message;
+        voiceStatusUntil=android.os.SystemClock.uptimeMillis()+2100L;
+        invalidate();
+    }
+    void onVoiceRecognized(int which){
+        if(!voiceEnabled||state!=PLAY||tutorialActive
+                ||guideKind!=TutorialRules.GUIDE_NONE||which<0||which>=4)return;
+        if(abilityCharges[which]<=0){
+            onVoiceStatus("KEINE "+ABILITY_NAMES[which]+"-LADUNG",false);
+            return;
+        }
+        // Exactly the same charge, tutorial protection and effect as a button tap.
+        useAbility(which);
+        onVoiceStatus(ABILITY_NAMES[which]+" AKTIVIERT",false);
+    }
     public void resumeClock(){lastFrame=0;invalidate();}
     public boolean handleBack(){
         if(state==PLAY){state=PAUSE;return true;}
@@ -183,6 +213,7 @@ public final class GameView extends View {
     }
     private void save(){prefs.edit().putInt("best",best).putInt("tech",techMask)
             .putInt("control",inputMode).putBoolean("sound",soundEnabled)
+            .putBoolean("voice_enabled",voiceEnabled)
             .putBoolean("vibration",vibrationEnabled)
             .putBoolean("tutorial_complete",tutorialComplete)
             .putInt("seen_ability_mask",seenAbilityMask)
@@ -1186,6 +1217,7 @@ public final class GameView extends View {
                 c.translate(-x,-y);drawPlayer(c);c.restore();
             }else drawPlayer(c);
             drawHud(c);
+            drawVoiceStatus(c);
             drawBossTransition(c);
             if(tutorialActive || guideKind!=TutorialRules.GUIDE_NONE)drawTutorialOverlay(c);
             if(state==PAUSE)drawPause(c);
@@ -1968,6 +2000,15 @@ public final class GameView extends View {
             }
         }
     }
+    private void drawVoiceStatus(Canvas c){
+        if(!voiceEnabled || (!voiceListening
+                && android.os.SystemClock.uptimeMillis()>=voiceStatusUntil)
+                ||voiceStatusText.isEmpty())return;
+        panel(c,237,52,123,33,0xF20D3046,
+                voiceListening?GREEN:0xFF6489A0,8);
+        txt(c,voiceListening?"MIC: "+voiceStatusText:voiceStatusText,
+                298,73,voiceStatusText.length()>15?8:10,WHITE,Paint.Align.CENTER,true);
+    }
     private void textCenterAt(Canvas c,String s,float xx,float yy,float sz,int color){
         txt(c,s,xx,yy,sz,color,Paint.Align.CENTER,true);
     }
@@ -2214,15 +2255,25 @@ public final class GameView extends View {
     }
     private void drawSettings(Canvas c){
         screenHeader(c,"EINSTELLUNGEN","JEDERZEIT VOR DEM NÄCHSTEN RUN ÄNDERBAR");
-        textCenter(c,"SEKUNDÄRWAFFEN-STEUERUNG",215,17,GOLD,true);
-        button(c,"EINHAND-MODUS "+(inputMode==0?"✓":""),28,246,364,66,inputMode==0);
-        textCenter(c,"Schiff ziehen; RAKETE / EMP direkt antippen",333,11,MUTED,false);
-        button(c,"ZWEIFINGER-MODUS "+(inputMode==1?"✓":""),28,353,364,66,inputMode==1);
-        textCenter(c,"Auch beim Steuern per zweitem Finger abfeuern",443,11,MUTED,false);
-        button(c,"TON: "+(soundEnabled?"EIN":"AUS"),40,478,340,52,soundEnabled);
-        button(c,"VIBRATION: "+(vibrationEnabled?"EIN":"AUS"),40,540,340,52,vibrationEnabled);
-        button(c,"LIZENZEN & DATENSCHUTZ",40,612,340,51,false);
-        button(c,"ZURÜCK",90,690,240,55,true);
+        textCenter(c,"SEKUNDÄRWAFFEN-STEUERUNG",185,17,GOLD,true);
+        button(c,"EINHAND-MODUS "+(inputMode==0?"✓":""),28,211,364,58,inputMode==0);
+        textCenter(c,"Schiff ziehen; RAKETE / EMP direkt antippen",290,11,MUTED,false);
+        button(c,"ZWEIFINGER-MODUS "+(inputMode==1?"✓":""),28,311,364,58,inputMode==1);
+        textCenter(c,"Auch beim Steuern per zweitem Finger abfeuern",390,11,MUTED,false);
+        boolean localSpeech=voiceController!=null&&voiceController.isLocalAvailable();
+        button(c,"SPRACHBEFEHLE: "+(voiceEnabled?"EIN":localSpeech?"AUS":"NICHT VERFÜGBAR"),
+                40,408,340,60,voiceEnabled);
+        textCenter(c,"2. FINGER IM SPIELFELD: SCHILD, TURBO, DREIFACH, PLASMA",
+                486,10,MUTED,false);
+        if(!voiceStatusText.isEmpty()
+                &&android.os.SystemClock.uptimeMillis()<voiceStatusUntil)
+            textCenter(c,voiceStatusText,502,9,GOLD,false);
+        else if(!localSpeech)
+            textCenter(c,"NUR MIT LOKALER ANDROID-SPRACHERKENNUNG",502,9,GOLD,false);
+        button(c,"TON: "+(soundEnabled?"EIN":"AUS"),40,511,340,44,soundEnabled);
+        button(c,"VIBRATION: "+(vibrationEnabled?"EIN":"AUS"),40,562,340,44,vibrationEnabled);
+        button(c,"LIZENZEN & DATENSCHUTZ",40,622,340,45,false);
+        button(c,"ZURÜCK",90,696,240,48,true);
     }
     private void drawArchive(Canvas c){
         screenHeader(c,"TECHNOLOGIE-ARCHIV","DAUERHAFTE FREISCHALTUNGEN STATT STAT-BOOSTS");
@@ -2242,13 +2293,14 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "FINAL SORTIE 0.6.3-alpha",
+                "FINAL SORTIE 0.6.4-alpha",
                 "Originaler Quellcode und 3D-Spielgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",
                 "Keine externen Runtime-Abhängigkeiten.",
                 "Keine Werbung, Analyse oder Netzverbindung.",
                 "Lokal gespeicherte Spielstände und Optionen.",
+                "Optionales lokales Mikrofon mit Erlaubnis.",
                 "Android-Framework: Systembestandteil.",
                 "Buildtools: Gradle / Android Gradle Plugin.",
                 "Vollständige Rechtshinweise im Repository:",
@@ -2257,7 +2309,7 @@ public final class GameView extends View {
                 "docs/PRIVACY.md"
         };
         for(int i=0;i<lines.length;i++)txt(c,lines[i],25,177+i*32,i==0?19:13,
-                i==0?GOLD:i>=9?CYAN:WHITE,Paint.Align.LEFT,i==0);
+                i==0?GOLD:i>=10?CYAN:WHITE,Paint.Align.LEFT,i==0);
         button(c,"ZURÜCK",90,690,240,55,true);
     }
     private String tutorialStepName(int step){
@@ -2468,7 +2520,10 @@ public final class GameView extends View {
                     }
                     return !(inputMode==0&&py<650);
                 }
-                if(inside(px,py,365,51,36,31)){state=PAUSE;return true;}
+                if(inside(px,py,365,51,36,31)){
+                    if(voiceController!=null)voiceController.cancelListening();
+                    state=PAUSE;return true;
+                }
                 if(py>=716){
                     int a=(int)((px-13)/100);
                     if(a>=0&&a<4 && px>=13){useAbility(a);return true;}
@@ -2559,12 +2614,24 @@ public final class GameView extends View {
                 if(inside(px,py,50,625,320,54)){state=MENU;return true;}
                 return true;
             case SETTINGS:
-                if(inside(px,py,28,246,364,66)){inputMode=0;save();return true;}
-                if(inside(px,py,28,353,364,66)){inputMode=1;save();return true;}
-                if(inside(px,py,40,478,340,52)){soundEnabled=!soundEnabled;save();return true;}
-                if(inside(px,py,40,540,340,52)){vibrationEnabled=!vibrationEnabled;save();return true;}
-                if(inside(px,py,40,612,340,51)){state=10;return true;}
-                if(inside(px,py,90,690,240,55)){state=MENU;return true;}
+                if(inside(px,py,28,211,364,58)){inputMode=0;save();return true;}
+                if(inside(px,py,28,311,364,58)){inputMode=1;save();return true;}
+                if(inside(px,py,40,408,340,60)){
+                    if(voiceEnabled){
+                        voiceEnabled=false;
+                        if(voiceController!=null)voiceController.cancelListening();
+                    }else if(voiceController!=null&&voiceController.isLocalAvailable()){
+                        voiceEnabled=true;
+                        voiceController.requestMicrophonePermission();
+                    }else{
+                        onVoiceStatus("OFFLINE-SPRACHE NICHT VERFUEGBAR",false);
+                    }
+                    save();return true;
+                }
+                if(inside(px,py,40,511,340,44)){soundEnabled=!soundEnabled;save();return true;}
+                if(inside(px,py,40,562,340,44)){vibrationEnabled=!vibrationEnabled;save();return true;}
+                if(inside(px,py,40,622,340,45)){state=10;return true;}
+                if(inside(px,py,90,696,240,48)){state=MENU;return true;}
                 return true;
             case ARCHIVE:
                 if(inside(px,py,90,688,240,55))state=MENU;
@@ -2581,6 +2648,18 @@ public final class GameView extends View {
         float sy=getHeight()>0?H/getHeight():1f;
         if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_POINTER_DOWN){
             float px=ev.getX(idx)*sx,py=ev.getY(idx)*sy;
+            // A second finger in the field requests one bounded offline command.
+            // The steering pointer is untouched; all HUD weapon/power-up taps
+            // retain priority and work as before in both existing modes.
+            if(action==MotionEvent.ACTION_POINTER_DOWN
+                    &&VoiceCommandRules.acceptsSecondFinger(
+                            voiceEnabled,state==PLAY,touchPointer>=0,tutorialActive,
+                            guideKind!=TutorialRules.GUIDE_NONE,
+                            voiceController!=null&&voiceController.isListening(),px,py)
+                    &&voiceController!=null){
+                voiceController.requestVoiceCommand();
+                return true;
+            }
             if(tap(px,py)){downWasButton=true;return true;}
             if(state==PLAY && touchPointer==-1 && py<650){
                 touchPointer=ev.getPointerId(idx);
