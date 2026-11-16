@@ -56,7 +56,8 @@ the retired work as bundled in the current APK.
 | Category | Origin | Rights / licensing position |
 |---|---|---|
 | Game and UI code | Newly written for SHATTERWAKE | Project `LICENSE` |
-| Player fighter, shipyard, weapon and upgrade sprites | Original SHATTERWAKE Blender scene, project-authored PBR materials and transparent PNG renders | Project `LICENSE`; no external source models or textures |\n| Enemies, worm segments, asteroids, HUD, stars, effects | Original project-drawn Android Canvas geometry and generated Bitmap sprites | Project `LICENSE`; no imported artwork |
+| Player fighter, shipyard, weapon and upgrade sprites | Original SHATTERWAKE Blender scene, project-authored PBR materials and transparent PNG renders | Project `LICENSE`; no external source models or textures |\n| Eight normal enemy ship types | Original SHATTERWAKE Blender geometry and baked transparent PNG renders from `art/enemies/build_enemies.py`; no imported models or textures | Project `LICENSE` |
+| Boss modules, worm segments, asteroids, HUD, stars, effects | Original project-drawn Android Canvas geometry and generated Bitmap fallback sprites | Project `LICENSE`; no imported artwork |
 | Launcher icon (`ic_launcher.xml`) | Original vector paths | Project `LICENSE`; no imported image |
 | Sound effects | PCM synthesised at runtime from elementary sine waves | Original generated output; no imported samples |
 | Font | Android device's system sans-serif / sans-serif-condensed | System typeface, not redistributed as font file |

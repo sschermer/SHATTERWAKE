@@ -1943,7 +1943,7 @@ public final class GameView extends View {
         button(c,"EINSTELLUNGEN",51,524,318,54,false);
         button(c,"TECHNOLOGIE-ARCHIV",51,593,318,54,false);
         button(c,"TUTORIAL "+(tutorialComplete?"WIEDERHOLEN":"STARTEN"),51,663,318,47,false);
-        textCenter(c,"PROTOTYP 0.5 · 3D-GRAFIK · OFFLINE",754,10,MUTED,false);
+        textCenter(c,"PROTOTYP 0.6 · 3D-GRAFIK · OFFLINE",754,10,MUTED,false);
     }
     private void screenHeader(Canvas c,String title,String sub){
         panel(c,13,27,394,92,0xE013273E,0x7766B7D1,12);
@@ -2193,7 +2193,7 @@ public final class GameView extends View {
     private void drawLicenses(Canvas c){
         screenHeader(c,"LIZENZEN & DATENSCHUTZ","RECHTLICHE INFORMATIONEN");
         String[] lines={
-                "SHATTERWAKE 0.4.0-alpha",
+                "SHATTERWAKE 0.6.0-alpha",
                 "Originaler Quellcode und Vektorgrafik.",
                 "Keine fremden Spielgrafiken oder Fonts.",
                 "Soundeffekte: algorithmisch selbst erzeugt.",

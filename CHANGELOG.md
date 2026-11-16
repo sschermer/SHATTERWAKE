@@ -1,3 +1,18 @@
+## 0.6.0-alpha — Blender enemy fleet, fair flight and clearer upgrades
+
+- Eight unique original metallic 3D hostile ship models, transparent renders,
+  including rare gold star hunter and mechanical fragment, authored in Blender.
+- Replace earlier colorful procedural enemies in Android; keep procedural
+  sprite fallback if an asset is ever missing.
+- Deterministic smooth arcs independent of player position and shooting:
+  **no targeted avoidance**; rare readable looping enemy only.
+- New special charge economy: 100 stars, ONE selected ability gains +1,
+  unlimited stack size, sector-start zero-to-one replenishment.
+- Optional tutorial only from the main menu, never auto-starts on first game;
+  one plasma lesson rather than two; eight training steps.
+- Pure-Java tests for special charge economy, tutorial and all eight flight paths.
+- APK artifact renamed to v0.6.0-alpha; all original enemy RGBA files verified.
+
 ## Integrated original Blender art and physical Werft upgrades — 2026-11-16
 - Replace rejected Grab3D ship on Android with the visually approved ART-004
   original Blender fighter in 1024px GAME and 2048px WERFT perspective.

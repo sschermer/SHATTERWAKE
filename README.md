@@ -1,23 +1,45 @@
 # SHATTERWAKE
 
-**Native Android arcade space shooter — playable prototype 0.5.0-alpha.**
+**Native Android arcade space shooter — playable prototype 0.6.0-alpha.**
 
 Vertical 2.5D/pseudo-isometric scrolling, automatic primary blaster with a tight correction cone, two selectable touch input modes, distinct enemy flight patterns, destructible segmented space worm, modular multi-stage bosses, star pickups, temporary in-run star-shop upgrades, permanent tech archive unlocks and genuine branching sector paths.
 
-## What's new in version 0.5
+## What's new in version 0.6
 
 - **Boss finale and mothership dock:** A huge multistage final explosion scatters collectible bonus stars, power-ups and an actual technology chip. Existing drops persist. The safe salvage phase only ends once every collectible has been caught or left the screen. A large mothership flies in, opens a glowing hangar and the player ship automatically docks before the Werft appears.
 - **Die Sternenwerft:** A large live ship view replaces the former direct-buy list. Choose any available upgrade to animate a smooth zoom onto its affected subsystem. The price and description are shown, but purchase stays disabled until the close-up finishes. **Jetzt kaufen** is a second, explicit action. **Zurueck**, including Android Back, returns to the complete ship view without spending stars.
-- A paced **nine-step interactive tutorial** teaches steering, automatic fire, stars, shield, rapid fire, triple shot, plasma, its visible impact on a training target, and homing missiles. **Each of the four power-ups now gets 5 seconds of active testing** after activation, with a visible countdown and real firing/target feedback. Only then does the **WEITER** confirmation unlock the next lesson. The last screen requires explicit confirmation to start sector 1.
+- A paced **eight-step interactive tutorial** teaches steering, automatic fire, stars, shield, rapid fire, triple shot, plasma, its visible impact on a training target, and homing missiles. **Each of the four power-ups now gets 5 seconds of active testing** after activation, with a visible countdown and real firing/target feedback. Only then does the **WEITER** confirmation unlock the next lesson. The last screen returns to the main menu; training is never launched automatically.
 - **Plasma is unambiguously visible:** a pulsing violet aura and reactor on the fighter, thick luminous violet bolts with long trails, and purple impact particles on targets. Its charged HUD tile remains highlighted while active.
 - Guided missiles now fire with **one tap**, instead of a hard-to-understand select-then-release sequence, in both control layouts. They must actually destroy a practice target before the tutorial completes.
 - Each special ability is first introduced with a paused hint highlighting its real HUD button. Training is safe and does not consume a normal run.
 - First-discovery help, boss shop orientation, illustrated sprites, and existing gameplay balance remain available from 0.4.
 
+### Version 0.6 – realistic enemy fleet, fair paths, special charges
+
+- Eight **original Blender-rendered metallic enemy designs**, matching the
+  smooth gunmetal hero-fighter aesthetic. Types include the light interceptor,
+  raider, reconnaissance needle, heavy carrier, bomber, sentinel, detached
+  machine fragment and a distinct rare gold hunter. Blender sources are in
+  `art/enemies/build_enemies.py`; every baked sprite is transparent RGBA.
+- Fixed, predictable aerial arcs, shallow S turns and one rare complete
+  circular loop. **Enemy trajectories do not react to player steering,
+  targeting or incoming shots**. Their own firing mechanics are unchanged.
+- **Spezialladung costs 100 stars** and adds exactly +1 to **one explicitly
+  selected** ability (shield, rapid, triple, plasma), with no three-charge cap.
+  At the start of every *sector*, each empty ability is refilled to one;
+  remaining quantities carry forward. A completely new run starts with one
+  per ability. Separate missiles and EMP are unaffected.
+- **Tutorial is available only from the main menu**. Starting a new game
+  never launches it automatically, including on first launch. The duplicate
+  plasma lesson is removed; the one plasma lesson shows the real effect.
+  The training has eight stages and returns to the main menu on completion.
+- The 0.5 eSterne display, high-detail hero fighter, repaired armor and
+  cinematic Werft remain in place.
+
 ## Install on an Android phone
 
-1. Open the latest [GitHub release](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.5.0-alpha) while signed into the repository-owning account (the repository is private).
-2. Download **SHATTERWAKE-v0.5.0-alpha-debug.apk**.
+1. Open the latest [GitHub release](https://github.com/sschermer/SHATTERWAKE/releases/tag/v0.6.0-alpha) while signed into the repository-owning account (the repository is private).
+2. Download **SHATTERWAKE-v0.6.0-alpha-debug.apk**.
 3. Confirm that the SHA-256 of the APK matches `SHA256SUMS.txt` from the release.
 4. Open the APK and permit installation from the chosen file manager/browser when Android asks.
 5. This is a **debug-signed test APK**. A later build signed with a different debug key may require uninstalling the earlier version first (which deletes the local unlock history).
