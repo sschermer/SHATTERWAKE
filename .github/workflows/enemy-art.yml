@@ -1,0 +1,65 @@
+name: SHATTERWAKE - render original enemy fleet
+on:
+  push:
+    branches: [feature/enemy-art-trajectory-v06]
+    paths:
+      - 'art/enemies/build_enemies.py'
+      - '.github/workflows/enemy-art.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  enemy-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender + preview renderer
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-pil
+      - name: Build eight original ship renders
+        run: |
+          blender -b -t 4 --python art/enemies/build_enemies.py -- .
+      - name: Check full transparent enemy atlas and create contact sheet
+        run: |
+          /usr/bin/python3 - <<'PY'
+          from PIL import Image,ImageDraw
+          import os
+          source='app/src/main/assets/rendered/enemies'
+          canvas=Image.new('RGB',(4*330,2*392),(17,24,33))
+          d=ImageDraw.Draw(canvas)
+          names=['INTERCEPTOR','RAIDER','RECON','CARRIER',
+                 'BOMBER','ENFORCER','FRAGMENT','STAR HUNTER']
+          for i in range(8):
+              src=os.path.join(source,'enemy_%d.png'%i)
+              im=Image.open(src)
+              assert im.mode=='RGBA' and im.size==(640,640),(i,im.mode,im.size)
+              assert im.getchannel('A').getextrema()[0]==0,'Not transparent'
+              assert im.getbbox() is not None,'Blank enemy sprite'
+              thumb=im.resize((300,300),Image.Resampling.LANCZOS)
+              x=(i%4)*330+15;y=(i//4)*392+20
+              canvas.paste(thumb,(x,y),thumb)
+              d.text((x,y+315),names[i],fill=(220,230,238))
+          os.makedirs('art/enemies/previews',exist_ok=True)
+          canvas.save('art/enemies/previews/enemy_lineup.jpg',quality=90)
+          print("PASS: 8 alpha sprite renders + lineup",flush=True)
+          PY
+      - name: Publish tested transparent enemy sprites to feature branch
+        run: |
+          set -eu
+          mkdir -p /tmp/sw_enemy_pngs
+          cp app/src/main/assets/rendered/enemies/*.png /tmp/sw_enemy_pngs/
+          cp art/enemies/previews/enemy_lineup.jpg /tmp/sw_enemy_lineup.jpg
+          git fetch origin feature/enemy-art-trajectory-v06
+          git reset --hard FETCH_HEAD
+          mkdir -p app/src/main/assets/rendered/enemies art/enemies/previews
+          cp /tmp/sw_enemy_pngs/*.png app/src/main/assets/rendered/enemies/
+          cp /tmp/sw_enemy_lineup.jpg art/enemies/previews/enemy_lineup.jpg
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f app/src/main/assets/rendered/enemies/ art/enemies/previews/enemy_lineup.jpg
+          git commit -m 'Render approved-style enemy fleet: 8 original metallic Blender sprites [skip ci]' || true
+          git push origin HEAD:feature/enemy-art-trajectory-v06
