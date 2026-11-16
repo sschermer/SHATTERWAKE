@@ -68,6 +68,7 @@ public final class GameView extends View {
     private int fireLevel=0, damageLevel=0, magnetLevel=0, shieldLevel=0, droneLevel=0;
     private int targetingLevel=0;
     private int specialMagazinePurchases=0;
+    private int repairPurchases=0;
     private boolean nextGunRight=false;
     private int techMask=0, newlyUnlocked=-1, armedSecondary=-1;
     private float x=W/2, y=573, targetX=x, targetY=y;
@@ -241,7 +242,7 @@ public final class GameView extends View {
         tutorialActive=false;guideKind=TutorialRules.GUIDE_NONE;guideId=-1;
         stage=1;world=0;stars=0;score=0;hp=maxHp=6;continuesUsed=0;
         fireLevel=damageLevel=magnetLevel=shieldLevel=droneLevel=targetingLevel=0;
-        specialMagazinePurchases=0;nextGunRight=false;
+        specialMagazinePurchases=0;repairPurchases=0;nextGunRight=false;
         shieldTime=rapidTime=tripleTime=plasmaTime=invulnerable=0;
         newlyUnlocked=-1;werftPreviewIndex=-1;werftZoom=0f;
         secCharges[0]=3;secCharges[1]=2;armedSecondary=-1;
@@ -1130,7 +1131,7 @@ public final class GameView extends View {
         switch(o.id){
             case 0:fireLevel++;break;
             case 1:damageLevel++;break;
-            case 2:hp=Math.min(maxHp,hp+1);break;
+            case 2:hp=Math.min(maxHp,hp+1);repairPurchases++;break;
             case 3:magnetLevel++;break;
             case 4:droneLevel++;break;
             case 5:shieldLevel++;break;
@@ -1438,8 +1439,11 @@ public final class GameView extends View {
         // Damage is independent of installed modules. In the repair preview
         // display the prospective +1 HP hull, never prematurely change HP.
         int shownHp=preview==2?Math.min(maxHp,hp+1):hp;
+        // Once a plate has been bought it remains a physical part of this run.
+        // The repair preview uses the same plate and prospective +1 HP visuals.
+        if(repairPurchases>0||(preview==2&&hp<maxHp))
+            atlas.drawHardware(c,2,1,werft);
         atlas.drawHullDamage(c,GameRules.hullDamageTier(shownHp,maxHp),werft);
-        if(preview==2&&hp<maxHp)atlas.drawHardware(c,2,1,werft);
     }
     /** Metal hardware is part of the ship, not a highlight or HUD marker.
      * Preview modules are fitted as transparent holographic blueprints and the
