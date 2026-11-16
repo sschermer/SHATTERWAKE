@@ -10,7 +10,8 @@ for d in (P,G,W):os.makedirs(d,exist_ok=True)
 random.seed(119)
 bpy.ops.object.select_all(action="SELECT");bpy.ops.object.delete(use_global=False)
 scene=bpy.context.scene;scene.render.engine="CYCLES"
-scene.cycles.samples=14;scene.cycles.use_denoising=True
+scene.cycles.samples=28;scene.cycles.use_denoising=True
+bpy.context.view_layer.cycles.use_denoising=True
 scene.render.threads_mode="FIXED";scene.render.threads=4
 scene.render.image_settings.file_format="PNG"
 scene.render.image_settings.color_mode="RGBA"
@@ -29,7 +30,7 @@ def mat(name,color,metal=.7,rough=.4,wear=.15,emission=None):
  p.inputs["Roughness"].default_value=rough
  p.inputs["Base Color"].default_value=(*color,1)
  uv=nodes.new("ShaderNodeTexCoord")
- noise=nodes.new("ShaderNodeTexNoise");noise.inputs["Scale"].default_value=19
+ noise=nodes.new("ShaderNodeTexNoise");noise.inputs["Scale"].default_value=9
  noise.inputs["Detail"].default_value=3.5
  links.new(uv.outputs["Generated"],noise.inputs["Vector"])
  ramp=nodes.new("ShaderNodeValToRGB")
@@ -37,11 +38,18 @@ def mat(name,color,metal=.7,rough=.4,wear=.15,emission=None):
  ramp.color_ramp.elements[1].color=(min(.95,rough+wear),)*3+(1,)
  links.new(noise.outputs["Fac"],ramp.inputs["Fac"])
  links.new(ramp.outputs["Color"],p.inputs["Roughness"])
- fine=nodes.new("ShaderNodeTexNoise");fine.inputs["Scale"].default_value=165
+ c_ramp=nodes.new("ShaderNodeValToRGB")
+ c_ramp.color_ramp.elements[0].position=.15
+ c_ramp.color_ramp.elements[0].color=tuple(max(.003,c*.48) for c in color)+(1,)
+ c_ramp.color_ramp.elements[1].position=.82
+ c_ramp.color_ramp.elements[1].color=tuple(min(.83,c*1.24+.009) for c in color)+(1,)
+ links.new(noise.outputs["Fac"],c_ramp.inputs["Fac"])
+ links.new(c_ramp.outputs["Color"],p.inputs["Base Color"])
+ fine=nodes.new("ShaderNodeTexNoise");fine.inputs["Scale"].default_value=325
  links.new(uv.outputs["Generated"],fine.inputs["Vector"])
  bump=nodes.new("ShaderNodeBump")
- bump.inputs["Strength"].default_value=.13
- bump.inputs["Distance"].default_value=.009
+ bump.inputs["Strength"].default_value=.045
+ bump.inputs["Distance"].default_value=.004
  links.new(fine.outputs["Fac"],bump.inputs["Height"])
  links.new(bump.outputs["Normal"],p.inputs["Normal"])
  if emission:
@@ -49,12 +57,12 @@ def mat(name,color,metal=.7,rough=.4,wear=.15,emission=None):
   p.inputs["Emission Strength"].default_value=2.1
  return m
 
-charcoal=mat("A / scratched oxidized titanium",(.12,.15,.19),.83,.37,.19)
-light=mat("B / cold machined alloy",(.36,.4,.44),.85,.29,.13)
-slate=mat("C / desaturated ceramic armor",(.24,.26,.28),.55,.46,.18)
+charcoal=mat("A / scratched oxidized titanium",(.064,.078,.092),.84,.34,.19)
+light=mat("B / cold machined alloy",(.23,.25,.275),.84,.32,.21)
+slate=mat("C / desaturated ceramic armor",(.13,.15,.18),.57,.45,.19)
 black=mat("D / carbon recessed mechanics",(.018,.026,.035),.21,.63,.1)
-brushed=mat("E / polished bevel edge",(.55,.60,.62),.83,.24,.15)
-ochre=mat("F / worn military hazard paint",(.46,.21,.095),.45,.5,.2)
+brushed=mat("E / polished bevel edge",(.32,.355,.39),.85,.27,.17)
+ochre=mat("F / worn military hazard paint",(.33,.16,.075),.45,.5,.2)
 glass=mat("G / smoked cockpit",(.018,.049,.072),.35,.17,.08)
 blue=mat("H / restrained ion blue",(.06,.18,.25),.22,.26,.06,(.04,.26,.49))
 warm=mat("I / amber worklight",(.2,.15,.07),.22,.27,.12,(.5,.24,.05))
@@ -154,6 +162,22 @@ for s in (-1,1):
  for j in range(4):
   box("Aft wing service access %s %s"%(s,j),
       (s*(2.08+j*.45),-2.22-j*.12,.48),(.3,.13,.03),slate,.01)
+ # Real replaceable armor cassettes, retaining bolts and fine scuffs.
+ for j in range(4):
+  xx=3.26+j*.4;yy=-.89-j*.14
+  box("Wing armor cassette %d"%j,(s*xx,yy,.558),(.31,.27,.064),
+      slate if j%2 else charcoal,.021)
+  box("Cassette service groove",(s*xx,yy,.602),(.13,.047,.016),black,.004)
+  for k in (-1,1):
+   cyl("Captive cassette bolt",(s*(xx+k*.11),yy,.597),.015,.011,brushed,n=10)
+ for j in range(32):
+  xx=2.35+random.random()*2.4
+  yy=-.72+random.random()*.85-(xx-2.35)*.18
+  zz=.58+random.random()*.012
+  length=.05+random.random()*.10
+  tube("Metal wear scratch %d"%j,(s*xx,yy,zz),
+       (s*(xx+length),yy-.01,zz+.001),.003,
+       brushed if j%5==0 else black)
  for j in range(11):
   y=3.3-j*.62
   x=s*(.73+.08*math.sin(j*.5))
@@ -278,9 +302,9 @@ def area(name,position,power,color,size,target=(0,0,0)):
  o.data.energy=power;o.data.shape="DISK";o.data.size=size;o.data.color=color
  o.rotation_euler=(Vector(target)-o.location).to_track_quat("-Z","Y").to_euler()
  extras.append(o)
-area("Hangar / massive left diffused softbox",(-9,5,15),2650,(.81,.9,1),8)
-area("Hangar / right cooler bounce",(10,-1,12),1800,(.55,.75,1),6)
-area("Hangar / orange engine rim",(0,-7,12),1280,(1,.76,.5),6)
+area("Hangar / massive left diffused softbox",(-9,5,15),2150,(.78,.87,1),8)
+area("Hangar / right cooler bounce",(10,-1,12),1350,(.58,.75,1),6)
+area("Hangar / orange engine rim",(0,-7,12),1450,(1,.73,.43),6)
 area("Hangar / frontal detail",(0,10,11),740,(.7,.82,1),5)
 
 def cam(name,where,lookat,size):
@@ -291,7 +315,7 @@ def cam(name,where,lookat,size):
  return o
 game_cam=cam("ART-001 GAME / nose is +Y, rendered UP",(0,0,29),(0,0,0),14.9)
 werft_cam=cam("ART-001 WERFT / cinematic 3-quarter",
-              (11,15,19),(0,0,.15),16.9)
+              (9,16,19),(0,0,.15),16.2
 scene.camera=werft_cam
 scene.world.use_nodes=True
 bg=scene.world.node_tree.nodes.get("Background")

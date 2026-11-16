@@ -20,12 +20,20 @@ jobs:
       - name: Install headless Blender
         run: |
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy python3-pil
       - name: Build editable 3D master and image previews, without touching Android
         run: |
           blender -b -t 4 --python art/hero_fighter/build_master.py -- art/hero_fighter
           test -s art/hero_fighter/previews/werft_before.png
           test -s art/hero_fighter/hero_fighter.blend
+          /usr/bin/python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          root=Path("art/hero_fighter/previews")
+          for key in ["werft_before","werft_weapons","werft_shield","werft_drones"]:
+              img=Image.open(root/(key+".png")).convert("RGB")
+              img.save(root/(key+".jpg"),quality=90,subsampling=0,optimize=True)
+          PY
       - name: Validate outputs
         run: |
           python3 - <<'PY'
