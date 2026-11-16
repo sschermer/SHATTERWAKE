@@ -1051,8 +1051,9 @@ public final class GameView extends View {
             bossSequence=GameRules.BOSS_DOCKING;dockingElapsed=0f;
             dockingStartX=x;dockingStartY=y;
             touchPointer=-1;targetX=x;targetY=y;
-            banner="BERGUNG ABGESCHLOSSEN · MUTTERSCHIFF IM ANFLUG";
-            bannerTime=2f;sound(2);
+            // Docking is communicated entirely through the approaching carrier
+            // and the fighter's boarding animation; no explanatory text.
+            banner="";bannerTime=0f;sound(2);
         }
     }
     private void updateDocking(float dt){
@@ -1779,12 +1780,6 @@ public final class GameView extends View {
             panel(c,37,153,346,53,0xE9142538,0xFFFFCD77,9);
             textCenter(c,"BOSS ZERSTOERT · BEUTE BERGEN",173,16,GOLD,true);
             textCenter(c,pickups.size()+" TEILE · ZEIT ZUM EINSAMMELN",193,11,WHITE,true);
-        }else if(bossSequence==GameRules.BOSS_DOCKING){
-            panel(c,25,466,370,88,0xE912273D,0xFF7AE0FF,12);
-            textCenter(c,"MUTTERSCHIFF · ANDOCKSEQUENZ",496,20,WHITE,true);
-            box(c,52,519,316,9,0xFF263F59);
-            box(c,52,519,316*clamp(dockingElapsed/GameRules.DOCKING_SECONDS,
-                    0f,1f),9,CYAN);
         }else if(bossSequence==GameRules.BOSS_WARNING){
             boolean blink=(int)(idleTime*4)%2==0;
             box(c,0,0,W,FIELD_BOTTOM,blink?0x22FF284C:0x0A89172D);
