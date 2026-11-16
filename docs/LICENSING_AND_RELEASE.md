@@ -40,6 +40,16 @@ Visual examples in planning conversations were **never copied** into the Android
 
 ## 4. Attribution and license references
 
+**Voluntary creator credits are required by SHATTERWAKE project policy** for
+any imported CC0 media, despite not being required by CC0 itself. Record the
+original author, exact asset name or ID, origin URL, license, import date, and
+local derivative/output. If the author is not published or cannot be verified,
+credit the source collection and do not invent a personal name. See
+`THIRD_PARTY_NOTICES.md` for the prospective source list and the inventory
+of actually included assets.
+
+
+
 See the `THIRD_PARTY_NOTICES.md` table for each tool, version, copyright/licensing source and links. The `LICENSE` concerns only new original work and does **not** relicense Android, Gradle, OpenJDK or the tools used to build the app.
 
 This checklist describes **current known contents**, not a legal guarantee of non-infringement or regulatory conformity.
